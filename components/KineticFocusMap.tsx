@@ -1,25 +1,25 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ScrollView } from 'react-native';
-import Svg, { Circle, Path } from 'react-native-svg';
+import { useAudioPlayer } from 'expo-audio';
+import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Dimensions, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
-  useAnimatedScrollHandler,
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  useAnimatedRef,
-  scrollTo,
-  useAnimatedProps,
-  withSpring,
-  useDerivedValue,
-  runOnJS,
   FadeIn,
   FadeOut,
-  SharedValue
+  runOnJS,
+  scrollTo,
+  SharedValue,
+  useAnimatedProps,
+  useAnimatedRef,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useDerivedValue,
+  useSharedValue,
+  withSpring,
+  withTiming
 } from 'react-native-reanimated';
-import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
-import * as Haptics from 'expo-haptics';
-import { useAudioPlayer } from 'expo-audio';
-import { LinearGradient } from 'expo-linear-gradient';
+import Svg, { Circle, Path } from 'react-native-svg';
 
 const { width, height } = Dimensions.get('window');
 const AnimatedPath = Animated.createAnimatedComponent(Path);
@@ -68,11 +68,11 @@ function AnimatedOverlayPath({ node, targetNode, stateRefs, rootCategories }: an
     const commonCategory = node.categories.find((c: string) => targetNode.categories.includes(c));
     const strokeColor = activeCluster.value !== -1 ? focusColor : (commonCategory ? (CATEGORY_COLORS[commonCategory] || '#111111') : CATEGORY_COLORS.Synthesis);
     const thickness = node.importance * 1.5 + 0.5;
-    
+
     // Elegant S-curves that mirror map style even at high density
     const dy = Math.abs(eY.value - sY.value);
-    const tangent = Math.max(160, dy * 0.6); 
-    
+    const tangent = Math.max(160, dy * 0.6);
+
     return {
       d: `M ${sX.value} ${sY.value} C ${sX.value} ${sY.value + tangent}, ${eX.value} ${eY.value - tangent}, ${eX.value} ${eY.value}`,
       stroke: strokeColor,
@@ -134,8 +134,9 @@ function AnimatedNoteCard({ node, stateRefs, onExpandNode, rootCategories }: any
   const textLeft = useDerivedValue(() => {
     if (activeCluster.value !== -1) {
       const axisX = currentX.value;
-      const leftSpace = axisX - 36;
-      const rightSpace = width - axisX - 40;
+      const PADDING = 70; // Increased to clear large node rings
+      const leftSpace = axisX - PADDING;
+      const rightSpace = width - axisX - PADDING;
       const canFitLeft = leftSpace >= textWidth;
       const canFitRight = rightSpace >= textWidth;
       
@@ -144,8 +145,8 @@ function AnimatedNoteCard({ node, stateRefs, onExpandNode, rootCategories }: any
       
       if (placeRight && !canFitRight && canFitLeft) placeRight = false;
       else if (!placeRight && !canFitLeft && canFitRight) placeRight = true;
-      if (placeRight) return Math.min(axisX + 40, width - textWidth - 20);
-      return Math.max(axisX - textWidth - 36, 20);
+      if (placeRight) return Math.min(axisX + PADDING, width - textWidth - 20);
+      return Math.max(axisX - textWidth - PADDING, 20);
     }
     return node.unfocusedTextLeft;
   });
@@ -197,7 +198,7 @@ export default function KineticFocusMap({ rootNode, mappedNotes, onClose }: any)
   const [readingNode, setReadingNode] = useState<any>(null);
   const lastTickY = useSharedValue(0);
   const player = useAudioPlayer(TICK_SOUND_URL);
-  
+
   const handleTick = () => {
     Haptics.selectionAsync();
     if (player) player.play();
@@ -233,17 +234,17 @@ export default function KineticFocusMap({ rootNode, mappedNotes, onClose }: any)
     const nodeCats = n.categories;
     return rootCats.length === 1 ? nodeCats.includes(rootCats[0]) : rootCats.every((c: string) => nodeCats.includes(c));
   });
-  
+
   const paddingBefore = height * 0.35;
   const FIXED_GAP = 180;
   const localTotalHeight = paddingBefore + clusterNotes.length * FIXED_GAP + height * 0.5;
 
   const isRight = rootNode.isRight;
   const focusAxisX = isRight ? width - 60 : 60;
-  
-  const stateRefs = { 
-    activeCluster: useSharedValue(1), 
-    activeNodeOriginY: useSharedValue(paddingBefore), 
+
+  const stateRefs = {
+    activeCluster: useSharedValue(1),
+    activeNodeOriginY: useSharedValue(paddingBefore),
     activeNodeOriginX: useSharedValue(focusAxisX),
     clusterMinY: useSharedValue(0)
   };
@@ -252,15 +253,15 @@ export default function KineticFocusMap({ rootNode, mappedNotes, onClose }: any)
     const FIXED_GAP = 180;
     const rootIdx = clusterNotes.findIndex((c: any) => c.id === rootNode.id);
     const safeIdx = rootIdx > -1 ? rootIdx : 0;
-    
+
     // Scroll so the root node is roughly at paddingBefore position
     scrollRef.current?.scrollTo({ y: safeIdx * FIXED_GAP, animated: false });
-    
-    requestAnimationFrame(() => { 
-      stateRefs.activeNodeOriginY.value = paddingBefore; 
-      stateRefs.activeNodeOriginX.value = focusAxisX; 
-      stateRefs.activeCluster.value = 1; 
-      stateRefs.clusterMinY.value = 0; 
+
+    requestAnimationFrame(() => {
+      stateRefs.activeNodeOriginY.value = paddingBefore;
+      stateRefs.activeNodeOriginX.value = focusAxisX;
+      stateRefs.activeCluster.value = 1;
+      stateRefs.clusterMinY.value = 0;
     });
   }, [rootNode.id]);
 
@@ -281,16 +282,16 @@ export default function KineticFocusMap({ rootNode, mappedNotes, onClose }: any)
                       const gTarget = node.connectedNodeIndex !== null ? mappedNotes[node.connectedNodeIndex] : null;
                       const fIdx = gTarget ? focusIdToIndex[gTarget.id] : undefined;
                       if (!gTarget || fIdx === undefined) return null;
-                      return <AnimatedOverlayPath key={`line-${node.id}`} node={{...node, clusterIndex: idx}} targetNode={{...gTarget, clusterIndex: fIdx}} stateRefs={stateRefs} rootCategories={rootNode.categories} />;
+                      return <AnimatedOverlayPath key={`line-${node.id}`} node={{ ...node, clusterIndex: idx }} targetNode={{ ...gTarget, clusterIndex: fIdx }} stateRefs={stateRefs} rootCategories={rootNode.categories} />;
                     })}
                     {clusterNotes.map((node: any, idx: number) => (
-                      <AnimatedNodeDot key={`dot-${node.id}`} node={{...node, clusterIndex: idx}} stateRefs={stateRefs} rootCategories={rootNode.categories} />
+                      <AnimatedNodeDot key={`dot-${node.id}`} node={{ ...node, clusterIndex: idx }} stateRefs={stateRefs} rootCategories={rootNode.categories} />
                     ))}
                   </Svg>
                 </View>
                 <View style={{ marginTop: paddingBefore }} pointerEvents="box-none">
                   {clusterNotes.map((node: any, idx: number) => (
-                    <AnimatedNoteCard key={node.id} node={{...node, clusterIndex: idx, paddingBefore}} stateRefs={stateRefs} onExpandNode={setReadingNode} rootCategories={rootNode.categories} />
+                    <AnimatedNoteCard key={node.id} node={{ ...node, clusterIndex: idx, paddingBefore }} stateRefs={stateRefs} onExpandNode={setReadingNode} rootCategories={rootNode.categories} />
                   ))}
                 </View>
               </View>

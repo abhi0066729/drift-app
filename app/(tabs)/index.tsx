@@ -83,7 +83,8 @@ function processContextualConnections(notes: Note[], width: number) {
     const unfocusedY = 150 + i * 480 + (randY - 0.5) * 60; // Increased from 360 to 480 for overlap prevention
     const textTargetWidth = width * 0.55;
     // Increased horizontal offset from node to avoid overlap with node circles
-    const unfocusedTextLeft = isRight ? unfocusedX - textTargetWidth - 32 : unfocusedX + 40;
+    const PADDING = 70;
+    const unfocusedTextLeft = isRight ? unfocusedX - textTargetWidth - PADDING : unfocusedX + PADDING;
     const ageFade = Math.max(0.15, 1 - (i * 0.015));
     const importance = Math.min(1, note.content.length / 85);
     const nodeRadius = 3.5 + (importance * 4.5);
