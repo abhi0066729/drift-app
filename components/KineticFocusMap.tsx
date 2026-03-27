@@ -36,11 +36,11 @@ const CATEGORY_COLORS: Record<string, string> = {
   Synthesis: '#8E44AD'
 };
 
-function getTargetY(node: any, activeCluster: SharedValue<number>, activeNodeClusterIndex: SharedValue<number>, activeNodeOriginY: SharedValue<number>) {
+function getTargetY(node: any, activeCluster: SharedValue<number>, activeNodeOriginY: SharedValue<number>, _clusterMinY: SharedValue<number>) {
   'worklet';
   if (activeCluster.value !== -1) {
-    const offsetIndex = (node.clusterIndex ?? 0) - activeNodeClusterIndex.value;
-    return activeNodeOriginY.value + offsetIndex * 240;
+    const FIXED_GAP = 180; // Maximum density for visibility
+    return activeNodeOriginY.value + (node.clusterIndex ?? 0) * FIXED_GAP;
   }
   return node.unfocusedY;
 }
@@ -48,24 +48,19 @@ function getTargetY(node: any, activeCluster: SharedValue<number>, activeNodeClu
 function getTargetX(node: any, activeCluster: SharedValue<number>, activeNodeOriginX: SharedValue<number>) {
   'worklet';
   if (activeCluster.value !== -1) {
-    const baseAxisX = activeNodeOriginX.value;
-    const originalX = node.unfocusedX;
-    const idx = node.clusterIndex ?? 0;
-    // Premium Mathplot Wander: Increased amplitude (95) and complex frequencies
-    const wander1 = Math.sin(idx * 0.45) * 95;
-    const wander2 = Math.cos(idx * 1.7) * 35;
-    const wander3 = Math.sin(idx * 2.3) * 20;
-    const totalWander = wander1 + wander2 + wander3;
-    return baseAxisX + (originalX - baseAxisX) * 0.08 + totalWander;
+    const centerX = width / 2;
+    // Compress map's horizontal sprawl to 35% for a tight serpentine visual
+    const compressedX = centerX + (node.unfocusedX - centerX) * 0.35;
+    return compressedX;
   }
   return node.unfocusedX;
 }
 
 function AnimatedOverlayPath({ node, targetNode, stateRefs, rootCategories }: any) {
-  const { activeCluster, activeNodeClusterIndex, activeNodeOriginY, activeNodeOriginX } = stateRefs;
-  const sY = useDerivedValue(() => withSpring(getTargetY(node, activeCluster, activeNodeClusterIndex, activeNodeOriginY), SPRING_CONFIG));
+  const { activeCluster, activeNodeOriginY, activeNodeOriginX, clusterMinY } = stateRefs;
+  const sY = useDerivedValue(() => withSpring(getTargetY(node, activeCluster, activeNodeOriginY, clusterMinY), SPRING_CONFIG));
   const sX = useDerivedValue(() => withSpring(getTargetX(node, activeCluster, activeNodeOriginX), SPRING_CONFIG));
-  const eY = useDerivedValue(() => withSpring(getTargetY(targetNode, activeCluster, activeNodeClusterIndex, activeNodeOriginY), SPRING_CONFIG));
+  const eY = useDerivedValue(() => withSpring(getTargetY(targetNode, activeCluster, activeNodeOriginY, clusterMinY), SPRING_CONFIG));
   const eX = useDerivedValue(() => withSpring(getTargetX(targetNode, activeCluster, activeNodeOriginX), SPRING_CONFIG));
 
   const animatedProps = useAnimatedProps(() => {
@@ -73,19 +68,13 @@ function AnimatedOverlayPath({ node, targetNode, stateRefs, rootCategories }: an
     const commonCategory = node.categories.find((c: string) => targetNode.categories.includes(c));
     const strokeColor = activeCluster.value !== -1 ? focusColor : (commonCategory ? (CATEGORY_COLORS[commonCategory] || '#111111') : CATEGORY_COLORS.Synthesis);
     const thickness = node.importance * 1.5 + 0.5;
-    const idx = node.clusterIndex ?? 0;
     
-    // BEAUTY CURVES: Deeper tangents (240) + organic horizontal variance
-    const nudge = Math.sin(idx * 2.3) * 10;
-    const cpWander1 = Math.cos(idx * 1.5) * 35;
-    const cpWander2 = Math.sin(idx * 3.1) * 25;
-    
-    const cp1x = sX.value + nudge + cpWander1;
-    const cp2x = eX.value + nudge + cpWander2;
-    const tangent = 240;
+    // Elegant S-curves that mirror map style even at high density
+    const dy = Math.abs(eY.value - sY.value);
+    const tangent = Math.max(160, dy * 0.6); 
     
     return {
-      d: `M ${sX.value} ${sY.value} C ${cp1x} ${sY.value + tangent}, ${cp2x} ${eY.value - tangent}, ${eX.value} ${eY.value}`,
+      d: `M ${sX.value} ${sY.value} C ${sX.value} ${sY.value + tangent}, ${eX.value} ${eY.value - tangent}, ${eX.value} ${eY.value}`,
       stroke: strokeColor,
       strokeWidth: withTiming(thickness),
       opacity: withTiming(node.ageFade * 0.9),
@@ -95,9 +84,9 @@ function AnimatedOverlayPath({ node, targetNode, stateRefs, rootCategories }: an
 }
 
 function CategoryRing({ cat, idx, node, stateRefs }: any) {
-  const { activeCluster } = stateRefs;
-  const currentX = useDerivedValue(() => getTargetX(node, activeCluster, stateRefs.activeNodeOriginX));
-  const currentY = useDerivedValue(() => getTargetY(node, activeCluster, stateRefs.activeNodeClusterIndex, stateRefs.activeNodeOriginY));
+  const { activeCluster, activeNodeOriginY, activeNodeOriginX, clusterMinY } = stateRefs;
+  const currentX = useDerivedValue(() => getTargetX(node, activeCluster, activeNodeOriginX));
+  const currentY = useDerivedValue(() => getTargetY(node, activeCluster, activeNodeOriginY, clusterMinY));
   const animatedProps = useAnimatedProps(() => {
     const isHybrid = node.categories.length > 1;
     const isFocused = activeCluster.value !== -1;
@@ -115,8 +104,8 @@ function CategoryRing({ cat, idx, node, stateRefs }: any) {
 }
 
 function AnimatedNodeDot({ node, stateRefs, rootCategories }: any) {
-  const { activeCluster, activeNodeClusterIndex, activeNodeOriginY, activeNodeOriginX } = stateRefs;
-  const currentY = useDerivedValue(() => getTargetY(node, activeCluster, activeNodeClusterIndex, activeNodeOriginY));
+  const { activeCluster, activeNodeOriginY, activeNodeOriginX, clusterMinY } = stateRefs;
+  const currentY = useDerivedValue(() => getTargetY(node, activeCluster, activeNodeOriginY, clusterMinY));
   const currentX = useDerivedValue(() => getTargetX(node, activeCluster, activeNodeOriginX));
   const animatedPropsCore = useAnimatedProps(() => {
     const focusColor = rootCategories && rootCategories.length > 0 ? (CATEGORY_COLORS[rootCategories[0]] || '#111111') : '#111111';
@@ -138,9 +127,9 @@ function AnimatedNodeDot({ node, stateRefs, rootCategories }: any) {
 }
 
 function AnimatedNoteCard({ node, stateRefs, onExpandNode, rootCategories }: any) {
-  const { activeCluster, activeNodeClusterIndex, activeNodeOriginY, activeNodeOriginX } = stateRefs;
+  const { activeCluster, activeNodeOriginY, activeNodeOriginX, clusterMinY } = stateRefs;
   const textWidth = width * 0.55;
-  const currentY = useDerivedValue(() => getTargetY(node, activeCluster, activeNodeClusterIndex, activeNodeOriginY));
+  const currentY = useDerivedValue(() => getTargetY(node, activeCluster, activeNodeOriginY, clusterMinY));
   const currentX = useDerivedValue(() => getTargetX(node, activeCluster, activeNodeOriginX));
   const textLeft = useDerivedValue(() => {
     if (activeCluster.value !== -1) {
@@ -150,8 +139,8 @@ function AnimatedNoteCard({ node, stateRefs, onExpandNode, rootCategories }: any
       const canFitLeft = leftSpace >= textWidth;
       const canFitRight = rightSpace >= textWidth;
       
-      // BALANCED RANDOMIZED LAYOUT: Alternate sides by default (idx % 2)
-      let placeRight = (node.clusterIndex % 2 === 0);
+      // Mirror the map screen's side preference
+      let placeRight = node.isRight; 
       
       if (placeRight && !canFitRight && canFitLeft) placeRight = false;
       else if (!placeRight && !canFitLeft && canFitRight) placeRight = true;
@@ -161,7 +150,7 @@ function AnimatedNoteCard({ node, stateRefs, onExpandNode, rootCategories }: any
     return node.unfocusedTextLeft;
   });
   const animatedStyle = useAnimatedStyle(() => ({
-    top: withSpring(currentY.value - node.paddingBefore - 44, SPRING_CONFIG),
+    top: withSpring(currentY.value - node.paddingBefore - 34, SPRING_CONFIG),
     paddingLeft: withSpring(textLeft.value, SPRING_CONFIG),
     opacity: node.ageFade,
   }));
@@ -176,7 +165,7 @@ function AnimatedNoteCard({ node, stateRefs, onExpandNode, rootCategories }: any
     <Animated.View pointerEvents="box-none" style={[{ position: 'absolute', width: '100%', zIndex: 2 }, animatedStyle]}>
       <GestureDetector gesture={tap}>
         <Animated.View style={[{ width: textWidth, alignSelf: 'flex-start' }]}>
-          <View style={[{ paddingTop: 30, paddingBottom: 30, justifyContent: 'center' }]}>
+          <View style={[{ paddingTop: 20, paddingBottom: 20, justifyContent: 'center' }]}>
             <View style={{ flexDirection: 'row', gap: 6, marginBottom: 6 }}>
               {node.categories.map((cat: string) => {
                 const isMain = rootCategories.includes(cat);
@@ -245,17 +234,34 @@ export default function KineticFocusMap({ rootNode, mappedNotes, onClose }: any)
     return rootCats.length === 1 ? nodeCats.includes(rootCats[0]) : rootCats.every((c: string) => nodeCats.includes(c));
   });
   
-  const paddingBefore = height * 0.35; 
-  const localTotalHeight = paddingBefore + clusterNotes.length * 240 + height * 0.5;
+  const paddingBefore = height * 0.35;
+  const FIXED_GAP = 180;
+  const localTotalHeight = paddingBefore + clusterNotes.length * FIXED_GAP + height * 0.5;
+
   const isRight = rootNode.isRight;
   const focusAxisX = isRight ? width - 60 : 60;
-  const stateRefs = { activeCluster: useSharedValue(1), activeNodeClusterIndex: useSharedValue(0), activeNodeOriginY: useSharedValue(0), activeNodeOriginX: useSharedValue(focusAxisX) };
+  
+  const stateRefs = { 
+    activeCluster: useSharedValue(1), 
+    activeNodeOriginY: useSharedValue(paddingBefore), 
+    activeNodeOriginX: useSharedValue(focusAxisX),
+    clusterMinY: useSharedValue(0)
+  };
 
   useEffect(() => {
+    const FIXED_GAP = 180;
     const rootIdx = clusterNotes.findIndex((c: any) => c.id === rootNode.id);
     const safeIdx = rootIdx > -1 ? rootIdx : 0;
-    scrollRef.current?.scrollTo({ y: safeIdx * 240, animated: false });
-    requestAnimationFrame(() => { stateRefs.activeNodeOriginY.value = paddingBefore + safeIdx * 240; stateRefs.activeNodeOriginX.value = focusAxisX; stateRefs.activeCluster.value = 1; stateRefs.activeNodeClusterIndex.value = safeIdx; });
+    
+    // Scroll so the root node is roughly at paddingBefore position
+    scrollRef.current?.scrollTo({ y: safeIdx * FIXED_GAP, animated: false });
+    
+    requestAnimationFrame(() => { 
+      stateRefs.activeNodeOriginY.value = paddingBefore; 
+      stateRefs.activeNodeOriginX.value = focusAxisX; 
+      stateRefs.activeCluster.value = 1; 
+      stateRefs.clusterMinY.value = 0; 
+    });
   }, [rootNode.id]);
 
   const scrollHandler = useAnimatedScrollHandler({ onScroll: (event) => { scrollY.value = event.contentOffset.y; } });
