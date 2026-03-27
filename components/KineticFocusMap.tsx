@@ -51,9 +51,10 @@ function getTargetX(node: any, activeCluster: SharedValue<number>, activeNodeOri
     const baseAxisX = activeNodeOriginX.value;
     const originalX = node.unfocusedX;
     const idx = node.clusterIndex ?? 0;
-    const wander1 = Math.sin(idx * 0.45) * 80;
-    const wander2 = Math.cos(idx * 1.7) * 25;
-    const wander3 = Math.sin(idx * 2.3) * 15;
+    // Premium Mathplot Wander: Increased amplitude (95) and complex frequencies
+    const wander1 = Math.sin(idx * 0.45) * 95;
+    const wander2 = Math.cos(idx * 1.7) * 35;
+    const wander3 = Math.sin(idx * 2.3) * 20;
     const totalWander = wander1 + wander2 + wander3;
     return baseAxisX + (originalX - baseAxisX) * 0.08 + totalWander;
   }
@@ -72,10 +73,17 @@ function AnimatedOverlayPath({ node, targetNode, stateRefs, rootCategories }: an
     const commonCategory = node.categories.find((c: string) => targetNode.categories.includes(c));
     const strokeColor = activeCluster.value !== -1 ? focusColor : (commonCategory ? (CATEGORY_COLORS[commonCategory] || '#111111') : CATEGORY_COLORS.Synthesis);
     const thickness = node.importance * 1.5 + 0.5;
-    const nudge = Math.sin((node.clusterIndex ?? 0) * 2.3) * 10;
-    const cp1x = sX.value + nudge;
-    const cp2x = eX.value + nudge;
-    const tangent = 180;
+    const idx = node.clusterIndex ?? 0;
+    
+    // BEAUTY CURVES: Deeper tangents (240) + organic horizontal variance
+    const nudge = Math.sin(idx * 2.3) * 10;
+    const cpWander1 = Math.cos(idx * 1.5) * 35;
+    const cpWander2 = Math.sin(idx * 3.1) * 25;
+    
+    const cp1x = sX.value + nudge + cpWander1;
+    const cp2x = eX.value + nudge + cpWander2;
+    const tangent = 240;
+    
     return {
       d: `M ${sX.value} ${sY.value} C ${cp1x} ${sY.value + tangent}, ${cp2x} ${eY.value - tangent}, ${eX.value} ${eY.value}`,
       stroke: strokeColor,
@@ -141,7 +149,10 @@ function AnimatedNoteCard({ node, stateRefs, onExpandNode, rootCategories }: any
       const rightSpace = width - axisX - 40;
       const canFitLeft = leftSpace >= textWidth;
       const canFitRight = rightSpace >= textWidth;
-      let placeRight = node.isRight;
+      
+      // BALANCED RANDOMIZED LAYOUT: Alternate sides by default (idx % 2)
+      let placeRight = (node.clusterIndex % 2 === 0);
+      
       if (placeRight && !canFitRight && canFitLeft) placeRight = false;
       else if (!placeRight && !canFitLeft && canFitRight) placeRight = true;
       if (placeRight) return Math.min(axisX + 40, width - textWidth - 20);
