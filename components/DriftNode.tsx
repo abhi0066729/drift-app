@@ -17,6 +17,8 @@ export default function DriftNode({ node, onPress, activeView }: DriftNodeProps)
   // Reanimated pulse for ghost nodes
   const pulseScale = useSharedValue(1);
   const pulseOpacity = useSharedValue(0.6);
+  const outerPulseScale = useSharedValue(1);
+  const outerPulseOpacity = useSharedValue(0.1);
   
   useEffect(() => {
     if (node.is_ghost) {
@@ -28,15 +30,44 @@ export default function DriftNode({ node, onPress, activeView }: DriftNodeProps)
         withTiming(0, { duration: 1500, easing: Easing.out(Easing.ease) }),
         -1, false
       );
+      outerPulseScale.value = withRepeat(
+        withTiming(3.0, { duration: 2000, easing: Easing.out(Easing.ease) }),
+        -1, false
+      );
+      outerPulseOpacity.value = withRepeat(
+        withTiming(0, { duration: 2000, easing: Easing.out(Easing.ease) }),
+        -1, false
+      );
     } else {
-      pulseScale.value = 1;
-      pulseOpacity.value = 0;
+      // Subtle 'Breathing' pulse for real notes to show clickability
+      pulseScale.value = withRepeat(
+        withTiming(1.3, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
+        -1, true
+      );
+      pulseOpacity.value = withRepeat(
+        withTiming(0.2, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
+        -1, true
+      );
+      // Secondary outer orbit
+      outerPulseScale.value = withRepeat(
+        withTiming(1.8, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
+        -1, true
+      );
+      outerPulseOpacity.value = withRepeat(
+        withTiming(0.05, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
+        -1, true
+      );
     }
   }, [node.is_ghost]);
 
   const pulseStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pulseScale.value }],
     opacity: pulseOpacity.value,
+  }));
+
+  const outerPulseStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: outerPulseScale.value }],
+    opacity: outerPulseOpacity.value,
   }));
 
   // Horizon Math
@@ -62,9 +93,8 @@ export default function DriftNode({ node, onPress, activeView }: DriftNodeProps)
         activeOpacity={1}
         onPress={handlePress}
       >
-        {node.is_ghost && (
-          <Animated.View style={[{ position: 'absolute', width: node.nodeRadius * 2, height: node.nodeRadius * 2, borderRadius: node.nodeRadius, backgroundColor: color }, pulseStyle]} />
-        )}
+        <Animated.View style={[{ position: 'absolute', width: node.nodeRadius * 2, height: node.nodeRadius * 2, borderRadius: node.nodeRadius, backgroundColor: color }, outerPulseStyle]} />
+        <Animated.View style={[{ position: 'absolute', width: node.nodeRadius * 2, height: node.nodeRadius * 2, borderRadius: node.nodeRadius, backgroundColor: color }, pulseStyle]} />
         <View pointerEvents="none" style={{ width: node.nodeRadius * 2, height: node.nodeRadius * 2, borderRadius: node.nodeRadius, backgroundColor: color, opacity: node.is_refining ? 0.3 : node.ageFade + 0.2 }} />
         {node.is_refining && (
           <View style={{ position: 'absolute', width: node.nodeRadius * 4, height: node.nodeRadius * 4, borderRadius: node.nodeRadius * 2, borderWidth: 1, borderColor: color, opacity: 0.5 }} />

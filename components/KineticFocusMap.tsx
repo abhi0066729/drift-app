@@ -17,8 +17,11 @@ import Animated, {
   useAnimatedStyle,
   useDerivedValue,
   useSharedValue,
+  withRepeat,
+  withSequence,
   withSpring,
-  withTiming
+  withTiming,
+  Easing
 } from 'react-native-reanimated';
 import Svg, { Circle, Path } from 'react-native-svg';
 
@@ -36,6 +39,64 @@ const CATEGORY_COLORS: Record<string, string> = {
   Study: '#5B8C5A',
   Synthesis: '#8E44AD'
 };
+
+function ScrubHint({ axisX }: { axisX: number }) {
+  const translateY = useSharedValue(0);
+  const opacity = useSharedValue(0);
+  const scale = useSharedValue(1.5); // Start slightly larger to show 'hover'
+  const fingerScale = useSharedValue(1);
+
+  useEffect(() => {
+    // Initial Fade In
+    opacity.value = withTiming(1, { duration: 800 });
+
+    // Sequence: Wait -> PRESS DOWN -> Wait 250ms -> Move Up -> Move Down -> Fade Out
+    fingerScale.value = withSequence(
+      withTiming(1, { duration: 1000 }), // Wait
+      withTiming(0.7, { duration: 250 }), // PRESS DOWN (Simulates hold activation)
+      withTiming(0.7, { duration: 2400 }), // Keep pressed during travel
+      withTiming(1, { duration: 400 })    // Release
+    );
+
+    translateY.value = withSequence(
+      withTiming(0, { duration: 1250 }), // Wait for press
+      withTiming(-120, { duration: 1200, easing: Easing.inOut(Easing.quad) }), // Scrub Up
+      withTiming(120, { duration: 1200, easing: Easing.inOut(Easing.quad) }),  // Scrub Down
+      withTiming(0, { duration: 800, easing: Easing.inOut(Easing.quad) })     // Return
+    );
+
+    // Final Fade Out
+    const timeout = setTimeout(() => {
+      opacity.value = withTiming(0, { duration: 1000 });
+    }, 5500);
+
+    return () => clearTimeout(timeout);
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }, { scale: fingerScale.value }],
+    opacity: opacity.value,
+  }));
+
+  return (
+    <Animated.View pointerEvents="none" style={[{ position: 'absolute', left: axisX - 30, top: height / 2 - 30, width: 60, height: 60, borderRadius: 30, backgroundColor: 'rgba(142, 68, 173, 0.1)', borderWidth: 1, borderColor: 'rgba(142, 68, 173, 0.3)', justifyContent: 'center', alignItems: 'center', zIndex: 100 }, animatedStyle]}>
+      {/* Visual Arrows */}
+      <View style={{ position: 'absolute', top: -30, width: 20, height: 20, alignItems: 'center' }}>
+        <Svg width="14" height="10" viewBox="0 0 14 10">
+          <Path d="M 1 9 L 7 1 L 13 9" stroke="#8E44AD" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        </Svg>
+      </View>
+      <View style={{ position: 'absolute', bottom: -30, width: 20, height: 20, alignItems: 'center' }}>
+        <Svg width="14" height="10" viewBox="0 0 14 10">
+          <Path d="M 1 1 L 7 9 L 13 1" stroke="#8E44AD" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        </Svg>
+      </View>
+      
+      {/* Inner 'Press' dot */}
+      <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: '#8E44AD' }} />
+    </Animated.View>
+  );
+}
 
 function getTargetY(node: any, activeCluster: SharedValue<number>, activeNodeOriginY: SharedValue<number>, _clusterMinY: SharedValue<number>) {
   'worklet';
@@ -305,6 +366,10 @@ export default function KineticFocusMap({ rootNode, mappedNotes, onClose }: any)
                 </View>
               </View>
             </Animated.ScrollView>
+            
+            {/* Visual Scrubbing Hint Overlay */}
+            <ScrubHint key={rootNode.id} axisX={focusAxisX} />
+            
             <Animated.View pointerEvents="none" style={{ position: 'absolute', top: 0, bottom: 0, left: focusAxisX - 80, width: 160, zIndex: 3 }} />
           </View>
         </GestureDetector>
