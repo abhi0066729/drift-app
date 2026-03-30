@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Dimensions, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
+import { Dimensions, StyleSheet, Text, View, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNotesStore } from '@/store/useNotesStore';
 import KineticFocusMap from '@/components/KineticFocusMap';
@@ -18,16 +18,31 @@ export default function HomeScreen() {
   const [activeView, setActiveView] = useState<'chronos' | 'nexus'>('chronos');
   const [focusRootNode, setFocusRootNode] = useState<any>(null);
   const [expandedGhostId, setExpandedGhostId] = useState<string | null>(null);
+  
+  // Developer Testing State
+  const [forceSandbox, setForceSandbox] = useState(false);
+  const lastTap = useRef<number>(0);
 
   // Core Routing Logic: Sandbox or Production
-  const isSandbox = notes.length < 5;
+  const isSandbox = (notes.length < 5) || forceSandbox;
 
   const displayNotes = useMemo(() => {
-    return isSandbox ? [...notes, ...generateFullGhostPool(5)] : notes;
+    // If in sandbox (manual or organic), show ONLY the tutorial pool for a clean recording
+    if (isSandbox) return generateFullGhostPool(15);
+    return notes;
   }, [notes, isSandbox]);
   
   const mappedNotes = useMemo(() => processContextualConnections(displayNotes, width), [displayNotes]);
   const totalHeight = mappedNotes.length > 0 ? mappedNotes[mappedNotes.length - 1].unfocusedY + 500 : height;
+
+  const handleDevGesture = () => {
+    const now = Date.now();
+    if (now - lastTap.current < 300) {
+      // Double Tap detected -> EXIT Sandbox
+      setForceSandbox(false);
+    }
+    lastTap.current = now;
+  };
 
   const handleNodePress = (node: any) => {
     if (node.is_ghost) {
@@ -41,7 +56,6 @@ export default function HomeScreen() {
 
   useEffect(() => {
     // TEMPORARY: Automatic seed 20 notes for testing. 
-    // Delete this when the user is done recording navigation GIFs.
     if (notes.length < 20) {
       setNotes(generateMockUserNotes());
     }
@@ -53,7 +67,15 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <View style={styles.headerText}>
           <Text style={styles.title}>Drift Map</Text>
-          <Text style={styles.subtitle}>Kinetic Semantic Synthesis</Text>
+          <Pressable 
+            onLongPress={() => setForceSandbox(true)} 
+            onPress={handleDevGesture}
+            delayLongPress={800}
+          >
+            <Text style={styles.subtitle}>
+              {forceSandbox ? 'DEVELOPER: GHOST MODE ACTIVE' : 'Kinetic Semantic Synthesis'}
+            </Text>
+          </Pressable>
         </View>
         <View style={styles.toggleContainer}>
           <ChronosNexusToggle activeView={activeView} onToggle={setActiveView} />

@@ -1,40 +1,30 @@
 import { Note } from '@/store/useNotesStore';
 
-export function generateFullGhostPool(limit: number = 5): Note[] {
+export function generateFullGhostPool(limit: number = 15): Note[] {
+  // Ordered by narrative priority: Welcome -> Core UI -> Navigation -> AI/Advanced
   const pool = [
-    { id: 'ghost-1', category: 'Welcome to Drift', content: "Welcome to Drift. Just type to capture your thoughts. Drift's engine handles live categorization automatically in the background.", img: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop' },
-    { id: 'ghost-2', category: 'Timeline Filters', content: "Tap the Chronos or Nexus toggles at the top of the map to instantly switch your view. Chronos organizes by date, and Nexus organizes by contextual priority.", img: null },
+    { id: 'ghost-1', category: 'Welcome to Drift', content: "Welcome to Drift. Just type to capture your thoughts. Drift's engine handles live categorization automatically in the background.", img: null },
+    { id: 'ghost-2', category: 'Timeline Filters', content: "Tap the Chronos or Nexus toggles at the top of the map to instantly switch your view. Chronos organizes by date, and Nexus organizes by contextual priority.", img: 'chronos_nexus_toggle.gif' },
     { id: 'ghost-3', category: 'Focus Mode', content: "Tap any pulsing node to dive into Focus Mode. The application will instantly isolate the active thread so you can read related notes smoothly.", img: null },
-    { id: 'ghost-4', category: 'Rich Media', content: "The fast-capture lens is below. You can drop rich photos directly into your thoughts, and the system will attach them to your ideas.", img: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=2000&auto=format&fit=crop' },
-    { id: 'ghost-5', category: 'Sandbox Limit', content: "These instructional ghost notes will disappear automatically as soon as you capture your first 5 real thoughts in the app.", img: null },
+    { id: 'ghost-7', category: 'Quick Navigation', content: "Use the bottom navigation bar to rapidly jump between the Home Map, the Capture Lens, and the detailed Notes List view.", img: 'bottom_tab_physics.gif' },
+    { id: 'ghost-9', category: 'Invisible Scrubbing', content: "Inside Focus Mode, touch anywhere and drag your finger up and down to quickly scrub through highly dense note clusters.", img: 'focus_mode_scrub.gif' },
+    { id: 'ghost-4', category: 'Rich Media', content: "The fast-capture lens is below. You can drop rich photos directly into your thoughts, and the system will attach them to your ideas.", img: 'capture_flow.gif' },
     { id: 'ghost-6', category: 'Note Linking', content: "Drift maps the relationship between your notes. The lines connecting dots physically represent deep semantic matches between disjointed thoughts.", img: null },
-    { id: 'ghost-7', category: 'Quick Navigation', content: "Use the bottom navigation bar to rapidly jump between the Home Map, the Capture Lens, and the detailed Notes List view.", img: null },
-    { id: 'ghost-8', category: 'Background AI', content: "Drift uses an advanced internal language processing agent to autonomously analyze and structure the context of everything you write.", img: null },
-    { id: 'ghost-9', category: 'Invisible Scrubbing', content: "Inside Focus Mode, touch anywhere and drag your finger up and down to quickly scrub through highly dense note clusters.", img: null },
-    { id: 'ghost-10', category: 'Task Extraction', content: "If you capture a thought regarding something you need to do, the engine immediately reads the context and structures it into a formal Todo note.", img: 'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=2000&auto=format&fit=crop' },
-    { id: 'ghost-11', category: 'Voice Synthesis', content: "Audio tools are natively integrated. You can capture voice memos directly and the system transcribes them while maintaining context.", img: null },
+    { id: 'ghost-10', category: 'Task Extraction', content: "If you capture a thought regarding something you need to do, the engine immediately reads the context and structures it into a formal Todo note.", img: null },
     { id: 'ghost-12', category: 'Offline Engine', content: "Drift is entirely offline-first. It works instantly without an internet connection, and the AI agent syncs structure the moment you reconnect.", img: null },
     { id: 'ghost-13', category: 'Zero Hierarchies', content: "There are no folders to manage and no tags to assign. You just capture the raw thought, and Drift constructs the organizational map.", img: null },
     { id: 'ghost-14', category: 'Idea Clustering', content: "If you regularly write notes about the exact same topic, the engine dynamically pulls them into a massive visual cluster for easy review.", img: null },
     { id: 'ghost-15', category: 'Data Ownership', content: "Your thoughts are your own. You can completely export your encrypted local SQLite database at any time straight from settings.", img: null },
-    { id: 'ghost-16', category: 'Quick Edit', content: "While inside the Focus Mode reading layer, you can tap on any specific paragraph to instantly modify or refine your text.", img: null },
-    { id: 'ghost-17', category: 'Cross-Concept Matches', content: "A single note can exist across multiple categories simultaneously if your thought possesses hybrid relevance.", img: null },
     { id: 'ghost-18', category: 'Instant Commits', content: "The moment you tap 'Commit', the text is saved locally in milliseconds, bypassing traditional loading screens entirely.", img: null },
     { id: 'ghost-19', category: 'Journal Workflow', content: "Starting a sentence with basic pronouns like 'I' or 'My' automatically routes your thought directly into the chronological Journal track.", img: null },
     { id: 'ghost-20', category: 'Endless Scrolling', content: "The Map view is endless. Scroll downwards to travel backward in time through your entire captured history.", img: null }
   ];
 
-  // Shuffle array using Fisher-Yates
-  for (let i = pool.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [pool[i], pool[j]] = [pool[j], pool[i]];
-  }
-  
-  // Pick exact limit
+  // Map to full Note objects with decreasing timestamps (recent first)
   return pool.slice(0, limit).map((item, idx) => ({
     id: item.id,
     content: item.content,
-    created_at: Date.now() - (idx * 15000),
+    created_at: Date.now() - (idx * 600000), // Spaced by 10 minutes to ensure clear separation
     source_type: 'text',
     images: item.img ? [item.img] : [],
     entities_json: JSON.stringify({ category: item.category }),
