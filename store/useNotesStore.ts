@@ -9,6 +9,9 @@ export type Note = {
   audio_url?: string;
   is_deleted?: number;
   entities_json?: string;
+  is_refining?: boolean;
+  images?: string[];
+  is_ghost?: boolean;
 };
 
 interface NotesState {

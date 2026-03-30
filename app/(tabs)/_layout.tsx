@@ -7,20 +7,14 @@ const INK_3 = '#7a756b';
 const ACCENT = '#c45c2a';
 const BORDER = 'rgba(26,24,20,0.12)';
 
+import KineticTabBar from '@/components/KineticTabBar';
+
 export default function TabLayout() {
   return (
     <Tabs
+      tabBar={(props) => <KineticTabBar {...props} />}
       screenOptions={{
         headerShown: false,
-        tabBarStyle: {
-          backgroundColor: PAPER,
-          borderTopColor: BORDER,
-          elevation: 0,
-          shadowOpacity: 0,
-        },
-        tabBarActiveTintColor: ACCENT,
-        tabBarInactiveTintColor: INK_3,
-        tabBarShowLabel: false,
       }}>
       <Tabs.Screen
         name="index"

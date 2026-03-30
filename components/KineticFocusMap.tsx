@@ -3,6 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Dimensions, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image } from 'expo-image';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
   FadeIn,
@@ -77,7 +78,7 @@ function AnimatedOverlayPath({ node, targetNode, stateRefs, rootCategories }: an
       d: `M ${sX.value} ${sY.value} C ${sX.value} ${sY.value + tangent}, ${eX.value} ${eY.value - tangent}, ${eX.value} ${eY.value}`,
       stroke: strokeColor,
       strokeWidth: withTiming(thickness),
-      opacity: withTiming(node.ageFade * 0.9),
+      opacity: withTiming(node.ageFade * 0.4),
     };
   });
   return <AnimatedPath fill="none" animatedProps={animatedProps} />;
@@ -128,44 +129,49 @@ function AnimatedNodeDot({ node, stateRefs, rootCategories }: any) {
 
 function AnimatedNoteCard({ node, stateRefs, onExpandNode, rootCategories }: any) {
   const { activeCluster, activeNodeOriginY, activeNodeOriginX, clusterMinY } = stateRefs;
-  const textWidth = width * 0.55;
   const currentY = useDerivedValue(() => getTargetY(node, activeCluster, activeNodeOriginY, clusterMinY));
   const currentX = useDerivedValue(() => getTargetX(node, activeCluster, activeNodeOriginX));
-  const textLeft = useDerivedValue(() => {
-    if (activeCluster.value !== -1) {
-      const axisX = currentX.value;
-      const PADDING = 70; // Increased to clear large node rings
-      const leftSpace = axisX - PADDING;
-      const rightSpace = width - axisX - PADDING;
-      const canFitLeft = leftSpace >= textWidth;
-      const canFitRight = rightSpace >= textWidth;
-      
-      // Mirror the map screen's side preference
-      let placeRight = node.isRight; 
-      
-      if (placeRight && !canFitRight && canFitLeft) placeRight = false;
-      else if (!placeRight && !canFitLeft && canFitRight) placeRight = true;
-      if (placeRight) return Math.min(axisX + PADDING, width - textWidth - 20);
-      return Math.max(axisX - textWidth - PADDING, 20);
-    }
-    return node.unfocusedTextLeft;
+  
+  // DYNAMIC SAFE WIDTH: Shrink width to fit available space without overlapping rings or leaving screen
+  const cardLayout = useDerivedValue(() => {
+    if (activeCluster.value === -1) return { left: node.unfocusedTextLeft, width: width * 0.55 };
+    
+    const axisX = currentX.value;
+    const PADDING = 60; // Safe clearance for rings
+    const margin = 20;
+    
+    const rightSpace = width - axisX - PADDING - margin;
+    const leftSpace = axisX - PADDING - margin;
+    
+    let placeRight = node.isRight;
+    if (placeRight && rightSpace < 120 && leftSpace > rightSpace) placeRight = false;
+    else if (!placeRight && leftSpace < 120 && rightSpace > leftSpace) placeRight = true;
+    
+    const available = placeRight ? rightSpace : leftSpace;
+    const finalWidth = Math.max(140, Math.min(width * 0.52, available));
+    const left = placeRight ? axisX + PADDING : axisX - PADDING - finalWidth;
+    
+    return { left, width: finalWidth };
   });
+
   const animatedStyle = useAnimatedStyle(() => ({
-    top: withSpring(currentY.value - node.paddingBefore - 34, SPRING_CONFIG),
-    paddingLeft: withSpring(textLeft.value, SPRING_CONFIG),
+    top: withSpring(currentY.value - node.paddingBefore - 44, SPRING_CONFIG),
+    left: withSpring(cardLayout.value.left, SPRING_CONFIG),
+    width: withSpring(cardLayout.value.width, SPRING_CONFIG),
     opacity: node.ageFade,
   }));
   const tap = Gesture.Tap().onEnd(() => { 'worklet'; runOnJS(onExpandNode)(node); });
   const displayLines = useMemo(() => {
     let hash = 0;
     for (let j = 0; j < node.id.length; j++) hash = node.id.charCodeAt(j) + ((hash << 5) - hash);
+    // Standard growth (2-5 lines)
     return 2 + (Math.abs(hash) % 4);
   }, [node.id]);
 
   return (
-    <Animated.View pointerEvents="box-none" style={[{ position: 'absolute', width: '100%', zIndex: 2 }, animatedStyle]}>
+    <Animated.View pointerEvents="box-none" style={[{ position: 'absolute', zIndex: 2 }, animatedStyle]}>
       <GestureDetector gesture={tap}>
-        <Animated.View style={[{ width: textWidth, alignSelf: 'flex-start' }]}>
+        <Animated.View>
           <View style={[{ paddingTop: 20, paddingBottom: 20, justifyContent: 'center' }]}>
             <View style={{ flexDirection: 'row', gap: 6, marginBottom: 6 }}>
               {node.categories.map((cat: string) => {
@@ -176,7 +182,7 @@ function AnimatedNoteCard({ node, stateRefs, onExpandNode, rootCategories }: any
               })}
             </View>
             <View style={{ height: 28 * displayLines, overflow: 'hidden' }}>
-              <Text style={styles.noteContent}>{node.content}</Text>
+              <Text numberOfLines={displayLines} style={styles.noteContent}>{node.content}</Text>
               {node.content.length > 50 && (
                 <LinearGradient
                   colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.6)', 'rgba(255,255,255,1)']}
@@ -184,6 +190,9 @@ function AnimatedNoteCard({ node, stateRefs, onExpandNode, rootCategories }: any
                 />
               )}
             </View>
+            {node.images && node.images.length > 0 && (
+              <Image source={{ uri: node.images[0] }} style={{ width: '100%', height: 120, borderRadius: 12, marginTop: 12 }} transition={200} contentFit="cover" />
+            )}
           </View>
         </Animated.View>
       </GestureDetector>
@@ -304,7 +313,12 @@ export default function KineticFocusMap({ rootNode, mappedNotes, onClose }: any)
             <GestureDetector gesture={closeReadingNodeTap}><Animated.View style={StyleSheet.absoluteFill} /></GestureDetector>
             <View pointerEvents="box-none" style={{ width: '85%', maxHeight: '70%', padding: 36, backgroundColor: '#FFFFFF', borderRadius: 16, shadowColor: '#000000', shadowOpacity: 0.08, shadowRadius: 30, elevation: 10 }}>
               <Text style={[styles.noteCategory, { color: CATEGORY_COLORS[readingNode.categories[0]] || '#BBBBBB', marginBottom: 12 }]}>{readingNode.categories.join(' + ')} — SYNTHESIS</Text>
-              <ScrollView showsVerticalScrollIndicator={false}><Text style={[styles.noteContent, { fontSize: 24, lineHeight: 36 }]}>{readingNode.content}</Text></ScrollView>
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {readingNode.images && readingNode.images.length > 0 && (
+                  <Image source={{ uri: readingNode.images[0] }} style={{ width: '100%', height: 200, borderRadius: 12, marginBottom: 16 }} transition={200} contentFit="cover" />
+                )}
+                <Text style={[styles.noteContent, { fontSize: 24, lineHeight: 36 }]}>{readingNode.content}</Text>
+              </ScrollView>
             </View>
           </Animated.View>
         )}

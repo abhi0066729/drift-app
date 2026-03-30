@@ -1,37 +1,75 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNotesStore } from '@/store/useNotesStore';
 import * as Crypto from 'expo-crypto';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import Animated, { FadeInDown, useAnimatedStyle, withTiming } from 'react-native-reanimated';
+import { extractRealtime, extractDeep, NoteCategory } from '@/services/ai';
 
-type NoteType = 'Idea' | 'Todo' | 'Journal' | 'Study';
-
-function predictCategory(text: string): NoteType {
-  const low = text.toLowerCase();
-  if (/\b(buy|do|call|send|need|must|finish|task|at|o'clock|meeting)\b/.test(low)) return 'Todo';
-  if (/^(\[ \]|- \[ \])/.test(low)) return 'Todo';
-  if (/\b(felt|feeling|today|was|morning|evening|night|thought|i am|actually)\b/.test(low)) return 'Journal';
-  if (low.length > 100 && /\b(i|me|my)\b/.test(low)) return 'Journal';
-  if (/\b(research|learn|article|book|theory|fact|note)\b/.test(low)) return 'Study';
-  return 'Idea';
-}
-
-const CATEGORY_COLORS: Record<NoteType, string> = {
-  Idea: '#111111',
-  Todo: '#C45C2A',
+const CATEGORY_COLORS: Record<NoteCategory, string> = {
   Journal: '#4A6FA5',
   Study: '#5B8C5A',
+  Idea: '#111111',
+  Todo: '#C45C2A',
+  Dream: '#704A81',
+  Research: '#3E5C76',
+  Quote: '#D4AF37',
+  Meeting: '#5A5A5A',
+  Reflection: '#808080',
+  Creative: '#E74C3C',
 };
+
+// LOCAL QUICK-HINT (Zero Latency)
+function predictLocal(text: string): NoteCategory | null {
+  const low = text.toLowerCase().trim();
+  if (low.startsWith('- [ ]') || low.startsWith('[]') || low.startsWith('v ') || low.startsWith('check ')) return 'Todo';
+  if (low.startsWith('idea:') || low.startsWith('bulb:')) return 'Idea';
+  if (low.startsWith('dream:') || low.startsWith('last night')) return 'Dream';
+  if (low.startsWith('study:') || low.startsWith('research:')) return 'Study';
+  if (low === 'i' || low === 'my' || low === 'today') return 'Journal';
+  return null;
+}
 
 export default function CaptureScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [inputText, setInputText] = useState('');
+  const [predictedCategory, setPredictedCategory] = useState<NoteCategory>('Journal');
+  const [emotionHint, setEmotionHint] = useState('');
+  const [isTypingSync, setIsTypingSync] = useState(false);
+  
   const addNote = useNotesStore(state => state.addNote);
+  const updateNote = useNotesStore(state => state.updateNote);
 
-  const predictedCategory = useMemo(() => predictCategory(inputText), [inputText]);
+  // REAL-TIME DEBOUNCED AI (Fast 3B Model)
+  useEffect(() => {
+    // 1. INSTANT LOCAL HINT
+    const local = predictLocal(inputText);
+    if (local) {
+      setPredictedCategory(local);
+    }
+
+    // 2. DEBOUNCED AI HINT
+    if (inputText.length < 3) return;
+    
+    const timeoutId = setTimeout(async () => {
+      setIsTypingSync(true);
+      try {
+        const result = await extractRealtime(inputText);
+        if (result && result.category) {
+          setPredictedCategory(result.category);
+          setEmotionHint(result.emotion);
+        }
+      } catch (err) {
+        console.warn('Realtime prediction failed:', err);
+      }
+      setIsTypingSync(false);
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [inputText]);
+
   const ribbonColor = CATEGORY_COLORS[predictedCategory];
 
   const ribbonStyle = useAnimatedStyle(() => ({
@@ -39,19 +77,59 @@ export default function CaptureScreen() {
     backgroundColor: ribbonColor,
   }));
 
-  const handleCapture = () => {
+  const inputRef = React.useRef<TextInput>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      // Ensure keyboard is dismissed and input is blurred when entering
+      Keyboard.dismiss();
+      inputRef.current?.blur();
+      return () => {
+        // Clean up on blur
+        Keyboard.dismiss();
+      };
+    }, [])
+  );
+
+  const handleCapture = useCallback(() => {
     if (!inputText.trim()) return;
+
+    const noteId = Crypto.randomUUID();
+    const currentText = inputText;
+
+    // 1. INSTANT COMMIT (No Wait)
     addNote({
-      id: Crypto.randomUUID(),
-      content: inputText,
+      id: noteId,
+      content: currentText,
       created_at: Date.now(),
       source_type: 'text',
-      entities_json: JSON.stringify({ category: predictedCategory, clusterId: -1 }),
+      is_refining: true, // Signal that 70B is working
+      entities_json: JSON.stringify({ 
+        category: predictedCategory, 
+        emotion: emotionHint || 'Neutral',
+        clusterId: -1 
+      }),
     });
+
+    // 2. BACKGROUND ENRICHMENT (70B Model)
+    extractDeep(currentText).then(aiResult => {
+      if (aiResult) {
+        updateNote(noteId, {
+          is_refining: false,
+          entities_json: JSON.stringify({ ...aiResult, clusterId: -1 })
+        });
+      } else {
+        updateNote(noteId, { is_refining: false });
+      }
+    }).catch(() => {
+      updateNote(noteId, { is_refining: false });
+    });
+
     setInputText('');
+    inputRef.current?.blur();
     Keyboard.dismiss();
     router.push('/');
-  };
+  }, [inputText, predictedCategory, emotionHint]);
 
   return (
     <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
@@ -82,11 +160,11 @@ export default function CaptureScreen() {
 
           <View style={styles.content}>
             <TextInput
+              ref={inputRef}
               style={styles.input}
               placeholder="What's your mind drifting to?"
               placeholderTextColor="#D0D0D0"
               multiline
-              autoFocus
               value={inputText}
               onChangeText={setInputText}
               textAlignVertical="top"
@@ -96,7 +174,7 @@ export default function CaptureScreen() {
 
           <Animated.View entering={FadeInDown.delay(200)} style={styles.footerHint}>
             <Text style={styles.hintText}>
-              Zenith engine is classifying your thought as {predictedCategory.toLowerCase()}...
+              {isTypingSync ? 'AI Sensing...' : (emotionHint ? `Feeling ${emotionHint.toLowerCase()} — ${predictedCategory.toLowerCase()}` : 'Thinking with Zenith engine...')}
             </Text>
           </Animated.View>
         </View>
