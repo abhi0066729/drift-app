@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Home, PlusCircle, FileText, Users } from 'lucide-react-native';
+import { preloadNavigationAssets } from '@/utils/assetLoader';
 
 const PAPER = '#f5f0e8';
 const INK_3 = '#7a756b';
@@ -10,6 +11,10 @@ const BORDER = 'rgba(26,24,20,0.12)';
 import KineticTabBar from '@/components/KineticTabBar';
 
 export default function TabLayout() {
+  useEffect(() => {
+    preloadNavigationAssets();
+  }, []);
+
   return (
     <Tabs
       tabBar={(props) => <KineticTabBar {...props} />}

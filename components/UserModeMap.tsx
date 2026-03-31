@@ -13,7 +13,7 @@ interface StaticOverlayPathProps {
   activeView: 'chronos' | 'nexus';
 }
 
-function StaticOverlayPath({ node, targetNode, activeView }: StaticOverlayPathProps) {
+const StaticOverlayPath = React.memo(({ node, targetNode, activeView }: StaticOverlayPathProps) => {
   if (!targetNode) return null;
   const strokeColor = CATEGORY_COLORS[node.category] || '#EAEAEA';
   const dy = Math.abs(targetNode.unfocusedY - node.unfocusedY);
@@ -33,16 +33,18 @@ function StaticOverlayPath({ node, targetNode, activeView }: StaticOverlayPathPr
       opacity={targetOpacity} 
     />
   );
-}
+}, (prev, next) => {
+  return prev.activeView === next.activeView && prev.node.id === next.node.id;
+});
 
 interface UserModeMapProps {
   mappedNotes: any[];
   activeView: 'chronos' | 'nexus';
-  onNodePress: (node: any) => void;
+  onNodePress: (node: any, type: 'dot' | 'text') => void;
   totalHeight: number;
 }
 
-export default function UserModeMap({ mappedNotes, activeView, onNodePress, totalHeight }: UserModeMapProps) {
+export default React.memo(function UserModeMap({ mappedNotes, activeView, onNodePress, totalHeight }: UserModeMapProps) {
   return (
     <ScrollView 
       contentContainerStyle={{ height: totalHeight, width: '100%' }} 
@@ -75,4 +77,4 @@ export default function UserModeMap({ mappedNotes, activeView, onNodePress, tota
       </View>
     </ScrollView>
   );
-}
+});

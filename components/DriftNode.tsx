@@ -1,16 +1,17 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, memo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming, withSpring } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CATEGORY_COLORS } from '@/constants/Categories';
+import * as Haptics from 'expo-haptics';
 
 interface DriftNodeProps {
   node: any;
-  onPress: (node: any) => void;
+  onPress: (node: any, type: 'dot' | 'text') => void;
   activeView: 'chronos' | 'nexus';
 }
 
-export default function DriftNode({ node, onPress, activeView }: DriftNodeProps) {
+function DriftNode({ node, onPress, activeView }: DriftNodeProps) {
   const localYBase = node.unfocusedY - 60;
   const color = CATEGORY_COLORS[node.category] || '#111111';
   
@@ -84,14 +85,22 @@ export default function DriftNode({ node, onPress, activeView }: DriftNodeProps)
     };
   }, [activeView, importanceScore]);
 
-  const handlePress = () => onPress(node);
+  const handleDotPress = () => {
+    try { Haptics.selectionAsync(); } catch (e) {}
+    onPress(node, 'dot');
+  };
+
+  const handleTextPress = () => {
+    try { Haptics.selectionAsync(); } catch (e) {}
+    onPress(node, 'text');
+  };
 
   return (
     <Animated.View style={[{ position: 'absolute', width: '100%', top: localYBase, zIndex: activeView === 'nexus' && importanceScore > 0.5 ? 20 : 2 }, containerStyle]}>
       <TouchableOpacity
         style={{ position: 'absolute', top: 60 - node.nodeRadius * 4, left: node.unfocusedX - node.nodeRadius * 4, width: node.nodeRadius * 8, height: node.nodeRadius * 8, justifyContent: 'center', alignItems: 'center', zIndex: 20 }}
         activeOpacity={1}
-        onPress={handlePress}
+        onPress={handleDotPress}
       >
         <Animated.View style={[{ position: 'absolute', width: node.nodeRadius * 2, height: node.nodeRadius * 2, borderRadius: node.nodeRadius, backgroundColor: color }, outerPulseStyle]} />
         <Animated.View style={[{ position: 'absolute', width: node.nodeRadius * 2, height: node.nodeRadius * 2, borderRadius: node.nodeRadius, backgroundColor: color }, pulseStyle]} />
@@ -104,7 +113,7 @@ export default function DriftNode({ node, onPress, activeView }: DriftNodeProps)
       <TouchableOpacity 
         style={{ zIndex: 10, marginLeft: node.unfocusedTextLeft, width: node.dynamicWidth, paddingTop: 30, paddingBottom: 30, justifyContent: 'center' }} 
         activeOpacity={1.0} 
-        onPress={handlePress}
+        onPress={handleTextPress}
       >
         <Text style={[styles.noteCategory, { color, marginBottom: 6, opacity: Math.min(1, node.ageFade + 0.4) }]}>
           {node.is_refining ? 'REFINING...' : node.category?.toUpperCase()}
@@ -123,6 +132,10 @@ export default function DriftNode({ node, onPress, activeView }: DriftNodeProps)
     </Animated.View>
   );
 }
+
+export default memo(DriftNode, (prev, next) => {
+  return prev.node.id === next.node.id && prev.activeView === next.activeView;
+});
 
 const styles = StyleSheet.create({
   noteCategory: { fontSize: 9, fontWeight: '700', letterSpacing: 2, textTransform: 'uppercase' },

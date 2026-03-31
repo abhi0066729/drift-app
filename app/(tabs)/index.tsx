@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNotesStore } from '@/store/useNotesStore';
 import KineticFocusMap from '@/components/KineticFocusMap';
 import GhostOverlay from '@/components/GhostOverlay';
+import ReadingModal from '@/components/ReadingModal';
 import ChronosNexusToggle from '@/components/ChronosNexusToggle';
 import UserModeMap from '@/components/UserModeMap';
 import GhostModeMap from '@/components/GhostModeMap';
@@ -18,6 +19,7 @@ export default function HomeScreen() {
   const [activeView, setActiveView] = useState<'chronos' | 'nexus'>('chronos');
   const [focusRootNode, setFocusRootNode] = useState<any>(null);
   const [expandedGhostId, setExpandedGhostId] = useState<string | null>(null);
+  const [readingNode, setReadingNode] = useState<any>(null);
   
   // Developer Testing State
   const [forceSandbox, setForceSandbox] = useState(false);
@@ -44,11 +46,15 @@ export default function HomeScreen() {
     lastTap.current = now;
   };
 
-  const handleNodePress = (node: any) => {
+  const handleNodePress = (node: any, type: 'dot' | 'text') => {
     if (node.is_ghost) {
       setExpandedGhostId(node.id);
     } else {
-      setFocusRootNode(node);
+      if (type === 'text') {
+        setReadingNode(node);
+      } else {
+        setFocusRootNode(node);
+      }
     }
   };
 
@@ -114,6 +120,14 @@ export default function HomeScreen() {
           rootNode={focusRootNode} 
           mappedNotes={mappedNotes} 
           onClose={() => setFocusRootNode(null)} 
+        />
+      )}
+
+      {/* Independent Reading Modal over Map */}
+      {readingNode && (
+        <ReadingModal 
+          node={readingNode} 
+          onClose={() => setReadingNode(null)} 
         />
       )}
     </View>

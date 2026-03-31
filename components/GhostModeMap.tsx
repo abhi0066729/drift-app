@@ -1,14 +1,14 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import DriftNode from './DriftNode';
 
 interface GhostModeMapProps {
   mappedNotes: any[];
-  onNodePress: (node: any) => void;
+  onNodePress: (node: any, type: 'dot' | 'text') => void;
   totalHeight: number;
 }
 
-export default function GhostModeMap({ mappedNotes, onNodePress, totalHeight }: GhostModeMapProps) {
+export default memo(function GhostModeMap({ mappedNotes, onNodePress, totalHeight }: GhostModeMapProps) {
   return (
     <ScrollView 
       contentContainerStyle={{ height: totalHeight, width: '100%' }} 
@@ -26,4 +26,4 @@ export default function GhostModeMap({ mappedNotes, onNodePress, totalHeight }: 
       </View>
     </ScrollView>
   );
-}
+});

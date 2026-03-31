@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, { Easing, useAnimatedProps, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
+import * as Haptics from 'expo-haptics';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
@@ -37,6 +38,11 @@ export default function ChronosNexusToggle({ activeView, onToggle }: ViewToggleP
     });
 
     togglePos.value = withSpring(view === 'chronos' ? 0 : 1, { damping: 14, stiffness: 200 });
+    
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch (e) {}
+
     onToggle(view);
   };
 
