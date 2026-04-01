@@ -9,9 +9,10 @@ interface DriftNodeProps {
   node: any;
   onPress: (node: any, type: 'dot' | 'text') => void;
   activeView: 'chronos' | 'nexus';
+  searchStatus?: 'match' | 'dim' | 'none';
 }
 
-function DriftNode({ node, onPress, activeView }: DriftNodeProps) {
+function DriftNode({ node, onPress, activeView, searchStatus = 'none' }: DriftNodeProps) {
   const localYBase = node.unfocusedY - 60;
   const color = CATEGORY_COLORS[node.category] || '#111111';
   
@@ -21,6 +22,26 @@ function DriftNode({ node, onPress, activeView }: DriftNodeProps) {
   const outerPulseScale = useSharedValue(1);
   const outerPulseOpacity = useSharedValue(0.1);
   
+  // Search Highlighting Pulse
+  const searchPulseScale = useSharedValue(1);
+  const searchPulseOpacity = useSharedValue(0);
+
+  useEffect(() => {
+    if (searchStatus === 'match') {
+      searchPulseScale.value = withRepeat(
+        withTiming(1.6, { duration: 1000, easing: Easing.out(Easing.ease) }),
+        -1, false
+      );
+      searchPulseOpacity.value = withRepeat(
+        withTiming(0, { duration: 1000, easing: Easing.out(Easing.ease) }),
+        -1, false
+      );
+    } else {
+      searchPulseScale.value = withTiming(1);
+      searchPulseOpacity.value = withTiming(0);
+    }
+  }, [searchStatus]);
+
   useEffect(() => {
     if (node.is_ghost) {
       pulseScale.value = withRepeat(
@@ -66,6 +87,11 @@ function DriftNode({ node, onPress, activeView }: DriftNodeProps) {
     opacity: pulseOpacity.value,
   }));
 
+  const searchPulseStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: searchPulseScale.value }],
+    opacity: searchPulseOpacity.value,
+  }));
+
   const outerPulseStyle = useAnimatedStyle(() => ({
     transform: [{ scale: outerPulseScale.value }],
     opacity: outerPulseOpacity.value,
@@ -76,14 +102,25 @@ function DriftNode({ node, onPress, activeView }: DriftNodeProps) {
   
   const containerStyle = useAnimatedStyle(() => {
     const isNexus = activeView === 'nexus';
-    const targetScale = isNexus ? 0.75 + (importanceScore * 0.6) : 1.0;
-    const targetOpacity = isNexus ? 0.25 + (importanceScore * 0.75) : 1.0;
+    let targetScale = isNexus ? 0.75 + (importanceScore * 0.6) : 1.0;
+    let targetOpacity = isNexus ? 0.25 + (importanceScore * 0.75) : 1.0;
     
+    // Search Visibility Overrides
+    if (searchStatus === 'dim') {
+      targetOpacity = 0.05;
+      targetScale = 0.95;
+    } else if (searchStatus === 'match') {
+      targetOpacity = 1.0;
+      targetScale = 1.1; // Pop out slightly
+    }
+
     return {
       transform: [{ scale: withSpring(targetScale, { damping: 20, stiffness: 90 }) }],
-      opacity: withTiming(targetOpacity, { duration: 600, easing: Easing.out(Easing.cubic) }),
+      opacity: withTiming(targetOpacity, { duration: 400, easing: Easing.out(Easing.cubic) }),
+      top: withSpring(localYBase, { damping: 25, stiffness: 60 }),
+      zIndex: searchStatus === 'match' ? 100 : (activeView === 'nexus' && importanceScore > 0.5 ? 20 : 2),
     };
-  }, [activeView, importanceScore]);
+  }, [activeView, importanceScore, searchStatus, localYBase]);
 
   const handleDotPress = () => {
     try { Haptics.selectionAsync(); } catch (e) {}
@@ -96,12 +133,13 @@ function DriftNode({ node, onPress, activeView }: DriftNodeProps) {
   };
 
   return (
-    <Animated.View style={[{ position: 'absolute', width: '100%', top: localYBase, zIndex: activeView === 'nexus' && importanceScore > 0.5 ? 20 : 2 }, containerStyle]}>
+    <Animated.View style={[{ position: 'absolute', width: '100%' }, containerStyle]}>
       <TouchableOpacity
         style={{ position: 'absolute', top: 60 - node.nodeRadius * 4, left: node.unfocusedX - node.nodeRadius * 4, width: node.nodeRadius * 8, height: node.nodeRadius * 8, justifyContent: 'center', alignItems: 'center', zIndex: 20 }}
         activeOpacity={1}
         onPress={handleDotPress}
       >
+        <Animated.View style={[{ position: 'absolute', width: node.nodeRadius * 5, height: node.nodeRadius * 5, borderRadius: node.nodeRadius * 2.5, backgroundColor: color }, searchPulseStyle]} />
         <Animated.View style={[{ position: 'absolute', width: node.nodeRadius * 2, height: node.nodeRadius * 2, borderRadius: node.nodeRadius, backgroundColor: color }, outerPulseStyle]} />
         <Animated.View style={[{ position: 'absolute', width: node.nodeRadius * 2, height: node.nodeRadius * 2, borderRadius: node.nodeRadius, backgroundColor: color }, pulseStyle]} />
         <View pointerEvents="none" style={{ width: node.nodeRadius * 2, height: node.nodeRadius * 2, borderRadius: node.nodeRadius, backgroundColor: color, opacity: node.is_refining ? 0.3 : node.ageFade + 0.2 }} />
@@ -134,7 +172,13 @@ function DriftNode({ node, onPress, activeView }: DriftNodeProps) {
 }
 
 export default memo(DriftNode, (prev, next) => {
-  return prev.node.id === next.node.id && prev.activeView === next.activeView;
+  return (
+    prev.node.id === next.node.id &&
+    prev.node.unfocusedY === next.node.unfocusedY &&
+    prev.node.unfocusedX === next.node.unfocusedX &&
+    prev.activeView === next.activeView &&
+    prev.searchStatus === next.searchStatus
+  );
 });
 
 const styles = StyleSheet.create({

@@ -1,6 +1,6 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Animated from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut, withSpring } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { CATEGORY_COLORS } from '@/constants/Categories';
 
@@ -23,14 +23,41 @@ export default function GhostOverlay({ node, onClose }: GhostOverlayProps) {
   const localAsset = noteImage ? ONBOARDING_ASSETS[noteImage] : null;
   const imageSource = localAsset || (noteImage ? { uri: noteImage } : null);
   
+  // Custom high-energy Drop & Bounce animation
+  const DropAndBounce = () => {
+    'worklet';
+    return {
+      initialValues: {
+        transform: [{ translateY: -500 }, { scale: 0.9 }],
+        opacity: 0,
+      },
+      animations: {
+        transform: [
+          { translateY: withSpring(0, { damping: 10, stiffness: 95, mass: 1 }) },
+          { scale: withSpring(1) }
+        ],
+        opacity: withSpring(1),
+      },
+    };
+  };
+
   return (
-    <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 1000, justifyContent: 'center', alignItems: 'center' }]}>
+    <Animated.View 
+      entering={FadeIn.duration(200)}
+      exiting={FadeOut.duration(200)}
+      style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 1000, justifyContent: 'center', alignItems: 'center' }]}
+    >
       <TouchableOpacity 
         style={StyleSheet.absoluteFill} 
         activeOpacity={1} 
         onPress={onClose} 
       />
-      <View pointerEvents="box-none" style={styles.modalContent}>
+      <Animated.View 
+        entering={DropAndBounce}
+        exiting={FadeOut.duration(200)}
+        pointerEvents="box-none" 
+        style={styles.modalContent}
+      >
         <Text style={[styles.noteCategory, { color: CATEGORY_COLORS[node.category] || '#BBBBBB', marginBottom: 16 }]}>
           {node.category?.toUpperCase()} — DRIFT ONBOARDING
         </Text>
@@ -49,7 +76,7 @@ export default function GhostOverlay({ node, onClose }: GhostOverlayProps) {
             {node.content}
           </Text>
         </ScrollView>
-      </View>
+      </Animated.View>
     </Animated.View>
   );
 }

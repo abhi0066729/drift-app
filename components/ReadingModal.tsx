@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View, Pressable, ScrollView } from 'react-native';
-import Animated, { FadeIn, FadeOut, SlideInUp, SlideOutDown } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut, withSpring } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { CATEGORY_COLORS } from '@/constants/Categories';
 
@@ -15,6 +15,24 @@ export default function ReadingModal({ node, onClose }: ReadingModalProps) {
   const categoriesText = node.categories ? node.categories.join(' + ') : (node.category || '');
   const color = CATEGORY_COLORS[node.categories?.[0] || node.category] || '#BBBBBB';
 
+  // Custom high-energy Drop & Bounce animation
+  const DropAndBounce = () => {
+    'worklet';
+    return {
+      initialValues: {
+        transform: [{ translateY: -500 }, { scale: 0.9 }],
+        opacity: 0,
+      },
+      animations: {
+        transform: [
+          { translateY: withSpring(0, { damping: 10, stiffness: 95, mass: 1 }) },
+          { scale: withSpring(1) }
+        ],
+        opacity: withSpring(1),
+      },
+    };
+  };
+
   return (
     <Animated.View 
       entering={FadeIn.duration(200)} 
@@ -23,10 +41,10 @@ export default function ReadingModal({ node, onClose }: ReadingModalProps) {
     >
       <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
       <Animated.View 
-        entering={SlideInUp.duration(300).springify().damping(20).stiffness(90)}
-        exiting={SlideOutDown.duration(200)}
+        entering={DropAndBounce}
+        exiting={FadeOut.duration(200)}
         pointerEvents="box-none" 
-        style={{ width: '85%', maxHeight: '70%', padding: 36, backgroundColor: '#FFFFFF', borderRadius: 16, shadowColor: '#000000', shadowOpacity: 0.08, shadowRadius: 30, elevation: 10 }}
+        style={{ width: '88%', maxHeight: '75%', padding: 36, backgroundColor: '#FFFFFF', borderRadius: 24, shadowColor: '#000000', shadowOpacity: 0.1, shadowRadius: 30, elevation: 15 }}
       >
         <Text style={[styles.noteCategory, { color, marginBottom: 12 }]}>{categoriesText} — FOCUS</Text>
         <ScrollView showsVerticalScrollIndicator={false}>

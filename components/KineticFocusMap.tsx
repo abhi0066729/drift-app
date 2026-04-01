@@ -282,6 +282,24 @@ export default function KineticFocusMap({ rootNode, mappedNotes, onClose }: any)
   const backTap = Gesture.Tap().onEnd(() => { 'worklet'; runOnJS(onClose)(); });
   const closeReadingNodeTap = Gesture.Tap().onEnd(() => { 'worklet'; runOnJS(setReadingNode)(null); });
 
+  // Custom high-energy Drop & Bounce animation for parity
+  const DropAndBounce = () => {
+    'worklet';
+    return {
+      initialValues: {
+        transform: [{ translateY: -500 }, { scale: 0.9 }],
+        opacity: 0,
+      },
+      animations: {
+        transform: [
+          { translateY: withSpring(0, { damping: 10, stiffness: 95, mass: 1 }) },
+          { scale: withSpring(1) }
+        ],
+        opacity: withSpring(1),
+      },
+    };
+  };
+
   const scrubberPan = Gesture.Pan().activateAfterLongPress(250)
     .onStart(() => {
       'worklet';
@@ -376,7 +394,12 @@ export default function KineticFocusMap({ rootNode, mappedNotes, onClose }: any)
         {readingNode && (
           <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(200)} style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.92)', zIndex: 200, justifyContent: 'center', alignItems: 'center' }]}>
             <GestureDetector gesture={closeReadingNodeTap}><Animated.View style={StyleSheet.absoluteFill} /></GestureDetector>
-            <View pointerEvents="box-none" style={{ width: '85%', maxHeight: '70%', padding: 36, backgroundColor: '#FFFFFF', borderRadius: 16, shadowColor: '#000000', shadowOpacity: 0.08, shadowRadius: 30, elevation: 10 }}>
+            <Animated.View 
+              entering={DropAndBounce}
+              exiting={FadeOut.duration(200)}
+              pointerEvents="box-none" 
+              style={{ width: '85%', maxHeight: '70%', padding: 36, backgroundColor: '#FFFFFF', borderRadius: 16, shadowColor: '#000000', shadowOpacity: 0.08, shadowRadius: 30, elevation: 10 }}
+            >
               <Text style={[styles.noteCategory, { color: CATEGORY_COLORS[readingNode.categories[0]] || '#BBBBBB', marginBottom: 12 }]}>{readingNode.categories.join(' + ')} — SYNTHESIS</Text>
               <ScrollView showsVerticalScrollIndicator={false}>
                 {readingNode.images && readingNode.images.length > 0 && (
@@ -384,7 +407,7 @@ export default function KineticFocusMap({ rootNode, mappedNotes, onClose }: any)
                 )}
                 <Text style={[styles.noteContent, { fontSize: 24, lineHeight: 36 }]}>{readingNode.content}</Text>
               </ScrollView>
-            </View>
+            </Animated.View>
           </Animated.View>
         )}
       </GestureHandlerRootView>

@@ -1,50 +1,90 @@
-import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { Dimensions, StyleSheet, Text, View, Pressable } from 'react-native';
+import React, { useMemo, useState, useRef } from 'react';
+import { Dimensions, StyleSheet, Text, View, Pressable, TextInput } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, withTiming, interpolate, Extrapolate, useAnimatedReaction, runOnJS } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 import { useNotesStore } from '@/store/useNotesStore';
 import KineticFocusMap from '@/components/KineticFocusMap';
 import GhostOverlay from '@/components/GhostOverlay';
 import ReadingModal from '@/components/ReadingModal';
 import ChronosNexusToggle from '@/components/ChronosNexusToggle';
 import UserModeMap from '@/components/UserModeMap';
-import GhostModeMap from '@/components/GhostModeMap';
-import { generateFullGhostPool, generateMockUserNotes, processContextualConnections } from '@/utils/noteUtils';
+import { generateFullGhostPool, processContextualConnections } from '@/utils/noteUtils';
 
 const { width, height } = Dimensions.get('window');
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const notes = useNotesStore(state => state.notes);
-  const setNotes = useNotesStore(state => state.setNotes);
   const [activeView, setActiveView] = useState<'chronos' | 'nexus'>('chronos');
   const [focusRootNode, setFocusRootNode] = useState<any>(null);
   const [expandedGhostId, setExpandedGhostId] = useState<string | null>(null);
   const [readingNode, setReadingNode] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  // Search Reveal State
+  const scrollOffset = useSharedValue(0);
+  const searchThresholdMet = useSharedValue(false);
+  const isSearchLocked = useSharedValue(false);
   
   // Developer Testing State
-  const [forceSandbox, setForceSandbox] = useState(false);
   const lastTap = useRef<number>(0);
 
-  // Core Routing Logic: Sandbox or Production
-  const isSandbox = (notes.length < 5) || forceSandbox;
-
   const displayNotes = useMemo(() => {
-    // If in sandbox (manual or organic), show ONLY the tutorial pool for a clean recording
-    if (isSandbox) return generateFullGhostPool(15);
-    return notes;
-  }, [notes, isSandbox]);
+    // Merge real notes with exactly 5 tutorial ghosts
+    const ghosts = generateFullGhostPool(5);
+    return [...notes, ...ghosts];
+  }, [notes]);
   
-  const mappedNotes = useMemo(() => processContextualConnections(displayNotes, width), [displayNotes]);
+  const mappedNotes = useMemo(() => processContextualConnections(displayNotes, width, searchQuery), [displayNotes, searchQuery]);
   const totalHeight = mappedNotes.length > 0 ? mappedNotes[mappedNotes.length - 1].unfocusedY + 500 : height;
 
   const handleDevGesture = () => {
     const now = Date.now();
     if (now - lastTap.current < 300) {
-      // Double Tap detected -> EXIT Sandbox
-      setForceSandbox(false);
+      // Dev gesture logic (placeholder)
     }
     lastTap.current = now;
   };
+
+  const triggerHaptic = () => {
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch(e){}
+  };
+
+  useAnimatedReaction(
+    () => scrollOffset.value,
+    (y) => {
+      // Lock it if pulled deep
+      if (y < -80 && !isSearchLocked.value) {
+        isSearchLocked.value = true;
+        searchThresholdMet.value = true;
+        runOnJS(triggerHaptic)();
+      } 
+      // Unlock it if swiped up significantly
+      else if (y > 50 && isSearchLocked.value && searchQuery.length === 0) {
+        isSearchLocked.value = false;
+      }
+      
+      if (y >= 0) {
+        searchThresholdMet.value = false;
+      }
+    },
+    [searchQuery]
+  );
+
+  const searchBarStyle = useAnimatedStyle(() => {
+    // Reveal starts at -20, fully visible at -80
+    const scrollRevealY = interpolate(scrollOffset.value, [0, -80], [-60, 0], Extrapolate.CLAMP);
+    const scrollRevealOpacity = interpolate(scrollOffset.value, [0, -40], [0, 1], Extrapolate.CLAMP);
+    
+    // If pinned or typing, force peak visibility
+    const isPinned = isSearchLocked.value || searchQuery.length > 0;
+    
+    return {
+      transform: [{ translateY: withSpring(isPinned ? 0 : scrollRevealY, { damping: 20, stiffness: 120 }) }],
+      opacity: withTiming(isPinned ? 1 : scrollRevealOpacity, { duration: 200 }),
+    };
+  }, [searchQuery]);
 
   const handleNodePress = (node: any, type: 'dot' | 'text') => {
     if (node.is_ghost) {
@@ -60,13 +100,6 @@ export default function HomeScreen() {
 
   const expandedGhostNode = mappedNotes.find((n: any) => n.id === expandedGhostId);
 
-  useEffect(() => {
-    // TEMPORARY: Automatic seed 20 notes for testing. 
-    if (notes.length < 20) {
-      setNotes(generateMockUserNotes());
-    }
-  }, []);
-
   return (
     <View style={[styles.container, { paddingTop: insets.top + 20 }]}>
       {/* Header / Nav Section */}
@@ -74,12 +107,10 @@ export default function HomeScreen() {
         <View style={styles.headerText}>
           <Text style={styles.title}>Drift Map</Text>
           <Pressable 
-            onLongPress={() => setForceSandbox(true)} 
             onPress={handleDevGesture}
-            delayLongPress={800}
           >
             <Text style={styles.subtitle}>
-              {forceSandbox ? 'DEVELOPER: GHOST MODE ACTIVE' : 'Kinetic Semantic Synthesis'}
+              Kinetic Semantic Synthesis
             </Text>
           </Pressable>
         </View>
@@ -91,19 +122,30 @@ export default function HomeScreen() {
       {/* Main Content Area */}
       {displayNotes.length === 0 ? (
         <Text style={styles.emptyText}>The void is empty. Capture something to begin.</Text>
-      ) : isSandbox ? (
-        <GhostModeMap 
-          mappedNotes={mappedNotes} 
-          onNodePress={handleNodePress} 
-          totalHeight={totalHeight} 
-        />
       ) : (
-        <UserModeMap 
-          mappedNotes={mappedNotes} 
-          activeView={activeView} 
-          onNodePress={handleNodePress} 
-          totalHeight={totalHeight} 
-        />
+        <View style={{ flex: 1 }}>
+          {/* Transitionary Search Reveal */}
+          <Animated.View style={[styles.searchContainer, searchBarStyle]}>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search your thoughts..."
+              placeholderTextColor="#999"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoFocus={false}
+              clearButtonMode="while-editing"
+            />
+          </Animated.View>
+
+          <UserModeMap 
+            mappedNotes={mappedNotes} 
+            activeView={activeView} 
+            searchQuery={searchQuery}
+            onNodePress={handleNodePress} 
+            scrollY={scrollOffset}
+            totalHeight={totalHeight} 
+          />
+        </View>
       )}
       
       {/* Cinematic Modal for Ghost Notes */}
@@ -142,4 +184,6 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 10, marginTop: 4, color: '#8E44AD', textTransform: 'uppercase', letterSpacing: 2.5, fontWeight: '700' },
   toggleContainer: { width: '100%', alignItems: 'center', marginTop: 10 },
   emptyText: { fontSize: 18, color: '#999999', fontWeight: '300', lineHeight: 28, paddingHorizontal: 32, marginTop: 80, textAlign: 'center' },
+  searchContainer: { position: 'absolute', top: 0, left: 0, right: 0, paddingHorizontal: 22, zIndex: 100, height: 60, justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.95)' },
+  searchInput: { height: 45, backgroundColor: '#F2F2F7', borderRadius: 12, paddingHorizontal: 16, fontSize: 16, color: '#111', fontWeight: '400' },
 });

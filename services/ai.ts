@@ -27,24 +27,22 @@ export interface ExtractedEntities {
 /**
  * Utility to scrub markdown and extra text from JSON response
  */
-function scrubJSON(text: string): string {
-  // Remove markdown code blocks if present
+function scrubJSON(text: string): string | null {
+  if (!text) return null;
   let clean = text.replace(/```json/gi, '').replace(/```/g, '').trim();
-  // Find the first { and the last }
   const start = clean.indexOf('{');
   const end = clean.lastIndexOf('}');
-  if (start !== -1 && end !== -1) {
-    clean = clean.substring(start, end + 1);
-  }
-  return clean;
+  if (start === -1 || end === -1 || end < start) return null;
+  return clean.substring(start, end + 1);
 }
 
 /**
- * FAST PREDICTION (Llama 3.2 3B)
- * Used for real-time UI hints while typing.
+ * FAST PREDICTION (Real-time hints)
  */
 export async function extractRealtime(text: string): Promise<{ category: NoteCategory; emotion: string } | null> {
   if (!API_KEY || !text.trim()) return null;
+
+  const validCategories: NoteCategory[] = ['Journal','Study','Idea','Todo','Dream','Research','Quote','Meeting','Reflection','Creative'];
 
   try {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -58,51 +56,43 @@ export async function extractRealtime(text: string): Promise<{ category: NoteCat
         messages: [
           { 
             role: 'system', 
-            content: `Return JSON ONLY. 
-Categories: Journal, Study, Idea, Todo, Dream, Research, Quote, Meeting, Reflection, Creative.
-
-Example 1: "Need to buy milk" -> {"category": "Todo", "emotion": "Neutral"}
-Example 2: "Saw a whale flying" -> {"category": "Dream", "emotion": "Surprise"}
-Example 3: "Calculus is hard" -> {"category": "Study", "emotion": "Frustration"}`
+            content: `Respond with ONLY JSON. Pick ONE: Journal, Study, Idea, Todo, Dream, Research, Quote, Meeting, Reflection, Creative.
+Example: "Buy milk" -> {"category": "Todo", "emotion": "Neutral"}`
           },
           { role: 'user', content: text }
         ],
-        response_format: { type: "json_object" },
         max_tokens: 60,
         temperature: 0.1,
       }),
     });
 
     const data = await response.json();
-    const content = scrubJSON(data.choices[0].message.content);
-    return JSON.parse(content);
+    const rawContent = data.choices?.[0]?.message?.content || '';
+    console.log('[AI Realtime Raw]:', rawContent);
+
+    const scrubbed = scrubJSON(rawContent);
+    if (!scrubbed) return null;
+    const parsed = JSON.parse(scrubbed);
+    if (parsed.category && validCategories.includes(parsed.category)) {
+      return parsed;
+    }
   } catch (e) {
-    console.warn('Realtime AI Parse Error:', e);
-    return null;
+    console.warn('[AI Realtime] Parse failed:', e);
   }
+  return null;
 }
 
 /**
- * DEEP SYNTHESIS (Llama 3.3 70B)
- * Used for background enrichment after save.
+ * DEEP SYNTHESIS (Background enrichment)
  */
 export async function extractDeep(text: string): Promise<ExtractedEntities | null> {
   if (!API_KEY) return null;
 
-  const systemPrompt = `
-Analyze this note for the Drift app. Return JSON ONLY.
-Categories: Journal, Study, Idea, Todo, Dream, Research, Quote, Meeting, Reflection, Creative.
+  const validCategories: NoteCategory[] = ['Journal','Study','Idea','Todo','Dream','Research','Quote','Meeting','Reflection','Creative'];
 
-Example: "Meeting with Bob tomorrow about the project" -> {
-  "category": "Meeting",
-  "emotion": "Professional",
-  "people": ["Bob"],
-  "topics": ["project"],
-  "sentiment": "neutral",
-  "urgency": "medium",
-  "dates": ["tomorrow"]
-}
-`;
+  const systemPrompt = `Analyze this note. Return ONLY valid JSON.
+Pick ONE: Journal, Study, Idea, Todo, Dream, Research, Quote, Meeting, Reflection, Creative.
+JSON: {"category": "...", "emotion": "...", "people": [], "topics": [], "sentiment": "neutral", "urgency": "medium", "dates": []}`;
 
   try {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -117,16 +107,23 @@ Example: "Meeting with Bob tomorrow about the project" -> {
           { role: 'system', content: systemPrompt },
           { role: 'user', content: text }
         ],
-        response_format: { type: "json_object" },
         temperature: 0.1,
+        max_tokens: 300,
       }),
     });
 
     const data = await response.json();
-    const content = scrubJSON(data.choices[0].message.content);
-    return JSON.parse(content);
+    const rawContent = data.choices?.[0]?.message?.content || '';
+    console.log('[AI Deep Raw]:', rawContent);
+
+    const scrubbed = scrubJSON(rawContent);
+    if (!scrubbed) return null;
+    const parsed = JSON.parse(scrubbed);
+    if (parsed.category && validCategories.includes(parsed.category)) {
+      return parsed;
+    }
   } catch (e) {
-    console.error('Deep extraction error:', e);
-    return null;
+    console.error('[AI Deep] Parse failed:', e);
   }
+  return null;
 }

@@ -1,4 +1,7 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
 export type Note = {
   id: string;
@@ -22,18 +25,30 @@ interface NotesState {
   updateNote: (id: string, updates: Partial<Note>) => void;
   setNotes: (notes: Note[]) => void;
   setFilters: (filters: Partial<NotesState['activeFilters']>) => void;
+  clearNotes: () => void;
 }
 
-export const useNotesStore = create<NotesState>((set) => ({
-  notes: [],
-  pendingSync: [],
-  activeFilters: {},
-  addNote: (note) => set((state) => ({ notes: [note, ...state.notes] })),
-  updateNote: (id, updates) =>
-    set((state) => ({
-      notes: state.notes.map((n) => (n.id === id ? { ...n, ...updates } : n)),
-    })),
-  setNotes: (notes) => set({ notes }),
-  setFilters: (filters) =>
-    set((state) => ({ activeFilters: { ...state.activeFilters, ...filters } })),
-}));
+export const useNotesStore = create<NotesState>()(
+  persist(
+    (set) => ({
+      notes: [],
+      pendingSync: [],
+      activeFilters: {},
+      addNote: (note) => set((state) => ({ notes: [note, ...state.notes] })),
+      updateNote: (id, updates) =>
+        set((state) => ({
+          notes: state.notes.map((n) => (n.id === id ? { ...n, ...updates } : n)),
+        })),
+      setNotes: (notes) => set({ notes }),
+      setFilters: (filters) =>
+        set((state) => ({ activeFilters: { ...state.activeFilters, ...filters } })),
+      clearNotes: () => set({ notes: [] }),
+    }),
+    {
+      name: 'drift-notes-storage',
+      storage: createJSONStorage(() => 
+        Platform.OS === 'web' ? window.localStorage : AsyncStorage as any
+      ),
+    }
+  )
+);
