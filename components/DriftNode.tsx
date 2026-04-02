@@ -10,9 +10,10 @@ interface DriftNodeProps {
   onPress: (node: any, type: 'dot' | 'text') => void;
   activeView: 'chronos' | 'nexus';
   searchStatus?: 'match' | 'dim' | 'none';
+  isFirst?: boolean;
 }
 
-function DriftNode({ node, onPress, activeView, searchStatus = 'none' }: DriftNodeProps) {
+function DriftNode({ node, onPress, activeView, searchStatus = 'none', isFirst }: DriftNodeProps) {
   const localYBase = node.unfocusedY - 60;
   const color = CATEGORY_COLORS[node.category] || '#111111';
   
@@ -43,7 +44,8 @@ function DriftNode({ node, onPress, activeView, searchStatus = 'none' }: DriftNo
   }, [searchStatus]);
 
   useEffect(() => {
-    if (node.is_ghost) {
+    // Only pulse the very first node or ghost nodes to save CPU on 2000+ items
+    if (node.is_ghost || isFirst) {
       pulseScale.value = withRepeat(
         withTiming(2.2, { duration: 1500, easing: Easing.out(Easing.ease) }),
         -1, false
@@ -61,26 +63,13 @@ function DriftNode({ node, onPress, activeView, searchStatus = 'none' }: DriftNo
         -1, false
       );
     } else {
-      // Subtle 'Breathing' pulse for real notes to show clickability
-      pulseScale.value = withRepeat(
-        withTiming(1.3, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
-        -1, true
-      );
-      pulseOpacity.value = withRepeat(
-        withTiming(0.2, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
-        -1, true
-      );
-      // Secondary outer orbit
-      outerPulseScale.value = withRepeat(
-        withTiming(1.8, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
-        -1, true
-      );
-      outerPulseOpacity.value = withRepeat(
-        withTiming(0.05, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
-        -1, true
-      );
+      // Static state for performance on standard nodes
+      pulseScale.value = 1;
+      pulseOpacity.value = 0.2;
+      outerPulseScale.value = 1;
+      outerPulseOpacity.value = 0.05;
     }
-  }, [node.is_ghost]);
+  }, [node.is_ghost, isFirst]);
 
   const pulseStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pulseScale.value }],
@@ -177,7 +166,8 @@ export default memo(DriftNode, (prev, next) => {
     prev.node.unfocusedY === next.node.unfocusedY &&
     prev.node.unfocusedX === next.node.unfocusedX &&
     prev.activeView === next.activeView &&
-    prev.searchStatus === next.searchStatus
+    prev.searchStatus === next.searchStatus &&
+    prev.isFirst === next.isFirst
   );
 });
 

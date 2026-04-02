@@ -59,7 +59,7 @@ export function processContextualConnections(notes: Note[], width: number, searc
   const matchCount = notesWithStatus.filter(n => n.searchStatus === 'match').length;
   currentDimY = 300 + (matchCount * 220) + 400; 
 
-  return notesWithStatus.map((note, i) => {
+  const processedNotes = notesWithStatus.map((note, i) => {
     let category = 'Journal';
     let clusterId = -1;
     if (note.entities_json) {
@@ -109,16 +109,6 @@ export function processContextualConnections(notes: Note[], width: number, searc
     const isGlowing = note.is_ghost || importance >= 0.8;
     const displayLines = note.is_ghost ? 3 : Math.floor(randX * 4) + 2;
 
-    const connectedNodeIndex = notes.findIndex((pastNote, pastIndex) => {
-      // Don't draw lines to ghosts to keep the map clean
-      if (pastIndex <= i || !pastNote.entities_json || pastNote.is_ghost || note.is_ghost) return false;
-      try {
-        const pastJson = JSON.parse(pastNote.entities_json);
-        const pastCategory = pastJson.category || pastJson.categories?.[0];
-        return pastCategory === category;
-      } catch { return false; }
-    });
-
     return {
       ...note,
       isRight,
@@ -135,9 +125,20 @@ export function processContextualConnections(notes: Note[], width: number, searc
       clusterId,
       clusterIndex: localIndex,
       displayLines,
-      connectedNodeIndex: connectedNodeIndex > -1 ? connectedNodeIndex : null,
+      connectedNodeId: null as string | null, // Correct typing for second pass
     };
   });
+
+  // Second Pass: O(N) Category-Locked Connections
+  // Using a single reverse-iteration with a category map to avoid O(N^2) lookup
+  const lastSeenByCategory = new Map<string, string>();
+  for (let i = processedNotes.length - 1; i >= 0; i--) {
+    const note = processedNotes[i];
+    note.connectedNodeId = lastSeenByCategory.get(note.category) || null;
+    lastSeenByCategory.set(note.category, note.id);
+  }
+
+  return processedNotes;
 }
 
 export function calculateSearchMatch(query: string, note: any): 'match' | 'dim' | 'none' {
