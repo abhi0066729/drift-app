@@ -26,6 +26,7 @@ interface NotesState {
   setNotes: (notes: Note[]) => void;
   setFilters: (filters: Partial<NotesState['activeFilters']>) => void;
   clearNotes: () => void;
+  deleteNote: (id: string) => void;
 }
 
 export const useNotesStore = create<NotesState>()(
@@ -39,6 +40,9 @@ export const useNotesStore = create<NotesState>()(
         set((state) => ({
           notes: state.notes.map((n) => (n.id === id ? { ...n, ...updates } : n)),
         })),
+      deleteNote: (id) => set((state) => ({ 
+        notes: state.notes.filter((n) => n.id !== id) 
+      })),
       setNotes: (notes) => set({ notes }),
       setFilters: (filters) =>
         set((state) => ({ activeFilters: { ...state.activeFilters, ...filters } })),

@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View, Pressable, ScrollView } from 'react-native';
 import Animated, { FadeIn, FadeOut, withSpring } from 'react-native-reanimated';
 import { Image } from 'expo-image';
+import { BlurView } from 'expo-blur';
 import { CATEGORY_COLORS } from '@/constants/Categories';
 
 interface ReadingModalProps {
@@ -37,28 +38,43 @@ export default function ReadingModal({ node, onClose }: ReadingModalProps) {
     <Animated.View 
       entering={FadeIn.duration(200)} 
       exiting={FadeOut.duration(200)} 
-      style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.92)', zIndex: 1000, justifyContent: 'center', alignItems: 'center' }]}
+      style={[StyleSheet.absoluteFill, { zIndex: 1000 }]}
     >
-      <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-      <Animated.View 
-        entering={DropAndBounce}
-        exiting={FadeOut.duration(200)}
-        pointerEvents="box-none" 
-        style={{ width: '88%', maxHeight: '75%', padding: 36, backgroundColor: '#FFFFFF', borderRadius: 24, shadowColor: '#000000', shadowOpacity: 0.1, shadowRadius: 30, elevation: 15 }}
-      >
-        <Text style={[styles.noteCategory, { color, marginBottom: 12 }]}>{categoriesText} — FOCUS</Text>
-        <ScrollView showsVerticalScrollIndicator={false}>
-          {node.images && node.images.length > 0 && (
-            <Image 
-              source={{ uri: node.images[0] }} 
-              style={{ width: '100%', height: 200, borderRadius: 12, marginBottom: 16 }} 
-              transition={200} 
-              contentFit="cover" 
-            />
-          )}
-          <Text style={[styles.noteContent, { fontSize: 24, lineHeight: 36 }]}>{node.content}</Text>
-        </ScrollView>
-      </Animated.View>
+      <BlurView intensity={60} tint="light" style={StyleSheet.absoluteFill}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+      </BlurView>
+      
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }} pointerEvents="box-none">
+        <Animated.View 
+          entering={DropAndBounce}
+          exiting={FadeOut.duration(200)}
+          pointerEvents="box-none" 
+          style={{ 
+            width: '88%', 
+            maxHeight: '75%', 
+            padding: 36, 
+            backgroundColor: '#FFFFFF', 
+            borderRadius: 24, 
+            shadowColor: '#000000', 
+            shadowOpacity: 0.1, 
+            shadowRadius: 30, 
+            elevation: 15 
+          }}
+        >
+          <Text style={[styles.noteCategory, { color, marginBottom: 12 }]}>{categoriesText} — FOCUS</Text>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {node.images && node.images.length > 0 && (
+              <Image 
+                source={{ uri: node.images[0] }} 
+                style={{ width: '100%', height: 200, borderRadius: 12, marginBottom: 16 }} 
+                transition={200} 
+                contentFit="cover" 
+              />
+            )}
+            <Text style={[styles.noteContent, { fontSize: 24, lineHeight: 36 }]}>{node.content}</Text>
+          </ScrollView>
+        </Animated.View>
+      </View>
     </Animated.View>
   );
 }

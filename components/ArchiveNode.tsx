@@ -1,16 +1,21 @@
-import React from 'react';
-import { StyleSheet, Text, View, Pressable } from 'react-native';
+import React, { useRef } from 'react';
+import { StyleSheet, Text, View, Pressable, TouchableOpacity, Animated as RNAnimated } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Swipeable } from 'react-native-gesture-handler';
 import { CATEGORY_COLORS } from '@/constants/Categories';
 
 interface ArchiveNodeProps {
   note: any;
   index: number;
   onPress: (note: any) => void;
+  onDelete: (id: string) => void;
+  onSwipeStart: (ref: Swipeable | null) => void;
 }
 
-export default function ArchiveNode({ note, index, onPress }: ArchiveNodeProps) {
-  // Extract category for the ribbon
+export default function ArchiveNode({ note, index, onPress, onDelete, onSwipeStart }: ArchiveNodeProps) {
+  const swipeableRef = useRef<Swipeable>(null);
+  
   let category = 'Journal';
   if (note.entities_json) {
     try {
@@ -19,91 +24,184 @@ export default function ArchiveNode({ note, index, onPress }: ArchiveNodeProps) 
     } catch (e) {}
   }
 
-  const ribbonColor = CATEGORY_COLORS[category] || '#111111';
+  const nodeColor = CATEGORY_COLORS[category] || '#111111';
   const dateStr = new Date(note.created_at).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric'
   });
 
+  const renderRightActions = (progress: any, dragX: any) => {
+    const scale = progress.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0.8, 1],
+      extrapolate: 'clamp',
+    });
+    
+    const opacity = progress.interpolate({
+      inputRange: [0, 0.5, 1],
+      outputRange: [0, 0, 1],
+      extrapolate: 'clamp',
+    });
+
+    return (
+      <View style={styles.deleteActionContainer}>
+        <RNAnimated.View style={{ transform: [{ scale }], opacity }}>
+          <TouchableOpacity 
+            onPress={() => {
+              onDelete(note.id);
+              swipeableRef.current?.close();
+            }}
+            style={styles.deleteButton}
+          >
+            <Text style={styles.deleteButtonText}>Delete</Text>
+          </TouchableOpacity>
+        </RNAnimated.View>
+      </View>
+    );
+  };
+
   return (
     <Animated.View 
-      entering={FadeInDown.delay(index * 50).duration(400).springify().damping(20)}
+      entering={FadeInDown.delay(index * 60).duration(800).springify().damping(12).stiffness(100)}
+      style={styles.wrapper}
     >
-      <Pressable 
-        style={({ pressed }) => [
-          styles.container,
-          pressed && styles.pressed
-        ]} 
-        onPress={() => onPress(note)}
+      <Swipeable
+        ref={swipeableRef}
+        renderRightActions={renderRightActions}
+        friction={1.5}
+        rightThreshold={40}
+        overshootRight={true}
+        onSwipeableWillOpen={() => onSwipeStart(swipeableRef.current)}
+        containerStyle={styles.swipeableContainer}
       >
-        {/* Category Ribbon */}
-        <View style={[styles.ribbon, { backgroundColor: ribbonColor }]} />
-        
-        <View style={styles.contentContainer}>
-          <View style={styles.headerRow}>
-            <Text style={[styles.categoryText, { color: ribbonColor }]}>
-              {category.toUpperCase()}
-            </Text>
-            <Text style={styles.dateText}>{dateStr}</Text>
+        <Pressable 
+          style={({ pressed }) => [
+            styles.container,
+            pressed && styles.pressed
+          ]} 
+          onPress={() => onPress(note)}
+        >
+          {/* The Node Dot - Column is transparent to show the timeline axis behind it */}
+          <View style={styles.nodeColumn}>
+            <View style={[styles.dot, { backgroundColor: nodeColor }]} />
           </View>
           
-          <Text style={styles.contentText} numberOfLines={3}>
-            {note.content}
-          </Text>
-        </View>
-      </Pressable>
+          {/* Content area is white to hide the delete button behind it */}
+          <View style={styles.contentContainer}>
+            <View style={styles.headerRow}>
+              <Text style={[styles.categoryText, { color: nodeColor }]}>
+                {category.toUpperCase()}
+              </Text>
+              <Text style={styles.dateText}>{dateStr}</Text>
+            </View>
+            
+            <View style={styles.textWrapper}>
+              <Text style={styles.contentText} numberOfLines={3}>
+                {note.content}
+              </Text>
+              {/* Expansion Blur Effect */}
+              <LinearGradient
+                colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.9)']}
+                style={styles.textBlur}
+              />
+            </View>
+          </View>
+        </Pressable>
+      </Swipeable>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
+  swipeableContainer: {
+    backgroundColor: 'transparent',
+  },
+  wrapper: {
+    width: '100%',
+    backgroundColor: 'transparent',
+  },
   container: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    marginBottom: 16,
     flexDirection: 'row',
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.03)',
+    marginBottom: 80, 
+    paddingLeft: 20,
+    backgroundColor: 'transparent', 
   },
   pressed: {
-    opacity: 0.8,
-    transform: [{ scale: 0.98 }],
+    opacity: 0.7,
   },
-  ribbon: {
-    width: 6,
-    height: '100%',
+  nodeColumn: {
+    width: 40,
+    alignItems: 'center',
+    paddingTop: 4, 
+    backgroundColor: 'transparent',
+  },
+  dot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    zIndex: 20, 
   },
   contentContainer: {
     flex: 1,
-    padding: 16,
+    paddingLeft: 12,
+    backgroundColor: '#FFFFFF', // White hides the DELETE button
+    paddingVertical: 4,
+    borderRadius: 8,
   },
   headerRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 12,
     marginBottom: 8,
   },
   categoryText: {
     fontSize: 9,
     fontWeight: '700',
-    letterSpacing: 1.5,
+    letterSpacing: 2,
   },
   dateText: {
     fontSize: 10,
-    color: '#BBBBBB',
+    color: '#CCCCCC',
     fontWeight: '500',
+    letterSpacing: 0.5,
+  },
+  textWrapper: {
+    position: 'relative',
   },
   contentText: {
-    fontSize: 15,
-    color: '#111111',
-    lineHeight: 22,
+    fontSize: 18,
+    color: '#333333',
+    lineHeight: 26,
     fontWeight: '300',
+    paddingRight: 60, 
+  },
+  textBlur: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 30,
+  },
+  deleteActionContainer: {
+    width: 100,
+    height: '100%',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    paddingLeft: 10,
+    paddingBottom: 80, 
+  },
+  deleteButton: {
+    backgroundColor: '#F9F9F9',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    marginTop: 28, // Correctly centered with text relative to headerRow elevation
+  },
+  deleteButtonText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#E74C3C',
+    letterSpacing: 1.5,
   },
 });

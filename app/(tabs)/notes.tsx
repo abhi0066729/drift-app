@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNotesStore } from '@/store/useNotesStore';
 import Animated, { FadeIn } from 'react-native-reanimated';
+import { Swipeable } from 'react-native-gesture-handler';
 import ArchiveNode from '@/components/ArchiveNode';
 import ReadingModal from '@/components/ReadingModal';
 
@@ -11,11 +12,12 @@ export default function NotesScreen() {
   const notes = useNotesStore((state) => state.notes);
   const clearNotes = useNotesStore((state) => state.clearNotes);
   const [selectedNote, setSelectedNote] = useState<any>(null);
+  const swipeableRowRef = useRef<Swipeable | null>(null);
 
   const handleClear = () => {
     Alert.alert(
       "Clear Archive",
-      "Are you sure you want to delete all entries? This action is immediate and cannot be undone.",
+      "Are you sure you want to delete all entries?",
       [
         { text: "Cancel", style: "cancel" },
         { text: "Delete Everything", style: "destructive", onPress: clearNotes }
@@ -25,6 +27,17 @@ export default function NotesScreen() {
 
   const handleNotePress = (note: any) => {
     setSelectedNote(note);
+  };
+
+  const handleDeleteNote = (id: string) => {
+    useNotesStore.getState().deleteNote(id);
+  };
+
+  const onSwipeStart = (ref: Swipeable | null) => {
+    if (swipeableRowRef.current !== ref) {
+      swipeableRowRef.current?.close();
+    }
+    swipeableRowRef.current = ref;
   };
 
   return (
@@ -48,19 +61,26 @@ export default function NotesScreen() {
           <Text style={styles.emptyTextSub}>Your captured thoughts will drift here once they are saved.</Text>
         </Animated.View>
       ) : (
-        <FlatList
-          data={notes}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item, index }) => (
-            <ArchiveNode 
-              note={item} 
-              index={index} 
-              onPress={handleNotePress} 
-            />
-          )}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-        />
+        <View style={styles.listWrapper}>
+          {/* Vertical Timeline Axis - Anchored at the backmost layer */}
+          <View style={styles.timelineAxis} />
+          
+          <FlatList
+            data={notes}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item, index }) => (
+              <ArchiveNode 
+                note={item} 
+                index={index} 
+                onPress={handleNotePress} 
+                onDelete={handleDeleteNote}
+                onSwipeStart={onSwipeStart}
+              />
+            )}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+          />
+        </View>
       )}
 
       {/* Focus Mode Overlay */}
@@ -81,8 +101,8 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'baseline',
-    marginBottom: 32,
+    alignItems: 'center',
+    marginBottom: 60, // Space between header and first node
     marginTop: 10,
     width: '100%',
   },
@@ -101,16 +121,29 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   clearButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
     borderRadius: 20,
     backgroundColor: '#F9F9F9',
   },
   clearButtonText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#FF3B30',
+    color: '#E74C3C',
     letterSpacing: 1.5,
+  },
+  timelineAxis: {
+    position: 'absolute',
+    left: 40, 
+    top: 0,
+    bottom: 0,
+    width: 1,
+    backgroundColor: '#EEEEEE',
+    zIndex: 0, // Explicitly behind the items
+  },
+  listWrapper: {
+    flex: 1,
+    zIndex: 1, // Ensure entire list stays above axis
   },
   emptyState: {
     flex: 1,

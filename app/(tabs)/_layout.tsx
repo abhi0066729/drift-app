@@ -1,7 +1,7 @@
-import { Tabs } from 'expo-router';
-import React, { useEffect } from 'react';
-import { Home, PlusCircle, FileText, Users } from 'lucide-react-native';
 import { preloadNavigationAssets } from '@/utils/assetLoader';
+import { Tabs } from 'expo-router';
+import { FileText, Home, PlusCircle, Users } from 'lucide-react-native';
+import React, { useEffect } from 'react';
 
 const PAPER = '#f5f0e8';
 const INK_3 = '#7a756b';
