@@ -1,18 +1,49 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNotesStore } from '@/store/useNotesStore';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import { useFocusEffect } from 'expo-router';
+import Animated, { FadeIn, useSharedValue, useAnimatedStyle, withRepeat, withTiming, withSequence } from 'react-native-reanimated';
 import { Swipeable } from 'react-native-gesture-handler';
+import { Star } from 'lucide-react-native';
 import ArchiveNode from '@/components/ArchiveNode';
+import ScrollToTopButton from '@/components/ScrollToTopButton';
 import ReadingModal from '@/components/ReadingModal';
+
+const BlinkingStar = () => {
+  const opacity = useSharedValue(0.2);
+
+  useEffect(() => {
+    opacity.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 1200 }),
+        withTiming(0.2, { duration: 1200 })
+      ),
+      -1,
+      true
+    );
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ scale: withRepeat(withTiming(1.1, { duration: 1200 }), -1, true) }]
+  }));
+
+  return (
+    <Animated.View style={[styles.starWrapper, animatedStyle]}>
+      <Star size={24} color="#8E44AD" fill="#8E44AD" />
+    </Animated.View>
+  );
+};
 
 export default function NotesScreen() {
   const insets = useSafeAreaInsets();
   const notes = useNotesStore((state) => state.notes);
   const clearNotes = useNotesStore((state) => state.clearNotes);
   const [selectedNote, setSelectedNote] = useState<any>(null);
+  const [showScrollTop, setShowScrollTop] = useState(false);
   const swipeableRowRef = useRef<Swipeable | null>(null);
+  const flatListRef = useRef<FlatList>(null);
 
   const handleClear = () => {
     Alert.alert(
@@ -33,11 +64,34 @@ export default function NotesScreen() {
     useNotesStore.getState().deleteNote(id);
   };
 
+  useFocusEffect(
+    useCallback(() => {
+      // Reset interaction state on enter
+      setSelectedNote(null);
+      swipeableRowRef.current?.close();
+      
+      return () => {
+        // Optional: Reset on leave as well if needed
+      };
+    }, [])
+  );
+
   const onSwipeStart = (ref: Swipeable | null) => {
     if (swipeableRowRef.current !== ref) {
       swipeableRowRef.current?.close();
     }
     swipeableRowRef.current = ref;
+  };
+
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const y = event.nativeEvent.contentOffset.y;
+    if (y > 200 && !showScrollTop) setShowScrollTop(true);
+    else if (y <= 200 && showScrollTop) setShowScrollTop(false);
+  };
+
+  const scrollToTop = () => {
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+    setShowScrollTop(false);
   };
 
   return (
@@ -57,8 +111,9 @@ export default function NotesScreen() {
       
       {notes.length === 0 ? (
         <Animated.View entering={FadeIn.delay(300)} style={styles.emptyState}>
-          <Text style={styles.emptyTextTitle}>Quiet in here.</Text>
-          <Text style={styles.emptyTextSub}>Your captured thoughts will drift here once they are saved.</Text>
+          <BlinkingStar />
+          <Text style={styles.emptyTextTitle}>Gathering Stardust</Text>
+          <Text style={styles.emptyTextSub}>Your captured thoughts will synthesize here soon.</Text>
         </Animated.View>
       ) : (
         <View style={styles.listWrapper}>
@@ -66,6 +121,7 @@ export default function NotesScreen() {
           <View style={styles.timelineAxis} />
           
           <FlatList
+            ref={flatListRef}
             data={notes}
             keyExtractor={(item) => item.id}
             renderItem={({ item, index }) => (
@@ -77,11 +133,18 @@ export default function NotesScreen() {
                 onSwipeStart={onSwipeStart}
               />
             )}
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
             showsVerticalScrollIndicator={false}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
           />
         </View>
       )}
+
+      <ScrollToTopButton 
+        visible={showScrollTop} 
+        onPress={scrollToTop} 
+      />
 
       {/* Focus Mode Overlay */}
       <ReadingModal 
@@ -149,19 +212,26 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingBottom: 100,
+    paddingBottom: 120,
+  },
+  starWrapper: {
+    marginBottom: 24,
   },
   emptyTextTitle: {
-    fontSize: 22,
-    fontWeight: '700',
+    fontSize: 18,
+    fontWeight: '300',
     color: '#111111',
-    marginBottom: 8,
+    letterSpacing: 1.5,
+    textAlign: 'center',
+    marginBottom: 6,
   },
   emptyTextSub: {
-    color: '#BBBBBB',
-    fontSize: 14,
+    fontSize: 8,
+    color: '#8E44AD',
+    textTransform: 'uppercase',
+    letterSpacing: 2.0,
+    fontWeight: '700',
     textAlign: 'center',
-    lineHeight: 20,
     paddingHorizontal: 40,
   },
   listContent: {

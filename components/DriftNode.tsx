@@ -15,15 +15,14 @@ interface DriftNodeProps {
 
 function DriftNode({ node, onPress, activeView, searchStatus = 'none', isFirst }: DriftNodeProps) {
   const localYBase = node.unfocusedY - 60;
-  const color = CATEGORY_COLORS[node.category] || '#111111';
+  const isRefining = node.is_refining;
+  const color = isRefining ? '#4A90E2' : (CATEGORY_COLORS[node.category] || '#111111');
   
-  // Reanimated pulse for ghost nodes
   const pulseScale = useSharedValue(1);
   const pulseOpacity = useSharedValue(0.6);
   const outerPulseScale = useSharedValue(1);
   const outerPulseOpacity = useSharedValue(0.1);
   
-  // Search Highlighting Pulse
   const searchPulseScale = useSharedValue(1);
   const searchPulseOpacity = useSharedValue(0);
 
@@ -44,32 +43,34 @@ function DriftNode({ node, onPress, activeView, searchStatus = 'none', isFirst }
   }, [searchStatus]);
 
   useEffect(() => {
-    // Only pulse the very first node or ghost nodes to save CPU on 2000+ items
-    if (node.is_ghost || isFirst) {
+    if (node.is_ghost || isFirst || isRefining) {
       pulseScale.value = withRepeat(
-        withTiming(2.2, { duration: 1500, easing: Easing.out(Easing.ease) }),
+        withTiming(isRefining ? 1.8 : 2.2, { duration: isRefining ? 800 : 1500, easing: Easing.out(Easing.ease) }),
         -1, false
       );
       pulseOpacity.value = withRepeat(
-        withTiming(0, { duration: 1500, easing: Easing.out(Easing.ease) }),
+        withTiming(0, { duration: isRefining ? 800 : 1500, easing: Easing.out(Easing.ease) }),
         -1, false
       );
-      outerPulseScale.value = withRepeat(
-        withTiming(3.0, { duration: 2000, easing: Easing.out(Easing.ease) }),
-        -1, false
-      );
-      outerPulseOpacity.value = withRepeat(
-        withTiming(0, { duration: 2000, easing: Easing.out(Easing.ease) }),
-        -1, false
-      );
+      
+      if (!isRefining) {
+        outerPulseScale.value = withRepeat(
+          withTiming(3.0, { duration: 2000, easing: Easing.out(Easing.ease) }),
+          -1, false
+        );
+        outerPulseOpacity.value = withRepeat(
+          withTiming(0, { duration: 2000, easing: Easing.out(Easing.ease) }),
+          -1, false
+        );
+      } else {
+        outerPulseScale.value = 1;
+        outerPulseOpacity.value = 0;
+      }
     } else {
-      // Static state for performance on standard nodes
-      pulseScale.value = 1;
-      pulseOpacity.value = 0.2;
-      outerPulseScale.value = 1;
-      outerPulseOpacity.value = 0.05;
+      pulseScale.value = 1; pulseOpacity.value = 0.2;
+      outerPulseScale.value = 1; outerPulseOpacity.value = 0.05;
     }
-  }, [node.is_ghost, isFirst]);
+  }, [node.is_ghost, isFirst, isRefining]);
 
   const pulseStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pulseScale.value }],
@@ -86,30 +87,40 @@ function DriftNode({ node, onPress, activeView, searchStatus = 'none', isFirst }
     opacity: outerPulseOpacity.value,
   }));
 
-  // Horizon Math
   const importanceScore = Math.min(1, Math.max(0, (node.content.length - 15) / 150));
   
   const containerStyle = useAnimatedStyle(() => {
     const isNexus = activeView === 'nexus';
-    let targetScale = isNexus ? 0.75 + (importanceScore * 0.6) : 1.0;
-    let targetOpacity = isNexus ? 0.25 + (importanceScore * 0.75) : 1.0;
-    
-    // Search Visibility Overrides
-    if (searchStatus === 'dim') {
-      targetOpacity = 0.05;
-      targetScale = 0.95;
-    } else if (searchStatus === 'match') {
-      targetOpacity = 1.0;
-      targetScale = 1.1; // Pop out slightly
-    }
+    const isPurpleNode = color === '#8E44AD';
+    let targetOpacity = isNexus ? 0.25 + (importanceScore * 0.75) : 0.9;
+    if (searchStatus === 'dim') targetOpacity = 0.05;
+    else if (searchStatus === 'match') targetOpacity = 1.0;
 
     return {
-      transform: [{ scale: withSpring(targetScale, { damping: 20, stiffness: 90 }) }],
       opacity: withTiming(targetOpacity, { duration: 400, easing: Easing.out(Easing.cubic) }),
       top: withSpring(localYBase, { damping: 25, stiffness: 60 }),
-      zIndex: searchStatus === 'match' ? 100 : (activeView === 'nexus' && importanceScore > 0.5 ? 20 : 2),
+      zIndex: searchStatus === 'match' ? 100 : (activeView === 'nexus' && (importanceScore > 0.5 || isPurpleNode) ? 20 : 2),
     };
-  }, [activeView, importanceScore, searchStatus, localYBase]);
+  }, [activeView, importanceScore, searchStatus, localYBase, color]);
+
+  const innerContentStyle = useAnimatedStyle(() => {
+    const isNexus = activeView === 'nexus';
+    const isChronos = activeView === 'chronos';
+    const isBlackNode = color === '#111111';
+    const isPurpleNode = color === '#8E44AD';
+    
+    let viewMultiplier = 1.0;
+    if (isChronos && isBlackNode) viewMultiplier = 1.05; 
+    if (isNexus && isPurpleNode) viewMultiplier = 1.1; 
+    
+    let targetScale = (isNexus ? 0.6 + (importanceScore * 0.5) : 0.85) * viewMultiplier;
+    if (searchStatus === 'dim') targetScale = targetScale * 0.8;
+    else if (searchStatus === 'match') targetScale = targetScale * 1.15;
+
+    return {
+      transform: [{ scale: withSpring(targetScale, { damping: 20, stiffness: 90 }) }]
+    };
+  }, [activeView, importanceScore, searchStatus, color]);
 
   const handleDotPress = () => {
     try { Haptics.selectionAsync(); } catch (e) {}
@@ -122,40 +133,67 @@ function DriftNode({ node, onPress, activeView, searchStatus = 'none', isFirst }
   };
 
   return (
-    <Animated.View style={[{ position: 'absolute', width: '100%' }, containerStyle]}>
-      <TouchableOpacity
-        style={{ position: 'absolute', top: 60 - node.nodeRadius * 4, left: node.unfocusedX - node.nodeRadius * 4, width: node.nodeRadius * 8, height: node.nodeRadius * 8, justifyContent: 'center', alignItems: 'center', zIndex: 20 }}
-        activeOpacity={1}
-        onPress={handleDotPress}
-      >
-        <Animated.View style={[{ position: 'absolute', width: node.nodeRadius * 5, height: node.nodeRadius * 5, borderRadius: node.nodeRadius * 2.5, backgroundColor: color }, searchPulseStyle]} />
-        <Animated.View style={[{ position: 'absolute', width: node.nodeRadius * 2, height: node.nodeRadius * 2, borderRadius: node.nodeRadius, backgroundColor: color }, outerPulseStyle]} />
-        <Animated.View style={[{ position: 'absolute', width: node.nodeRadius * 2, height: node.nodeRadius * 2, borderRadius: node.nodeRadius, backgroundColor: color }, pulseStyle]} />
-        <View pointerEvents="none" style={{ width: node.nodeRadius * 2, height: node.nodeRadius * 2, borderRadius: node.nodeRadius, backgroundColor: color, opacity: node.is_refining ? 0.3 : node.ageFade + 0.2 }} />
-        {node.is_refining && (
-          <View style={{ position: 'absolute', width: node.nodeRadius * 4, height: node.nodeRadius * 4, borderRadius: node.nodeRadius * 2, borderWidth: 1, borderColor: color, opacity: 0.5 }} />
-        )}
-      </TouchableOpacity>
-      
-      <TouchableOpacity 
-        style={{ zIndex: 10, marginLeft: node.unfocusedTextLeft, width: node.dynamicWidth, paddingTop: 30, paddingBottom: 30, justifyContent: 'center' }} 
-        activeOpacity={1.0} 
-        onPress={handleTextPress}
-      >
-        <Text style={[styles.noteCategory, { color, marginBottom: 6, opacity: Math.min(1, node.ageFade + 0.4) }]}>
-          {node.is_refining ? 'REFINING...' : node.category?.toUpperCase()}
-        </Text>
-        <View style={{ maxHeight: 60, overflow: 'hidden' }}>
-          <Text numberOfLines={3} style={[styles.noteContent, node.is_refining && { color: '#BBBBBB' }]}>{node.content}</Text>
-          {(node.content.length > 80 || node.displayLines > 2) && (
-            <LinearGradient
-              colors={['rgba(255,255,255,0)', 'rgba(255,255,255,1)']}
-              style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 28 }}
-              pointerEvents="none"
-            />
+    <Animated.View style={[{ position: 'absolute', width: '100%', height: 120 }, containerStyle]}>
+      {/* 
+        CRITICAL: Dot is wrapped in its own scaling View separate from the coordinate system.
+        This ensures the dot stays centered at node.unfocusedX even when scaling.
+      */}
+      <Animated.View style={[{ 
+        position: 'absolute', 
+        top: 60 - node.nodeRadius * 4, 
+        left: node.unfocusedX - node.nodeRadius * 4, 
+        width: node.nodeRadius * 8, 
+        height: node.nodeRadius * 8, 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        zIndex: 20 
+      }, innerContentStyle]}>
+        <TouchableOpacity
+          style={{ width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' }}
+          activeOpacity={1}
+          onPress={handleDotPress}
+        >
+          <Animated.View style={[{ position: 'absolute', width: node.nodeRadius * 5, height: node.nodeRadius * 5, borderRadius: node.nodeRadius * 2.5, backgroundColor: color }, searchPulseStyle]} />
+          <Animated.View style={[{ position: 'absolute', width: node.nodeRadius * 2, height: node.nodeRadius * 2, borderRadius: node.nodeRadius, backgroundColor: color }, outerPulseStyle]} />
+          <Animated.View style={[{ position: 'absolute', width: node.nodeRadius * 2, height: node.nodeRadius * 2, borderRadius: node.nodeRadius, backgroundColor: color }, pulseStyle]} />
+          <View pointerEvents="none" style={{ width: node.nodeRadius * 2, height: node.nodeRadius * 2, borderRadius: node.nodeRadius, backgroundColor: color, opacity: node.is_refining ? 0.3 : node.ageFade + 0.2 }} />
+          {node.is_refining && (
+            <View style={{ position: 'absolute', width: node.nodeRadius * 4, height: node.nodeRadius * 4, borderRadius: node.nodeRadius * 2, borderWidth: 1, borderColor: color, opacity: 0.5 }} />
           )}
-        </View>
-      </TouchableOpacity>
+        </TouchableOpacity>
+      </Animated.View>
+        
+      <Animated.View 
+        style={[{ 
+          zIndex: 10, 
+          position: 'absolute', 
+          top: 30, 
+          left: node.unfocusedTextLeft, 
+          width: node.dynamicWidth, 
+          height: 60, 
+          justifyContent: 'center' 
+        }, innerContentStyle]}
+      >
+        <TouchableOpacity 
+          activeOpacity={1.0} 
+          onPress={handleTextPress}
+          style={{ width: '100%', height: '100%', justifyContent: 'center' }}
+        >
+          <Text style={[styles.noteCategory, { color, marginBottom: 6, opacity: Math.min(1, node.ageFade + 0.4) }]}>
+            {node.is_refining ? 'REFINING...' : node.category?.toUpperCase()}
+          </Text>
+          <View style={{ maxHeight: 60, overflow: 'hidden' }}>
+            <Text numberOfLines={3} style={[styles.noteContent, node.is_refining && { color: '#BBBBBB' }]}>{node.content}</Text>
+            {(node.content.length > 80 || node.displayLines > 2) && (
+              <LinearGradient
+                colors={['rgba(255,255,255,0)', 'rgba(255,255,255,1)']}
+                style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 28 }}
+                pointerEvents="none"
+              />
+            )}
+          </View>
+        </TouchableOpacity>
+      </Animated.View>
     </Animated.View>
   );
 }
@@ -173,5 +211,5 @@ export default memo(DriftNode, (prev, next) => {
 
 const styles = StyleSheet.create({
   noteCategory: { fontSize: 9, fontWeight: '700', letterSpacing: 2, textTransform: 'uppercase' },
-  noteContent: { fontSize: 18, fontWeight: '300', lineHeight: 28, color: '#111111' },
+  noteContent: { fontSize: 18, fontWeight: '300', lineHeight: 26, color: '#111111' },
 });

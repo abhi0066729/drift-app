@@ -1,9 +1,26 @@
 import React, { useRef } from 'react';
 import { StyleSheet, Text, View, Pressable, TouchableOpacity, Animated as RNAnimated } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withRepeat, withTiming } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Swipeable } from 'react-native-gesture-handler';
 import { CATEGORY_COLORS } from '@/constants/Categories';
+
+const RefiningPulse = () => {
+  const opacity = useSharedValue(0.4);
+  const scale = useSharedValue(1);
+
+  React.useEffect(() => {
+    opacity.value = withRepeat(withTiming(1, { duration: 800 }), -1, true);
+    scale.value = withRepeat(withTiming(1.5, { duration: 800 }), -1, true);
+  }, []);
+
+  const style = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ scale: scale.value }],
+  }));
+
+  return <Animated.View style={[styles.refiningPulse, style]} />;
+};
 
 interface ArchiveNodeProps {
   note: any;
@@ -17,6 +34,8 @@ export default function ArchiveNode({ note, index, onPress, onDelete, onSwipeSta
   const swipeableRef = useRef<Swipeable>(null);
   
   let category = 'Journal';
+  const isRefining = note.is_refining;
+
   if (note.entities_json) {
     try {
       const parsed = JSON.parse(note.entities_json);
@@ -24,7 +43,7 @@ export default function ArchiveNode({ note, index, onPress, onDelete, onSwipeSta
     } catch (e) {}
   }
 
-  const nodeColor = CATEGORY_COLORS[category] || '#111111';
+  const nodeColor = isRefining ? '#4A90E2' : (CATEGORY_COLORS[category] || '#111111');
   const dateStr = new Date(note.created_at).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
@@ -84,6 +103,7 @@ export default function ArchiveNode({ note, index, onPress, onDelete, onSwipeSta
         >
           {/* The Node Dot - Column is transparent to show the timeline axis behind it */}
           <View style={styles.nodeColumn}>
+            {isRefining && <RefiningPulse />}
             <View style={[styles.dot, { backgroundColor: nodeColor }]} />
           </View>
           
@@ -91,7 +111,7 @@ export default function ArchiveNode({ note, index, onPress, onDelete, onSwipeSta
           <View style={styles.contentContainer}>
             <View style={styles.headerRow}>
               <Text style={[styles.categoryText, { color: nodeColor }]}>
-                {category.toUpperCase()}
+                {isRefining ? 'REFINING...' : category.toUpperCase()}
               </Text>
               <Text style={styles.dateText}>{dateStr}</Text>
             </View>
@@ -141,6 +161,15 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 5,
     zIndex: 20, 
+  },
+  refiningPulse: {
+    position: 'absolute',
+    top: 4,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#4A90E2',
+    opacity: 0.5,
   },
   contentContainer: {
     flex: 1,

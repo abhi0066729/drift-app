@@ -74,12 +74,12 @@ export function processContextualConnections(notes: Note[], width: number, searc
     if (clusterId !== -1) clusterCounts[clusterId] = localIndex + 1;
 
     // --- SHARED SERPENTINE LOGIC ---
-    const isRight = (i * 7) % 3 === 0 || i % 2 !== 0;
+    const isRight = note.is_ghost ? (i % 2 !== 0) : ((i * 7) % 3 === 0 || i % 2 !== 0);
     const randX = (Math.abs(Math.sin(i * 37)) * 10000) % 1;
     const randY = (Math.abs(Math.cos(i * 41)) * 10000) % 1;
     
     const basePadding = 42;
-    const varianceX = randX * 120;
+    const varianceX = note.is_ghost ? (randX * 60) : (randX * 120);
     const unfocusedX = isRight ? (width - basePadding - varianceX) : (basePadding + varianceX);
     
     const resY = isSearchActive 
@@ -125,17 +125,19 @@ export function processContextualConnections(notes: Note[], width: number, searc
       clusterId,
       clusterIndex: localIndex,
       displayLines,
-      connectedNodeId: null as string | null, // Correct typing for second pass
+      connectedNodeId: null as string | null,
+      connectedNodeIndex: null as number | null,
     };
   });
 
   // Second Pass: O(N) Category-Locked Connections
-  // Using a single reverse-iteration with a category map to avoid O(N^2) lookup
-  const lastSeenByCategory = new Map<string, string>();
+  const lastSeenByCategory = new Map<string, number>();
   for (let i = processedNotes.length - 1; i >= 0; i--) {
     const note = processedNotes[i];
-    note.connectedNodeId = lastSeenByCategory.get(note.category) || null;
-    lastSeenByCategory.set(note.category, note.id);
+    const targetIdx = lastSeenByCategory.get(note.category);
+    note.connectedNodeIndex = targetIdx !== undefined ? targetIdx : null;
+    note.connectedNodeId = targetIdx !== undefined ? processedNotes[targetIdx].id : null;
+    lastSeenByCategory.set(note.category, i);
   }
 
   return processedNotes;

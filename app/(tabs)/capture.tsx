@@ -4,23 +4,22 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNotesStore } from '@/store/useNotesStore';
 import * as Crypto from 'expo-crypto';
 import { useRouter, useFocusEffect } from 'expo-router';
-import Animated, { FadeInDown, useAnimatedStyle, withTiming } from 'react-native-reanimated';
+import Animated, { FadeInDown, useAnimatedStyle, withTiming, useSharedValue, withRepeat } from 'react-native-reanimated';
 import { extractRealtime, extractDeep, NoteCategory } from '@/services/ai';
 
 const CATEGORY_COLORS: Record<NoteCategory, string> = {
-  Journal: '#4A6FA5',
+  Journal: '#8E44AD', 
   Study: '#5B8C5A',
   Idea: '#111111',
-  Todo: '#C45C2A',
-  Dream: '#704A81',
+  Todo: '#4A90E2', // Changed Todo to a distinct blue for better contrast
+  Dream: '#8E44AD',
   Research: '#3E5C76',
   Quote: '#D4AF37',
   Meeting: '#5A5A5A',
-  Reflection: '#808080',
+  Reflection: '#8E44AD',
   Creative: '#E74C3C',
 };
 
-// LOCAL QUICK-HINT (Zero Latency)
 function predictLocal(text: string): NoteCategory | null {
   const low = text.toLowerCase().trim();
   if (low.startsWith('- [ ]') || low.startsWith('[]') || low.startsWith('v ') || low.startsWith('check ')) return 'Todo';
@@ -42,15 +41,20 @@ export default function CaptureScreen() {
   const addNote = useNotesStore(state => state.addNote);
   const updateNote = useNotesStore(state => state.updateNote);
 
-  // REAL-TIME DEBOUNCED AI (Fast 3B Model)
-  useEffect(() => {
-    // 1. INSTANT LOCAL HINT
-    const local = predictLocal(inputText);
-    if (local) {
-      setPredictedCategory(local);
-    }
+  const pulseOpacity = useSharedValue(0);
 
-    // 2. DEBOUNCED AI HINT
+  useEffect(() => {
+    if (isTypingSync) {
+      pulseOpacity.value = withRepeat(withTiming(1, { duration: 800 }), -1, true);
+    } else {
+      pulseOpacity.value = withTiming(0, { duration: 400 });
+    }
+  }, [isTypingSync]);
+
+  useEffect(() => {
+    const local = predictLocal(inputText);
+    if (local) setPredictedCategory(local);
+
     if (inputText.length < 3) return;
     
     const timeoutId = setTimeout(async () => {
@@ -65,27 +69,22 @@ export default function CaptureScreen() {
         console.warn('Realtime prediction failed:', err);
       }
       setIsTypingSync(false);
-    }, 500); // 500ms debounce
+    }, 500);
 
     return () => clearTimeout(timeoutId);
   }, [inputText]);
 
-  const ribbonColor = CATEGORY_COLORS[predictedCategory];
-
-  const ribbonStyle = useAnimatedStyle(() => ({
-    width: withTiming(inputText.length > 0 ? 120 : 0),
-    backgroundColor: ribbonColor,
+  const auraStyle = useAnimatedStyle(() => ({
+    opacity: pulseOpacity.value,
+    transform: [{ scale: 1 + pulseOpacity.value * 0.1 }]
   }));
 
   const inputRef = React.useRef<TextInput>(null);
 
   useFocusEffect(
     useCallback(() => {
-      // Ensure keyboard is dismissed and input is blurred when entering
-      Keyboard.dismiss();
-      inputRef.current?.blur();
+      // Manual focus only - removed auto-focus timer
       return () => {
-        // Clean up on blur
         Keyboard.dismiss();
       };
     }, [])
@@ -97,13 +96,12 @@ export default function CaptureScreen() {
     const noteId = Crypto.randomUUID();
     const currentText = inputText;
 
-    // 1. INSTANT COMMIT (No Wait)
     addNote({
       id: noteId,
       content: currentText,
       created_at: Date.now(),
       source_type: 'text',
-      is_refining: true, // Signal that 70B is working
+      is_refining: true,
       entities_json: JSON.stringify({ 
         category: predictedCategory, 
         emotion: emotionHint || 'Neutral',
@@ -111,7 +109,6 @@ export default function CaptureScreen() {
       }),
     });
 
-    // 2. BACKGROUND ENRICHMENT (70B Model)
     extractDeep(currentText).then(aiResult => {
       if (aiResult) {
         updateNote(noteId, {
@@ -126,35 +123,36 @@ export default function CaptureScreen() {
     });
 
     setInputText('');
-    inputRef.current?.blur();
-    Keyboard.dismiss();
     router.push('/');
   }, [inputText, predictedCategory, emotionHint]);
+
+  const ribbonColor = CATEGORY_COLORS[predictedCategory];
 
   return (
     <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
       <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={[styles.inner, { paddingTop: insets.top + 20 }]}>
+          {/* Pulsating AI Aura */}
+          <Animated.View style={[styles.aura, auraStyle]} />
+
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => router.push('/')} style={styles.backButton}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
               <Text style={styles.backButtonText}>✕</Text>
             </TouchableOpacity>
 
             <View style={styles.semanticHub}>
-              <Animated.Text
-                style={[styles.categoryLabel, { color: inputText.length > 0 ? ribbonColor : '#BBBBBB' }]}
-              >
-                {inputText.length > 0 ? predictedCategory.toUpperCase() : 'CAPTURE'}
-              </Animated.Text>
-              <Animated.View style={[styles.semanticRibbon, ribbonStyle]} />
+              <Text style={styles.captureTitle}>Zenith Capture</Text>
+              <Text style={[styles.categoryLabel, { color: inputText.length > 0 ? ribbonColor : '#BBBBBB' }]}>
+                {inputText.length > 0 ? (isTypingSync ? 'SYNTHESIZING...' : predictedCategory.toUpperCase()) : 'WAITING FOR THOUGHT'}
+              </Text>
             </View>
 
-            <TouchableOpacity
-              style={[styles.commitButton, { opacity: inputText.trim().length > 0 ? 1 : 0.3 }]}
+            <TouchableOpacity 
+              style={[styles.commitButton, { backgroundColor: inputText.trim().length > 0 ? '#8E44AD' : '#F5F5F5' }]} 
               onPress={handleCapture}
               disabled={inputText.trim().length === 0}
             >
-              <Text style={styles.commitButtonText}>Commit</Text>
+              <Text style={[styles.commitButtonText, { color: inputText.trim().length > 0 ? '#FFFFFF' : '#BBBBBB' }]}>Commit</Text>
             </TouchableOpacity>
           </View>
 
@@ -163,19 +161,21 @@ export default function CaptureScreen() {
               ref={inputRef}
               style={styles.input}
               placeholder="What's your mind drifting to?"
-              placeholderTextColor="#D0D0D0"
+              placeholderTextColor="#E0E0E0"
               multiline
               value={inputText}
               onChangeText={setInputText}
               textAlignVertical="top"
-              selectionColor="#111111"
+              selectionColor="#8E44AD"
             />
           </View>
 
           <Animated.View entering={FadeInDown.delay(200)} style={styles.footerHint}>
-            <Text style={styles.hintText}>
-              {isTypingSync ? 'AI Sensing...' : (emotionHint ? `Feeling ${emotionHint.toLowerCase()} — ${predictedCategory.toLowerCase()}` : 'Thinking with Zenith engine...')}
-            </Text>
+            <View style={styles.hintContainer}>
+              <Text style={styles.hintText}>
+                {isTypingSync ? 'AI SYNTHESIZING...' : (emotionHint ? `${emotionHint.toUpperCase()} ENERGY DETECTED` : 'ZENITH COORDINATE ENGINE READY')}
+              </Text>
+            </View>
           </Animated.View>
         </View>
       </KeyboardAvoidingView>
@@ -186,35 +186,44 @@ export default function CaptureScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
   inner: { flex: 1 },
+  aura: {
+    position: 'absolute',
+    top: -50,
+    alignSelf: 'center',
+    width: 400,
+    height: 400,
+    borderRadius: 200,
+    backgroundColor: '#8E44AD05', // Extremely subtle purple aura
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingBottom: 24,
+    paddingBottom: 20,
   },
   backButton: {
-    width: 44, height: 44, borderRadius: 22,
+    width: 36, height: 36, borderRadius: 18,
     backgroundColor: '#F9F9F9',
     justifyContent: 'center', alignItems: 'center',
   },
-  backButtonText: { fontSize: 16, color: '#111111', fontWeight: '400' },
+  backButtonText: { fontSize: 14, color: '#111111', fontWeight: '300' },
   semanticHub: { alignItems: 'center', flex: 1 },
-  categoryLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 2.0, marginBottom: 4 },
-  semanticRibbon: { height: 2, borderRadius: 1 },
+  captureTitle: { fontSize: 12, fontWeight: '300', color: '#BBBBBB', letterSpacing: 1.2, marginBottom: 2 },
+  categoryLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 2.0 },
   commitButton: {
-    backgroundColor: '#111111',
-    paddingHorizontal: 24, paddingVertical: 12, borderRadius: 30,
+    paddingHorizontal: 16, paddingVertical: 8, borderRadius: 18,
   },
   commitButtonText: {
-    color: '#FFFFFF', fontWeight: '700', fontSize: 11,
+    fontWeight: '700', fontSize: 10,
     letterSpacing: 1.5, textTransform: 'uppercase',
   },
   content: { flex: 1, paddingHorizontal: 32 },
   input: {
-    fontSize: 28, fontWeight: '300', lineHeight: 40,
-    color: '#111111', marginTop: 20, minHeight: 300,
+    fontSize: 24, fontWeight: '300', lineHeight: 36,
+    color: '#111111', marginTop: 40, minHeight: 300,
   },
   footerHint: { position: 'absolute', bottom: 40, width: '100%', alignItems: 'center' },
-  hintText: { fontSize: 12, color: '#BBBBBB', fontWeight: '300', letterSpacing: 0.5 },
+  hintContainer: { paddingHorizontal: 20, paddingVertical: 6, borderRadius: 15, backgroundColor: '#F9F9F9' },
+  hintText: { fontSize: 8, color: '#8E44AD', fontWeight: '700', letterSpacing: 1.5 },
 });

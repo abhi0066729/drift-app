@@ -7,16 +7,17 @@ import DriftNode from './DriftNode';
 import { calculateSearchMatch } from '@/utils/noteUtils';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const WINDOW_BUFFER = 1000; // Extra pixels above and below
+const WINDOW_BUFFER = 1500; // Extra pixels above and below
 
 // High-Performance SVG Optimizer: Render Connection Streams in category batches
 // This consolidates hundreds of draw calls into ~10 per window
-const BatchedConnectionLayer = React.memo(({ visibleCurves, nodeMap, tileY, isNexus, searchQuery }: { 
+const BatchedConnectionLayer = React.memo(({ visibleCurves, nodeMap, tileY, isNexus, searchQuery, width }: { 
   visibleCurves: any[], 
   nodeMap: Record<string, any>, 
   tileY: number, 
   isNexus: boolean,
-  searchQuery: string 
+  searchQuery: string,
+  width: number
 }) => {
   if (visibleCurves.length === 0) return null;
 
@@ -45,13 +46,17 @@ const BatchedConnectionLayer = React.memo(({ visibleCurves, nodeMap, tileY, isNe
 
     // Identical Curvature Logic
     const dy = Math.abs(targetNode.unfocusedY - node.unfocusedY);
-    const tangent = Math.max(160, dy * 0.6);
+    const tangent = Math.max(160, dy * 0.5);
     const curX = node.unfocusedX;
     const curY = node.unfocusedY - tileY;
     const tgtX = targetNode.unfocusedX;
     const tgtY = targetNode.unfocusedY - tileY;
 
-    const pathD = `M ${curX} ${curY} C ${curX} ${curY + tangent}, ${tgtX} ${tgtY - tangent}, ${tgtX} ${tgtY}`;
+    // Use a simpler curve if they are very far vertically to prevent "loops"
+    const cp1y = curY + tangent;
+    const cp2y = tgtY - tangent;
+
+    const pathD = `M ${curX} ${curY} C ${curX} ${cp1y}, ${tgtX} ${cp2y}, ${tgtX} ${tgtY}`;
     groups[groupKey].push(pathD);
   });
 
@@ -81,11 +86,12 @@ interface UserModeMapProps {
   onNodePress: (node: any, type: 'dot' | 'text') => void;
   onScroll?: (y: number) => void;
   scrollY: SharedValue<number>;
+  width: number;
   totalHeight: number;
 }
 
 export default React.memo(React.forwardRef<Animated.ScrollView, UserModeMapProps>((props, ref) => {
-  const { mappedNotes, activeView, searchQuery, onNodePress, onScroll, scrollY, totalHeight } = props;
+  const { mappedNotes, activeView, searchQuery, onNodePress, onScroll, scrollY, totalHeight, width } = props;
   const isNexus = activeView === 'nexus';
   
   // --- TEMPORAL WINDOWING STATE ---
@@ -159,9 +165,12 @@ export default React.memo(React.forwardRef<Animated.ScrollView, UserModeMapProps
     return mappedNotes.slice(safeStart, safeEnd + 1).filter(n => {
       const targetNode = n.connectedNodeId ? nodeMap[n.connectedNodeId] : null;
       if (!targetNode) return false;
-      const startVisible = n.unfocusedY >= minY && n.unfocusedY <= maxY;
-      const endVisible = targetNode.unfocusedY >= minY && targetNode.unfocusedY <= maxY;
-      return startVisible || endVisible;
+      
+      const startY = Math.min(n.unfocusedY, targetNode.unfocusedY);
+      const endY = Math.max(n.unfocusedY, targetNode.unfocusedY);
+      
+      // Line is visible if its Y-range intersects the tile's Y-range
+      return Math.max(startY, minY) <= Math.min(endY, maxY);
     });
   }, [mappedNotes, nodeMap, start, end, tileY, tileHeight]);
 
@@ -177,18 +186,19 @@ export default React.memo(React.forwardRef<Animated.ScrollView, UserModeMapProps
     >
       {/* Tiled Render Layer: 'Turbo' Accelerated for scaling */}
       <View 
-        style={{ position: 'absolute', top: tileY, left: 0, right: 0, height: tileHeight, zIndex: 1 }} 
+        style={{ position: 'absolute', top: tileY, left: 0, width, height: tileHeight, zIndex: 1 }} 
         pointerEvents="none"
-        shouldRasterizeIOS={true} // Boost iPhone GPU performance
-        renderToHardwareTextureAndroid={true} // Boost Android GPU performance
+        shouldRasterizeIOS={true} 
+        renderToHardwareTextureAndroid={true} 
       >
-        <Svg width="100%" height={tileHeight}>
+        <Svg width={width} height={tileHeight}>
           <BatchedConnectionLayer 
             visibleCurves={visibleCurves} 
             nodeMap={nodeMap} 
             tileY={tileY} 
             isNexus={isNexus}
             searchQuery={searchQuery}
+            width={width}
           />
         </Svg>
       </View>

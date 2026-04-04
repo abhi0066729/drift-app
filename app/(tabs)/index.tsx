@@ -1,7 +1,8 @@
-import React, { useMemo, useState, useRef } from 'react';
-import { Dimensions, StyleSheet, Text, View, Pressable, TextInput } from 'react-native';
+import React, { useMemo, useState, useRef, useCallback } from 'react';
+import { Dimensions, StyleSheet, Text, View, Pressable, TextInput, Alert } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, withTiming, interpolate, Extrapolate, useAnimatedReaction, runOnJS } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useNotesStore } from '@/store/useNotesStore';
 import KineticFocusMap from '@/components/KineticFocusMap';
@@ -9,6 +10,7 @@ import GhostOverlay from '@/components/GhostOverlay';
 import ReadingModal from '@/components/ReadingModal';
 import ChronosNexusToggle from '@/components/ChronosNexusToggle';
 import UserModeMap from '@/components/UserModeMap';
+import ScrollToTopButton from '@/components/ScrollToTopButton';
 import { generateFullGhostPool, processContextualConnections } from '@/utils/noteUtils';
 
 const { width, height } = Dimensions.get('window');
@@ -21,6 +23,9 @@ export default function HomeScreen() {
   const [expandedGhostId, setExpandedGhostId] = useState<string | null>(null);
   const [readingNode, setReadingNode] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  
+  const mapRef = useRef<any>(null);
   
   // Search Reveal State
   const scrollOffset = useSharedValue(0);
@@ -29,11 +34,35 @@ export default function HomeScreen() {
   
   // Developer Testing State
   const lastTap = useRef<number>(0);
+  
+  useFocusEffect(
+    useCallback(() => {
+      // Reset interaction state on enter
+      setFocusRootNode(null);
+      setExpandedGhostId(null);
+      setReadingNode(null);
+
+      return () => {
+        // Optional: Reset on leave as well if needed
+      };
+    }, [])
+  );
 
   const displayNotes = useMemo(() => {
-    // Merge real notes with exactly 5 tutorial ghosts
-    const ghosts = generateFullGhostPool(5);
-    return [...notes, ...ghosts];
+    // If user has 5 or more notes, vanish ghosts entirely
+    if (notes.length >= 5) return notes;
+    
+    // Otherwise, fill the remaining slots with ghosts to keep a high-density "training" field
+    const ghostLimit = 5 - notes.length;
+    const ghosts = generateFullGhostPool(ghostLimit);
+    
+    // Ghost timestamps should be older than real notes to appear below them
+    const adjustedGhosts = ghosts.map((g, i) => ({
+      ...g,
+      created_at: notes.length > 0 ? (notes[notes.length - 1].created_at - (i + 1) * 3600000) : g.created_at
+    }));
+
+    return [...notes, ...adjustedGhosts];
   }, [notes]);
   
   const mappedNotes = useMemo(() => processContextualConnections(displayNotes, width, searchQuery), [displayNotes, searchQuery]);
@@ -41,8 +70,38 @@ export default function HomeScreen() {
 
   const handleDevGesture = () => {
     const now = Date.now();
-    if (now - lastTap.current < 300) {
-      // Dev gesture logic (placeholder)
+    if (now - lastTap.current < 400) {
+      // BURST MODE: Add 20 Random Notes
+      const categories = ['Journal', 'Idea', 'Reflection', 'Creative', 'Todo'];
+      const emotions = ['excited', 'contemplative', 'peaceful', 'focused', 'dreamy'];
+      
+      for (let i = 0; i < 20; i++) {
+        const id = `debug-${Date.now()}-${i}`;
+        const timestamp = Date.now() - (Math.random() * 1000 * 60 * 60 * 24 * 30); // Random within 30 days
+        const cat = categories[Math.floor(Math.random() * categories.length)];
+        
+        const debugNote: any = {
+          id,
+          content: `Burst Capture #${i + 1}: Synthetic thought fragment exploring ${cat.toLowerCase()} semantics.`,
+          created_at: timestamp,
+          source_type: 'text',
+          is_refining: false,
+          entities_json: JSON.stringify({
+            category: cat,
+            emotion: emotions[Math.floor(Math.random() * emotions.length)],
+            people: [],
+            topics: ["debug", "burst"],
+            sentiment: "neutral",
+            urgency: i % 5 === 0 ? "high" : "low",
+            dates: []
+          })
+        };
+        
+        useNotesStore.getState().addNote(debugNote);
+      }
+      
+      triggerHaptic();
+      Alert.alert("Burst Synthesis Complete", "20 debug fragments localized to the map.");
     }
     lastTap.current = now;
   };
@@ -98,6 +157,19 @@ export default function HomeScreen() {
     }
   };
 
+  const handleScroll = (y: number) => {
+    if (y > 300) {
+      setShowScrollTop(true);
+    } else {
+      setShowScrollTop(false);
+    }
+  };
+
+  const scrollToTop = () => {
+    mapRef.current?.scrollTo({ y: 0, animated: true });
+    setShowScrollTop(false);
+  };
+
   const expandedGhostNode = mappedNotes.find((n: any) => n.id === expandedGhostId);
 
   return (
@@ -138,15 +210,23 @@ export default function HomeScreen() {
           </Animated.View>
 
           <UserModeMap 
+            ref={mapRef}
             mappedNotes={mappedNotes} 
             activeView={activeView} 
             searchQuery={searchQuery}
             onNodePress={handleNodePress} 
             scrollY={scrollOffset}
+            onScroll={handleScroll}
+            width={width}
             totalHeight={totalHeight} 
           />
         </View>
       )}
+
+      <ScrollToTopButton 
+        visible={showScrollTop} 
+        onPress={scrollToTop} 
+      />
       
       {/* Cinematic Modal for Ghost Notes */}
       {expandedGhostNode && (
