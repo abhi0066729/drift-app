@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { StyleSheet, Text, View, Pressable, TouchableOpacity, Animated as RNAnimated } from 'react-native';
-import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withRepeat, withTiming } from 'react-native-reanimated';
+import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withRepeat, withTiming, withSpring } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Swipeable } from 'react-native-gesture-handler';
 import { CATEGORY_COLORS } from '@/constants/Categories';
@@ -22,15 +22,46 @@ const RefiningPulse = () => {
   return <Animated.View style={[styles.refiningPulse, style]} />;
 };
 
+const SearchMatchPulse = ({ color }: { color: string }) => {
+  const scale = useSharedValue(1);
+  const opacity = useSharedValue(0.6);
+
+  React.useEffect(() => {
+    scale.value = withRepeat(withSpring(2.5, { damping: 10, stiffness: 80 }), -1, true);
+    opacity.value = withRepeat(withTiming(0, { duration: 1200 }), -1, false);
+  }, []);
+
+  const style = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    opacity: opacity.value,
+  }));
+
+  return (
+    <Animated.View style={[
+      styles.matchPulse, 
+      { backgroundColor: color },
+      style
+    ]} />
+  );
+};
+
 interface ArchiveNodeProps {
   note: any;
   index: number;
   onPress: (note: any) => void;
   onDelete: (id: string) => void;
   onSwipeStart: (ref: Swipeable | null) => void;
+  searchQuery?: string;
 }
 
-export default function ArchiveNode({ note, index, onPress, onDelete, onSwipeStart }: ArchiveNodeProps) {
+export default function ArchiveNode({ 
+  note, 
+  index, 
+  onPress, 
+  onDelete, 
+  onSwipeStart, 
+  searchQuery
+}: ArchiveNodeProps) {
   const swipeableRef = useRef<Swipeable>(null);
   
   let category = 'Journal';
@@ -42,6 +73,13 @@ export default function ArchiveNode({ note, index, onPress, onDelete, onSwipeSta
       category = parsed.category || parsed.categories?.[0] || 'Journal';
     } catch (e) {}
   }
+
+  // Search Match Check
+  const lowerQuery = searchQuery?.toLowerCase();
+  const isMatch = !!(lowerQuery && (
+    note.content.toLowerCase().includes(lowerQuery) ||
+    category.toLowerCase().includes(lowerQuery)
+  ));
 
   const nodeColor = isRefining ? '#4A90E2' : (CATEGORY_COLORS[category] || '#111111');
   const dateStr = new Date(note.created_at).toLocaleDateString('en-US', {
@@ -97,18 +135,30 @@ export default function ArchiveNode({ note, index, onPress, onDelete, onSwipeSta
         <Pressable 
           style={({ pressed }) => [
             styles.container,
-            pressed && styles.pressed
+            pressed && styles.pressed,
+            isMatch && styles.matchContainer
           ]} 
           onPress={() => onPress(note)}
         >
           {/* The Node Dot - Column is transparent to show the timeline axis behind it */}
           <View style={styles.nodeColumn}>
             {isRefining && <RefiningPulse />}
-            <View style={[styles.dot, { backgroundColor: nodeColor }]} />
+            {isMatch && <SearchMatchPulse color={nodeColor} />}
+            <View style={[
+              styles.dot, 
+              { backgroundColor: nodeColor },
+              isMatch && { 
+                shadowColor: nodeColor, 
+                shadowOpacity: 1, 
+                shadowRadius: 15, 
+                elevation: 10,
+                transform: [{ scale: 1.2 }]
+              }
+            ]} />
           </View>
           
           {/* Content area is white to hide the delete button behind it */}
-          <View style={styles.contentContainer}>
+          <View style={[styles.contentContainer, isMatch && styles.matchContent]}>
             <View style={styles.headerRow}>
               <Text style={[styles.categoryText, { color: nodeColor }]}>
                 {isRefining ? 'REFINING...' : category.toUpperCase()}
@@ -121,10 +171,12 @@ export default function ArchiveNode({ note, index, onPress, onDelete, onSwipeSta
                 {note.content}
               </Text>
               {/* Expansion Blur Effect */}
-              <LinearGradient
-                colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.9)']}
-                style={styles.textBlur}
-              />
+              {!isMatch && (
+                <LinearGradient
+                  colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.9)']}
+                  style={styles.textBlur}
+                />
+              )}
             </View>
           </View>
         </Pressable>
@@ -146,6 +198,9 @@ const styles = StyleSheet.create({
     marginBottom: 80, 
     paddingLeft: 20,
     backgroundColor: 'transparent', 
+  },
+  matchContainer: {
+    // Subtle highlight for matches
   },
   pressed: {
     opacity: 0.7,
@@ -171,12 +226,23 @@ const styles = StyleSheet.create({
     backgroundColor: '#4A90E2',
     opacity: 0.5,
   },
+  matchPulse: {
+    position: 'absolute',
+    top: 4,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    zIndex: 10,
+  },
   contentContainer: {
     flex: 1,
     paddingLeft: 12,
     backgroundColor: '#FFFFFF', // White hides the DELETE button
     paddingVertical: 4,
     borderRadius: 8,
+  },
+  matchContent: {
+    backgroundColor: 'rgba(142, 68, 173, 0.05)', 
   },
   headerRow: {
     flexDirection: 'row',
