@@ -62,12 +62,16 @@ export function processContextualConnections(notes: Note[], width: number, searc
   const processedNotes = notesWithStatus.map((note, i) => {
     let category = 'Journal';
     let clusterId = -1;
+    let resonances: Record<string, number> = {};
     if (note.entities_json) {
       try {
         const parsed = JSON.parse(note.entities_json);
         category = parsed.category || parsed.categories?.[0] || 'Journal';
         clusterId = parsed.clusterId ?? -1;
+        resonances = parsed.resonances || { [category]: 1.0 };
       } catch (e) { }
+    } else {
+      resonances = { [category]: 1.0 };
     }
 
     const localIndex = clusterCounts[clusterId] || 0;
@@ -122,22 +126,36 @@ export function processContextualConnections(notes: Note[], width: number, searc
       isGlowing,
       category,
       categories: [category],
+      resonances,
       clusterId,
       clusterIndex: localIndex,
       displayLines,
       connectedNodeId: null as string | null,
       connectedNodeIndex: null as number | null,
+      connections: [] as { targetId: string, category: string, weight: number }[],
     };
   });
 
-  // Second Pass: O(N) Category-Locked Connections
+  // Second Pass: O(N) Multi-Category Connections
   const lastSeenByCategory = new Map<string, number>();
   for (let i = processedNotes.length - 1; i >= 0; i--) {
     const note = processedNotes[i];
-    const targetIdx = lastSeenByCategory.get(note.category);
-    note.connectedNodeIndex = targetIdx !== undefined ? targetIdx : null;
-    note.connectedNodeId = targetIdx !== undefined ? processedNotes[targetIdx].id : null;
-    lastSeenByCategory.set(note.category, i);
+    
+    const connections: { targetId: string, category: string, weight: number }[] = [];
+    
+    // Connect back sequentially for every active resonance
+    Object.entries(note.resonances).forEach(([cat, weight]) => {
+      const targetIdx = lastSeenByCategory.get(cat);
+      if (targetIdx !== undefined) {
+         connections.push({ targetId: processedNotes[targetIdx].id, category: cat, weight: weight as number });
+      }
+      lastSeenByCategory.set(cat, i);
+    });
+
+    note.connections = connections;
+    // Maintain backwards compatibility for single node tracking if needed elsewhere
+    note.connectedNodeId = connections.length > 0 ? connections[0].targetId : null;
+    note.connectedNodeIndex = connections.length > 0 ? processedNotes.findIndex(n => n.id === connections[0].targetId) : null;
   }
 
   return processedNotes;

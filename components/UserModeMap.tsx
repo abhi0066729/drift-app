@@ -26,38 +26,45 @@ const BatchedConnectionLayer = React.memo(({ visibleCurves, nodeMap, tileY, isNe
   const metadata: Record<string, { color: string, opacity: number, width: number }> = {};
 
   visibleCurves.forEach(node => {
-    const targetNode = nodeMap[node.connectedNodeId];
-    if (!targetNode) return;
+    if (!node.connections || node.connections.length === 0) return;
 
-    const status = calculateSearchMatch(searchQuery, node);
-    const groupKey = `${node.category}-${status}`;
-    
-    if (!groups[groupKey]) {
-      groups[groupKey] = [];
-      const color = CATEGORY_COLORS[node.category] || '#EAEAEA';
-      let opacity = isNexus ? 0.1 : (node.ageFade || 1) * 0.8;
-      const width = isNexus ? 1.5 : (node.importance || 1) * 2 + 0.8;
+    node.connections.forEach((conn: any) => {
+      const targetNode = nodeMap[conn.targetId];
+      if (!targetNode) return;
+
+      const status = calculateSearchMatch(searchQuery, node);
+      const groupKey = `${conn.category}-${status}`;
       
-      if (status === 'dim') opacity = 0.02;
-      if (status === 'match') opacity = isNexus ? 0.2 : 0.6;
-      
-      metadata[groupKey] = { color, opacity, width };
-    }
+      if (!groups[groupKey]) {
+        groups[groupKey] = [];
+        const color = CATEGORY_COLORS[conn.category] || '#EAEAEA';
+        
+        // Weight the opacity and thickness based on resonance weight (conn.weight)
+        const weightMult = conn.weight || 1.0;
+        let opacity = isNexus ? 0.1 * weightMult : ((node.ageFade || 1) * 0.8) * weightMult;
+        const width = isNexus ? 1.5 : (node.importance || 1) * 2 * weightMult + 0.8;
+        
+        if (status === 'dim') opacity = 0.02 * weightMult;
+        if (status === 'match') opacity = (isNexus ? 0.2 : 0.6) * weightMult;
+        
+        metadata[groupKey] = { color, opacity, width };
+      }
 
-    // Identical Curvature Logic
-    const dy = Math.abs(targetNode.unfocusedY - node.unfocusedY);
-    const tangent = Math.max(160, dy * 0.5);
-    const curX = node.unfocusedX;
-    const curY = node.unfocusedY - tileY;
-    const tgtX = targetNode.unfocusedX;
-    const tgtY = targetNode.unfocusedY - tileY;
+      // Identical Curvature Logic
+      const dy = Math.abs(targetNode.unfocusedY - node.unfocusedY);
+      const tangent = Math.max(160, dy * 0.5);
+      const curX = node.unfocusedX;
+      const curY = node.unfocusedY - tileY;
+      const tgtX = targetNode.unfocusedX;
+      const tgtY = targetNode.unfocusedY - tileY;
 
-    // Use a simpler curve if they are very far vertically to prevent "loops"
-    const cp1y = curY + tangent;
-    const cp2y = tgtY - tangent;
+      // Use a simpler curve if they are very far vertically to prevent "loops"
+      const cp1y = curY + tangent;
+      const cp2y = tgtY - tangent;
 
-    const pathD = `M ${curX} ${curY} C ${curX} ${cp1y}, ${tgtX} ${cp2y}, ${tgtX} ${tgtY}`;
-    groups[groupKey].push(pathD);
+      const pathD = `M ${curX} ${curY} C ${curX} ${cp1y}, ${tgtX} ${cp2y}, ${tgtX} ${tgtY}`;
+      groups[groupKey].push(pathD);
+    });
   });
 
   return (

@@ -1,14 +1,18 @@
-import { useAudioPlayer } from 'expo-audio';
-import * as Haptics from 'expo-haptics';
+
+
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Dimensions, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
-import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useNotesStore } from '@/store/useNotesStore';
+import { NightTheme } from '@/constants/theme';
+import { CATEGORY_COLORS as GLOBAL_COLORS } from '@/constants/Categories';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   FadeIn,
   FadeOut,
   runOnJS,
+  runOnUI,
   scrollTo,
   SharedValue,
   useAnimatedProps,
@@ -21,7 +25,8 @@ import Animated, {
   withSequence,
   withSpring,
   withTiming,
-  Easing
+  Easing,
+  cancelAnimation
 } from 'react-native-reanimated';
 import Svg, { Circle, Path } from 'react-native-svg';
 
@@ -30,42 +35,35 @@ const AnimatedPath = Animated.createAnimatedComponent(Path);
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const SPRING_CONFIG = { damping: 24, stiffness: 120, overshootClamping: true };
 
-const TICK_SOUND_URL = 'https://www.soundjay.com/buttons/button-20.mp3';
+
 
 const CATEGORY_COLORS: Record<string, string> = {
-  Idea: '#111111',
-  Todo: '#C45C2A',
-  Journal: '#4A6FA5',
-  Study: '#5B8C5A',
-  Synthesis: '#8E44AD'
+  ...GLOBAL_COLORS,
+  Idea: '#F4F1EA', 
+  Synthesis: '#9B59B6'
 };
 
 function ScrubHint({ axisX }: { axisX: number }) {
   const translateY = useSharedValue(0);
   const opacity = useSharedValue(0);
-  const scale = useSharedValue(1.5); // Start slightly larger to show 'hover'
   const fingerScale = useSharedValue(1);
 
   useEffect(() => {
-    // Initial Fade In
     opacity.value = withTiming(1, { duration: 800 });
-
-    // Sequence: Wait -> PRESS DOWN -> Wait 250ms -> Move Up -> Move Down -> Fade Out
     fingerScale.value = withSequence(
-      withTiming(1, { duration: 1000 }), // Wait
-      withTiming(0.7, { duration: 250 }), // PRESS DOWN (Simulates hold activation)
-      withTiming(0.7, { duration: 2400 }), // Keep pressed during travel
-      withTiming(1, { duration: 400 })    // Release
+      withTiming(1, { duration: 1000 }),
+      withTiming(0.7, { duration: 250 }),
+      withTiming(0.7, { duration: 2400 }),
+      withTiming(1, { duration: 400 })
     );
 
     translateY.value = withSequence(
-      withTiming(0, { duration: 1250 }), // Wait for press
-      withTiming(-120, { duration: 1200, easing: Easing.inOut(Easing.quad) }), // Scrub Up
-      withTiming(120, { duration: 1200, easing: Easing.inOut(Easing.quad) }),  // Scrub Down
-      withTiming(0, { duration: 800, easing: Easing.inOut(Easing.quad) })     // Return
+      withTiming(0, { duration: 1250 }),
+      withTiming(-120, { duration: 1200, easing: Easing.inOut(Easing.quad) }),
+      withTiming(120, { duration: 1200, easing: Easing.inOut(Easing.quad) }),
+      withTiming(0, { duration: 800, easing: Easing.inOut(Easing.quad) })
     );
 
-    // Final Fade Out
     const timeout = setTimeout(() => {
       opacity.value = withTiming(0, { duration: 1000 });
     }, 5500);
@@ -80,7 +78,6 @@ function ScrubHint({ axisX }: { axisX: number }) {
 
   return (
     <Animated.View pointerEvents="none" style={[{ position: 'absolute', left: axisX - 30, top: height / 2 - 30, width: 60, height: 60, borderRadius: 30, backgroundColor: 'rgba(142, 68, 173, 0.1)', borderWidth: 1, borderColor: 'rgba(142, 68, 173, 0.3)', justifyContent: 'center', alignItems: 'center', zIndex: 100 }, animatedStyle]}>
-      {/* Visual Arrows */}
       <View style={{ position: 'absolute', top: -30, width: 20, height: 20, alignItems: 'center' }}>
         <Svg width="14" height="10" viewBox="0 0 14 10">
           <Path d="M 1 9 L 7 1 L 13 9" stroke="#8E44AD" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
@@ -91,17 +88,15 @@ function ScrubHint({ axisX }: { axisX: number }) {
           <Path d="M 1 1 L 7 9 L 13 1" stroke="#8E44AD" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
         </Svg>
       </View>
-      
-      {/* Inner 'Press' dot */}
       <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: '#8E44AD' }} />
     </Animated.View>
   );
 }
 
-function getTargetY(node: any, activeCluster: SharedValue<number>, activeNodeOriginY: SharedValue<number>, _clusterMinY: SharedValue<number>) {
+function getTargetY(node: any, activeCluster: SharedValue<number>, activeNodeOriginY: SharedValue<number>) {
   'worklet';
   if (activeCluster.value !== -1) {
-    const FIXED_GAP = 180; // Maximum density for visibility
+    const FIXED_GAP = 180;
     return activeNodeOriginY.value + (node.clusterIndex ?? 0) * FIXED_GAP;
   }
   return node.unfocusedY;
@@ -111,18 +106,16 @@ function getTargetX(node: any, activeCluster: SharedValue<number>, activeNodeOri
   'worklet';
   if (activeCluster.value !== -1) {
     const centerX = width / 2;
-    // Compress map's horizontal sprawl to 35% for a tight serpentine visual
     const compressedX = centerX + (node.unfocusedX - centerX) * 0.35;
     return compressedX;
   }
   return node.unfocusedX;
 }
 
-function AnimatedOverlayPath({ node, targetNode, stateRefs, rootCategories }: any) {
-  const { activeCluster, activeNodeOriginY, activeNodeOriginX, clusterMinY } = stateRefs;
-  const sY = useDerivedValue(() => withSpring(getTargetY(node, activeCluster, activeNodeOriginY, clusterMinY), SPRING_CONFIG));
+function AnimatedOverlayPath({ node, targetNode, activeCluster, activeNodeOriginY, activeNodeOriginX, rootCategories }: any) {
+  const sY = useDerivedValue(() => withSpring(getTargetY(node, activeCluster, activeNodeOriginY), SPRING_CONFIG));
   const sX = useDerivedValue(() => withSpring(getTargetX(node, activeCluster, activeNodeOriginX), SPRING_CONFIG));
-  const eY = useDerivedValue(() => withSpring(getTargetY(targetNode, activeCluster, activeNodeOriginY, clusterMinY), SPRING_CONFIG));
+  const eY = useDerivedValue(() => withSpring(getTargetY(targetNode, activeCluster, activeNodeOriginY), SPRING_CONFIG));
   const eX = useDerivedValue(() => withSpring(getTargetX(targetNode, activeCluster, activeNodeOriginX), SPRING_CONFIG));
 
   const animatedProps = useAnimatedProps(() => {
@@ -130,8 +123,6 @@ function AnimatedOverlayPath({ node, targetNode, stateRefs, rootCategories }: an
     const commonCategory = node.categories.find((c: string) => targetNode.categories.includes(c));
     const strokeColor = activeCluster.value !== -1 ? focusColor : (commonCategory ? (CATEGORY_COLORS[commonCategory] || '#111111') : CATEGORY_COLORS.Synthesis);
     const thickness = node.importance * 1.5 + 0.5;
-
-    // Elegant S-curves that mirror map style even at high density
     const dy = Math.abs(eY.value - sY.value);
     const tangent = Math.max(160, dy * 0.6);
 
@@ -145,10 +136,9 @@ function AnimatedOverlayPath({ node, targetNode, stateRefs, rootCategories }: an
   return <AnimatedPath fill="none" animatedProps={animatedProps} />;
 }
 
-function CategoryRing({ cat, idx, node, stateRefs }: any) {
-  const { activeCluster, activeNodeOriginY, activeNodeOriginX, clusterMinY } = stateRefs;
+function CategoryRing({ cat, idx, node, activeCluster, activeNodeOriginY, activeNodeOriginX }: any) {
   const currentX = useDerivedValue(() => getTargetX(node, activeCluster, activeNodeOriginX));
-  const currentY = useDerivedValue(() => getTargetY(node, activeCluster, activeNodeOriginY, clusterMinY));
+  const currentY = useDerivedValue(() => getTargetY(node, activeCluster, activeNodeOriginY));
   const animatedProps = useAnimatedProps(() => {
     const isHybrid = node.categories.length > 1;
     const isFocused = activeCluster.value !== -1;
@@ -165,12 +155,12 @@ function CategoryRing({ cat, idx, node, stateRefs }: any) {
   return <AnimatedCircle fill="none" animatedProps={animatedProps} />;
 }
 
-function AnimatedNodeDot({ node, stateRefs, rootCategories }: any) {
-  const { activeCluster, activeNodeOriginY, activeNodeOriginX, clusterMinY } = stateRefs;
-  const currentY = useDerivedValue(() => getTargetY(node, activeCluster, activeNodeOriginY, clusterMinY));
+function AnimatedNodeDot({ node, activeCluster, activeNodeOriginY, activeNodeOriginX, rootCategories, isDark }: any) {
+  const currentY = useDerivedValue(() => getTargetY(node, activeCluster, activeNodeOriginY));
   const currentX = useDerivedValue(() => getTargetX(node, activeCluster, activeNodeOriginX));
   const animatedPropsCore = useAnimatedProps(() => {
-    const focusColor = rootCategories && rootCategories.length > 0 ? (CATEGORY_COLORS[rootCategories[0]] || '#111111') : '#111111';
+    const defaultColor = isDark ? '#E8E6E0' : '#111111';
+    const focusColor = rootCategories && rootCategories.length > 0 ? (CATEGORY_COLORS[rootCategories[0]] || defaultColor) : defaultColor;
     return {
       cx: withSpring(currentX.value, SPRING_CONFIG), cy: withSpring(currentY.value, SPRING_CONFIG),
       r: node.nodeRadius * 1.2,
@@ -182,36 +172,29 @@ function AnimatedNodeDot({ node, stateRefs, rootCategories }: any) {
     <React.Fragment>
       <AnimatedCircle animatedProps={animatedPropsCore} />
       {node.categories.map((cat: string, idx: number) => (
-        <CategoryRing key={cat} cat={cat} idx={idx} node={node} stateRefs={stateRefs} rootCategories={rootCategories} />
+        <CategoryRing key={cat} cat={cat} idx={idx} node={node} activeCluster={activeCluster} activeNodeOriginY={activeNodeOriginY} activeNodeOriginX={activeNodeOriginX} />
       ))}
     </React.Fragment>
   );
 }
 
-function AnimatedNoteCard({ node, stateRefs, onExpandNode, rootCategories }: any) {
-  const { activeCluster, activeNodeOriginY, activeNodeOriginX, clusterMinY } = stateRefs;
-  const currentY = useDerivedValue(() => getTargetY(node, activeCluster, activeNodeOriginY, clusterMinY));
+function AnimatedNoteCard({ node, activeCluster, activeNodeOriginY, activeNodeOriginX, onExpandNode, rootCategories, isDark }: any) {
+  const currentY = useDerivedValue(() => getTargetY(node, activeCluster, activeNodeOriginY));
   const currentX = useDerivedValue(() => getTargetX(node, activeCluster, activeNodeOriginX));
   
-  // DYNAMIC SAFE WIDTH: Shrink width to fit available space without overlapping rings or leaving screen
   const cardLayout = useDerivedValue(() => {
     if (activeCluster.value === -1) return { left: node.unfocusedTextLeft, width: width * 0.55 };
-    
     const axisX = currentX.value;
-    const PADDING = 60; // Safe clearance for rings
+    const PADDING = 60;
     const margin = 20;
-    
     const rightSpace = width - axisX - PADDING - margin;
     const leftSpace = axisX - PADDING - margin;
-    
     let placeRight = node.isRight;
     if (placeRight && rightSpace < 120 && leftSpace > rightSpace) placeRight = false;
     else if (!placeRight && leftSpace < 120 && rightSpace > leftSpace) placeRight = true;
-    
     const available = placeRight ? rightSpace : leftSpace;
     const finalWidth = Math.max(140, Math.min(width * 0.52, available));
     const left = placeRight ? axisX + PADDING : axisX - PADDING - finalWidth;
-    
     return { left, width: finalWidth };
   });
 
@@ -225,9 +208,9 @@ function AnimatedNoteCard({ node, stateRefs, onExpandNode, rootCategories }: any
   const displayLines = useMemo(() => {
     let hash = 0;
     for (let j = 0; j < node.id.length; j++) hash = node.id.charCodeAt(j) + ((hash << 5) - hash);
-    // Standard growth (2-5 lines)
     return 2 + (Math.abs(hash) % 4);
   }, [node.id]);
+
 
   return (
     <Animated.View pointerEvents="box-none" style={[{ position: 'absolute', zIndex: 2 }, animatedStyle]}>
@@ -243,17 +226,8 @@ function AnimatedNoteCard({ node, stateRefs, onExpandNode, rootCategories }: any
               })}
             </View>
             <View style={{ height: 28 * displayLines, overflow: 'hidden' }}>
-              <Text numberOfLines={displayLines} style={styles.noteContent}>{node.content}</Text>
-              {node.content.length > 50 && (
-                <LinearGradient
-                  colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.6)', 'rgba(255,255,255,1)']}
-                  style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 60 }}
-                />
-              )}
+              <Text numberOfLines={displayLines} style={[styles.noteContent, { color: isDark ? NightTheme.textPrimary : '#111111' }]}>{node.content}</Text>
             </View>
-            {node.images && node.images.length > 0 && (
-              <Image source={{ uri: node.images[0] }} style={{ width: '100%', height: 120, borderRadius: 12, marginTop: 12 }} transition={200} contentFit="cover" />
-            )}
           </View>
         </Animated.View>
       </GestureDetector>
@@ -262,17 +236,18 @@ function AnimatedNoteCard({ node, stateRefs, onExpandNode, rootCategories }: any
 }
 
 export default function KineticFocusMap({ rootNode, mappedNotes, onClose }: any) {
+  const theme = useNotesStore(state => state.theme);
+  const isDark = theme === 'dark';
   const scrollY = useSharedValue(0);
   const startScrollY = useSharedValue(0);
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
-  const [readingNode, setReadingNode] = useState<any>(null);
   const lastTickY = useSharedValue(0);
-  const player = useAudioPlayer(TICK_SOUND_URL);
 
-  const handleTick = () => {
-    Haptics.selectionAsync();
-    if (player) player.play();
-  };
+  const [readingNode, setReadingNode] = useState<any>(null);
+
+  if (!rootNode) return null;
+
+  const handleTick = () => {};
 
   const triggerTick = () => {
     'worklet';
@@ -282,30 +257,11 @@ export default function KineticFocusMap({ rootNode, mappedNotes, onClose }: any)
   const backTap = Gesture.Tap().onEnd(() => { 'worklet'; runOnJS(onClose)(); });
   const closeReadingNodeTap = Gesture.Tap().onEnd(() => { 'worklet'; runOnJS(setReadingNode)(null); });
 
-  // Custom high-energy Drop & Bounce animation for parity
-  const DropAndBounce = () => {
-    'worklet';
-    return {
-      initialValues: {
-        transform: [{ translateY: -500 }, { scale: 0.9 }],
-        opacity: 0,
-      },
-      animations: {
-        transform: [
-          { translateY: withSpring(0, { damping: 10, stiffness: 95, mass: 1 }) },
-          { scale: withSpring(1) }
-        ],
-        opacity: withSpring(1),
-      },
-    };
-  };
-
   const scrubberPan = Gesture.Pan().activateAfterLongPress(250)
     .onStart(() => {
       'worklet';
       startScrollY.value = scrollY.value;
       lastTickY.value = scrollY.value;
-      runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Medium);
     })
     .onUpdate((event) => {
       'worklet';
@@ -318,6 +274,7 @@ export default function KineticFocusMap({ rootNode, mappedNotes, onClose }: any)
     });
 
   const clusterNotes = mappedNotes.filter((n: any) => {
+    if (!rootNode.categories) return false;
     const rootCats = rootNode.categories;
     const nodeCats = n.categories;
     return rootCats.length === 1 ? nodeCats.includes(rootCats[0]) : rootCats.every((c: string) => nodeCats.includes(c));
@@ -326,41 +283,60 @@ export default function KineticFocusMap({ rootNode, mappedNotes, onClose }: any)
   const paddingBefore = height * 0.35;
   const FIXED_GAP = 180;
   const localTotalHeight = paddingBefore + clusterNotes.length * FIXED_GAP + height * 0.5;
+  const focusAxisX = rootNode.isRight ? width - 60 : 60;
 
-  const isRight = rootNode.isRight;
-  const focusAxisX = isRight ? width - 60 : 60;
-
-  const stateRefs = {
-    activeCluster: useSharedValue(1),
-    activeNodeOriginY: useSharedValue(paddingBefore),
-    activeNodeOriginX: useSharedValue(focusAxisX),
-    clusterMinY: useSharedValue(0)
-  };
+  const activeCluster = useSharedValue(1);
+  const activeNodeOriginY = useSharedValue(paddingBefore);
+  const activeNodeOriginX = useSharedValue(focusAxisX);
+  const clusterMinY = useSharedValue(0);
 
   useEffect(() => {
-    const FIXED_GAP = 180;
     const rootIdx = clusterNotes.findIndex((c: any) => c.id === rootNode.id);
     const safeIdx = rootIdx > -1 ? rootIdx : 0;
+    const targetY = safeIdx * FIXED_GAP;
 
-    // Scroll so the root node is roughly at paddingBefore position
-    scrollRef.current?.scrollTo({ y: safeIdx * FIXED_GAP, animated: false });
+    // Use a small delay to ensure the native view is mounted and registered with Reanimated
+    const timeout = setTimeout(() => {
+      runOnUI(() => {
+        'worklet';
+        try {
+          scrollTo(scrollRef, 0, targetY, false);
+        } catch (e) {}
+      })();
+    }, 100);
 
-    requestAnimationFrame(() => {
-      stateRefs.activeNodeOriginY.value = paddingBefore;
-      stateRefs.activeNodeOriginX.value = focusAxisX;
-      stateRefs.activeCluster.value = 1;
-      stateRefs.clusterMinY.value = 0;
-    });
+    activeNodeOriginY.value = paddingBefore;
+    activeNodeOriginX.value = focusAxisX;
+    activeCluster.value = 1;
+    clusterMinY.value = 0;
+
+    return () => {
+      clearTimeout(timeout);
+      cancelAnimation(activeCluster);
+      cancelAnimation(activeNodeOriginY);
+      cancelAnimation(activeNodeOriginX);
+      cancelAnimation(clusterMinY);
+    };
   }, [rootNode.id]);
 
   const scrollHandler = useAnimatedScrollHandler({ onScroll: (event) => { scrollY.value = event.contentOffset.y; } });
   const focusIdToIndex: Record<string, number> = {};
   clusterNotes.forEach((n: any, i: number) => { focusIdToIndex[n.id] = i; });
 
+  const DropAndBounce = () => {
+    'worklet';
+    return {
+      initialValues: { transform: [{ translateY: -500 }, { scale: 0.9 }], opacity: 0 },
+      animations: {
+        transform: [{ translateY: withSpring(0, { damping: 10, stiffness: 95, mass: 1 }) }, { scale: withSpring(1) }],
+        opacity: withSpring(1),
+      },
+    };
+  };
+
   return (
-    <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(200)} style={[StyleSheet.absoluteFill, { zIndex: 100, backgroundColor: '#FFFFFF' }]}>
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <GestureDetector gesture={Gesture.Exclusive(scrubberPan, backTap)}>
+    <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(200)} style={[StyleSheet.absoluteFill, { zIndex: 100, backgroundColor: isDark ? NightTheme.background : '#FFFFFF' }]}>
+      <GestureDetector gesture={Gesture.Exclusive(scrubberPan, backTap)}>
           <View style={{ flex: 1 }}>
             <Animated.ScrollView ref={scrollRef} onScroll={scrollHandler} scrollEventThrottle={16} contentContainerStyle={{ height: localTotalHeight, width: '100%' }} showsVerticalScrollIndicator={false} pointerEvents="box-none" style={{ zIndex: 2 }}>
               <View style={{ flex: 1 }} pointerEvents="box-none">
@@ -370,52 +346,46 @@ export default function KineticFocusMap({ rootNode, mappedNotes, onClose }: any)
                       const gTarget = node.connectedNodeIndex !== null ? mappedNotes[node.connectedNodeIndex] : null;
                       const fIdx = gTarget ? focusIdToIndex[gTarget.id] : undefined;
                       if (!gTarget || fIdx === undefined) return null;
-                      return <AnimatedOverlayPath key={`line-${node.id}`} node={{ ...node, clusterIndex: idx }} targetNode={{ ...gTarget, clusterIndex: fIdx }} stateRefs={stateRefs} rootCategories={rootNode.categories} />;
+                      return <AnimatedOverlayPath key={`line-${node.id}`} node={{ ...node, clusterIndex: idx }} targetNode={{ ...gTarget, clusterIndex: fIdx }} activeCluster={activeCluster} activeNodeOriginY={activeNodeOriginY} activeNodeOriginX={activeNodeOriginX} rootCategories={rootNode.categories} />;
                     })}
                     {clusterNotes.map((node: any, idx: number) => (
-                      <AnimatedNodeDot key={`dot-${node.id}`} node={{ ...node, clusterIndex: idx }} stateRefs={stateRefs} rootCategories={rootNode.categories} />
+                      <AnimatedNodeDot key={`dot-${node.id}`} node={{ ...node, clusterIndex: idx }} activeCluster={activeCluster} activeNodeOriginY={activeNodeOriginY} activeNodeOriginX={activeNodeOriginX} rootCategories={rootNode.categories} isDark={isDark} />
                     ))}
                   </Svg>
                 </View>
                 <View style={{ marginTop: paddingBefore }} pointerEvents="box-none">
                   {clusterNotes.map((node: any, idx: number) => (
-                    <AnimatedNoteCard key={node.id} node={{ ...node, clusterIndex: idx, paddingBefore }} stateRefs={stateRefs} onExpandNode={setReadingNode} rootCategories={rootNode.categories} />
+                    <AnimatedNoteCard key={node.id} node={{ ...node, clusterIndex: idx, paddingBefore }} activeCluster={activeCluster} activeNodeOriginY={activeNodeOriginY} activeNodeOriginX={activeNodeOriginX} onExpandNode={setReadingNode} rootCategories={rootNode.categories} isDark={isDark} />
                   ))}
                 </View>
               </View>
             </Animated.ScrollView>
-            
-            {/* Visual Scrubbing Hint Overlay */}
-            <ScrubHint key={rootNode.id} axisX={focusAxisX} />
-            
-            <Animated.View pointerEvents="none" style={{ position: 'absolute', top: 0, bottom: 0, left: focusAxisX - 80, width: 160, zIndex: 3 }} />
+            <ScrubHint axisX={focusAxisX} />
           </View>
         </GestureDetector>
         {readingNode && (
-          <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(200)} style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.92)', zIndex: 200, justifyContent: 'center', alignItems: 'center' }]}>
+          <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(200)} style={[StyleSheet.absoluteFill, { backgroundColor: isDark ? 'rgba(0,0,0,0.85)' : 'rgba(255,255,255,0.92)', zIndex: 200, justifyContent: 'center', alignItems: 'center' }]}>
             <GestureDetector gesture={closeReadingNodeTap}><Animated.View style={StyleSheet.absoluteFill} /></GestureDetector>
             <Animated.View 
               entering={DropAndBounce}
               exiting={FadeOut.duration(200)}
-              pointerEvents="box-none" 
-              style={{ width: '85%', maxHeight: '70%', padding: 36, backgroundColor: '#FFFFFF', borderRadius: 16, shadowColor: '#000000', shadowOpacity: 0.08, shadowRadius: 30, elevation: 10 }}
+              style={{ width: '85%', maxHeight: '70%', padding: 36, backgroundColor: isDark ? NightTheme.surface : '#FFFFFF', borderRadius: 16, shadowColor: '#000000', shadowOpacity: isDark ? 0.4 : 0.08, shadowRadius: 30, elevation: 10 }}
             >
               <Text style={[styles.noteCategory, { color: CATEGORY_COLORS[readingNode.categories[0]] || '#BBBBBB', marginBottom: 12 }]}>{readingNode.categories.join(' + ')} — SYNTHESIS</Text>
               <ScrollView showsVerticalScrollIndicator={false}>
                 {readingNode.images && readingNode.images.length > 0 && (
                   <Image source={{ uri: readingNode.images[0] }} style={{ width: '100%', height: 200, borderRadius: 12, marginBottom: 16 }} transition={200} contentFit="cover" />
                 )}
-                <Text style={[styles.noteContent, { fontSize: 24, lineHeight: 36 }]}>{readingNode.content}</Text>
+                <Text style={[styles.noteContent, { fontSize: 24, lineHeight: 36, color: isDark ? NightTheme.textPrimary : '#111111' }]}>{readingNode.content}</Text>
               </ScrollView>
             </Animated.View>
           </Animated.View>
         )}
-      </GestureHandlerRootView>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   noteCategory: { fontSize: 9, fontWeight: '700', letterSpacing: 2, textTransform: 'uppercase' },
-  noteContent: { fontSize: 18, fontWeight: '300', lineHeight: 28, color: '#111111' },
+  noteContent: { fontSize: 17, fontWeight: '300', lineHeight: 28, color: '#111111' },
 });

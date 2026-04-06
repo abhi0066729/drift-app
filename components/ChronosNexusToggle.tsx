@@ -3,6 +3,8 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, { Easing, useAnimatedProps, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
+import { useNotesStore } from '@/store/useNotesStore';
+import { NightTheme } from '@/constants/theme';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
@@ -12,6 +14,7 @@ interface ViewToggleProps {
 }
 
 export default function ChronosNexusToggle({ activeView, onToggle }: ViewToggleProps) {
+  const theme = useNotesStore(state => state.theme);
   const togglePos = useSharedValue(activeView === 'chronos' ? 0 : 1);
   const pulseTranslation = useSharedValue(activeView === 'chronos' ? 0 : 80);
   const pulseScale = useSharedValue(0);
@@ -69,20 +72,20 @@ export default function ChronosNexusToggle({ activeView, onToggle }: ViewToggleP
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 16 }}>
       <TouchableOpacity onPress={() => handlePress('chronos')} style={{ alignItems: 'center', padding: 8 }} activeOpacity={1}>
-        <Text style={{ fontSize: 9, fontWeight: '700', letterSpacing: 2.0, marginBottom: 8, color: activeView === 'chronos' ? '#111' : '#AAA' }}>CHRONOS</Text>
-        <Animated.View style={[{ width: 12, height: 12, borderRadius: 6, backgroundColor: '#111111', borderWidth: 1, borderColor: '#111111' }, chronosStyle]} />
+        <Text style={{ fontSize: 9, fontWeight: '700', letterSpacing: 2.0, marginBottom: 8, color: activeView === 'chronos' ? (theme === 'dark' ? NightTheme.textPrimary : '#111') : (theme === 'dark' ? NightTheme.textMuted : '#AAA') }}>CHRONOS</Text>
+        <Animated.View style={[{ width: 12, height: 12, borderRadius: 6, backgroundColor: theme === 'dark' ? NightTheme.textPrimary : '#111111', borderWidth: 1, borderColor: theme === 'dark' ? NightTheme.textPrimary : '#111111' }, chronosStyle]} />
       </TouchableOpacity>
 
       <View style={{ width: 80, height: 90, justifyContent: 'center' }}>
         <Svg width="80" height="90" style={{ position: 'absolute' }}>
-          <AnimatedPath animatedProps={animatedProps} stroke="#E0E0E0" strokeWidth="1.5" fill="none" />
+          <AnimatedPath animatedProps={animatedProps} stroke={theme === 'dark' ? NightTheme.border : '#E0E0E0'} strokeWidth="1.5" fill="none" />
         </Svg>
-        <Animated.View style={[{ position: 'absolute', width: 8, height: 8, borderRadius: 4, backgroundColor: '#8E44AD', top: 41, left: -4 }, indicatorStyle]} />
+        <Animated.View style={[{ position: 'absolute', width: 8, height: 8, borderRadius: 4, backgroundColor: theme === 'dark' ? NightTheme.accent : '#8E44AD', top: 41, left: -4 }, indicatorStyle]} />
       </View>
 
       <TouchableOpacity onPress={() => handlePress('nexus')} style={{ alignItems: 'center', padding: 8 }} activeOpacity={1}>
-        <Text style={{ fontSize: 9, fontWeight: '700', letterSpacing: 2.0, marginBottom: 8, color: activeView === 'nexus' ? '#8E44AD' : '#AAA' }}>NEXUS</Text>
-        <Animated.View style={[{ width: 12, height: 12, borderRadius: 6, backgroundColor: '#8E44AD' }, nexusStyle]} />
+        <Text style={{ fontSize: 9, fontWeight: '700', letterSpacing: 2.0, marginBottom: 8, color: activeView === 'nexus' ? (theme === 'dark' ? NightTheme.accent : '#8E44AD') : (theme === 'dark' ? NightTheme.textMuted : '#AAA') }}>NEXUS</Text>
+        <Animated.View style={[{ width: 12, height: 12, borderRadius: 6, backgroundColor: theme === 'dark' ? NightTheme.accent : '#8E44AD' }, nexusStyle]} />
       </TouchableOpacity>
     </View>
   );

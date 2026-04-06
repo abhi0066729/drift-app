@@ -15,18 +15,21 @@ export type Note = {
   is_refining?: boolean;
   images?: string[];
   is_ghost?: boolean;
+  resonances?: Record<string, number>;
 };
 
 interface NotesState {
   notes: Note[];
   pendingSync: string[];
   activeFilters: { person?: string; topic?: string; date?: string };
+  theme: 'light' | 'dark';
   addNote: (note: Note) => void;
   updateNote: (id: string, updates: Partial<Note>) => void;
   setNotes: (notes: Note[]) => void;
   setFilters: (filters: Partial<NotesState['activeFilters']>) => void;
   clearNotes: () => void;
   deleteNote: (id: string) => void;
+  toggleTheme: () => void;
 }
 
 export const useNotesStore = create<NotesState>()(
@@ -35,6 +38,7 @@ export const useNotesStore = create<NotesState>()(
       notes: [],
       pendingSync: [],
       activeFilters: {},
+      theme: 'light',
       addNote: (note) => set((state) => ({ notes: [note, ...state.notes] })),
       updateNote: (id, updates) =>
         set((state) => ({
@@ -47,6 +51,7 @@ export const useNotesStore = create<NotesState>()(
       setFilters: (filters) =>
         set((state) => ({ activeFilters: { ...state.activeFilters, ...filters } })),
       clearNotes: () => set({ notes: [] }),
+      toggleTheme: () => set((state) => ({ theme: state.theme === 'light' ? 'dark' : 'light' })),
     }),
     {
       name: 'drift-notes-storage',

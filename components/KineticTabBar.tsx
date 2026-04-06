@@ -11,6 +11,8 @@ import Animated, {
   withDelay,
   Easing
 } from 'react-native-reanimated';
+import { useNotesStore } from '@/store/useNotesStore';
+import { NightTheme } from '@/constants/theme';
 
 const { width } = Dimensions.get('window');
 const TAB_BAR_WIDTH = width - 64;
@@ -25,7 +27,7 @@ const getLabel = (routeName: string) => {
   }
 };
 
-function KineticTabItem({ route, isFocused, onPress, onLongPress }: any) {
+function KineticTabItem({ route, isFocused, onPress, onLongPress, theme }: any) {
   // Shared values for the gravity drop
   const dropY = useSharedValue(isFocused ? 0 : 0);
   const dotOpacity = useSharedValue(isFocused ? 1 : 0.4);
@@ -84,13 +86,13 @@ function KineticTabItem({ route, isFocused, onPress, onLongPress }: any) {
           {/* The physical gravity dot */}
           <Animated.View style={[
             styles.nodeDot,
-            { backgroundColor: isFocused ? '#8E44AD' : '#111111' },
+            { backgroundColor: isFocused ? (theme === 'dark' ? NightTheme.accent : '#8E44AD') : (theme === 'dark' ? NightTheme.textMuted : '#111111') },
             isFocused ? styles.nodeDotActive : {},
             dotStyle
           ]} />
         </View>
 
-        <Text style={[styles.nodeLabel, { color: isFocused ? '#8E44AD' : '#AAAAAA' }]}>
+        <Text style={[styles.nodeLabel, { color: isFocused ? (theme === 'dark' ? NightTheme.accent : '#8E44AD') : (theme === 'dark' ? NightTheme.textMuted : '#AAAAAA') }]}>
           {getLabel(route.name)}
         </Text>
       </View>
@@ -99,9 +101,11 @@ function KineticTabItem({ route, isFocused, onPress, onLongPress }: any) {
 }
 
 export default function KineticTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+  const theme = useNotesStore(state => state.theme);
+  
   return (
-    <View style={styles.tabBarContainer}>
-      <BlurView intensity={100} tint="systemChromeMaterialLight" style={styles.blurContainer}>
+    <View style={[styles.tabBarContainer, { borderColor: theme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.4)', shadowOpacity: theme === 'dark' ? 0.3 : 0.1 }]}>
+      <BlurView intensity={theme === 'dark' ? 80 : 100} tint={theme === 'dark' ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight'} style={styles.blurContainer}>
         <View style={styles.tabsRow}>
           {state.routes.map((route, index) => {
             const isFocused = state.index === index;
@@ -118,6 +122,7 @@ export default function KineticTabBar({ state, descriptors, navigation }: Bottom
                 isFocused={isFocused} 
                 onPress={onPress} 
                 onLongPress={onLongPress} 
+                theme={theme}
               />
             );
           })}

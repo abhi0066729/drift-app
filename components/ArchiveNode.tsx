@@ -4,6 +4,8 @@ import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withRepeat, wit
 import { LinearGradient } from 'expo-linear-gradient';
 import { Swipeable } from 'react-native-gesture-handler';
 import { CATEGORY_COLORS } from '@/constants/Categories';
+import { useNotesStore } from '@/store/useNotesStore';
+import { NightTheme } from '@/constants/theme';
 
 const RefiningPulse = () => {
   const opacity = useSharedValue(0.4);
@@ -62,6 +64,7 @@ export default function ArchiveNode({
   onSwipeStart, 
   searchQuery
 }: ArchiveNodeProps) {
+  const theme = useNotesStore(state => state.theme);
   const swipeableRef = useRef<Swipeable>(null);
   
   let category = 'Journal';
@@ -109,7 +112,7 @@ export default function ArchiveNode({
               onDelete(note.id);
               swipeableRef.current?.close();
             }}
-            style={styles.deleteButton}
+            style={[styles.deleteButton, { backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.1)' : '#F9F9F9' }]}
           >
             <Text style={styles.deleteButtonText}>Delete</Text>
           </TouchableOpacity>
@@ -157,23 +160,23 @@ export default function ArchiveNode({
             ]} />
           </View>
           
-          {/* Content area is white to hide the delete button behind it */}
-          <View style={[styles.contentContainer, isMatch && styles.matchContent]}>
+          {/* Content area is colored to hide the delete button behind it */}
+          <View style={[styles.contentContainer, { backgroundColor: theme === 'dark' ? NightTheme.background : '#FFFFFF' }, isMatch && (theme === 'dark' ? { backgroundColor: 'rgba(142, 68, 173, 0.15)' } : styles.matchContent)]}>
             <View style={styles.headerRow}>
               <Text style={[styles.categoryText, { color: nodeColor }]}>
                 {isRefining ? 'REFINING...' : category.toUpperCase()}
               </Text>
-              <Text style={styles.dateText}>{dateStr}</Text>
+              <Text style={[styles.dateText, { color: theme === 'dark' ? NightTheme.textMuted : '#CCCCCC' }]}>{dateStr}</Text>
             </View>
             
             <View style={styles.textWrapper}>
-              <Text style={styles.contentText} numberOfLines={3}>
+              <Text style={[styles.contentText, { color: theme === 'dark' ? NightTheme.textPrimary : '#111111' }]} numberOfLines={3}>
                 {note.content}
               </Text>
               {/* Expansion Blur Effect */}
               {!isMatch && (
                 <LinearGradient
-                  colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.9)']}
+                  colors={theme === 'dark' ? ['rgba(15,14,12,0)', 'rgba(15,14,12,0.9)'] : ['rgba(255,255,255,0)', 'rgba(255,255,255,0.9)']}
                   style={styles.textBlur}
                 />
               )}
@@ -237,7 +240,6 @@ const styles = StyleSheet.create({
   contentContainer: {
     flex: 1,
     paddingLeft: 12,
-    backgroundColor: '#FFFFFF', // White hides the DELETE button
     paddingVertical: 4,
     borderRadius: 8,
   },
@@ -265,9 +267,9 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   contentText: {
-    fontSize: 18,
-    color: '#333333',
-    lineHeight: 26,
+    fontSize: 17,
+    color: '#111111',
+    lineHeight: 25,
     fontWeight: '300',
     paddingRight: 60, 
   },

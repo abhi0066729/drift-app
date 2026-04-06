@@ -2,14 +2,29 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, NativeScrollEvent, NativeSyntheticEvent, TextInput, Dimensions, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNotesStore } from '@/store/useNotesStore';
+import { useShallow } from 'zustand/react/shallow';
 import { useFocusEffect } from 'expo-router';
-import Animated, { FadeIn, useSharedValue, useAnimatedStyle, withRepeat, withTiming, withSequence, withSpring, interpolate, Extrapolate, useAnimatedReaction, runOnJS } from 'react-native-reanimated';
-import { Swipeable } from 'react-native-gesture-handler';
-import { Star, SearchX } from 'lucide-react-native';
+import Animated, { 
+  FadeIn, 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withRepeat, 
+  withTiming, 
+  withSequence, 
+  withSpring, 
+  interpolate, 
+  Extrapolate, 
+  useAnimatedReaction, 
+  runOnJS,
+  useAnimatedProps
+} from 'react-native-reanimated';
+import { Swipeable, PanGestureHandler } from 'react-native-gesture-handler';
+import { Star, SearchX, Search } from 'lucide-react-native';
 import ArchiveNode from '@/components/ArchiveNode';
 import ScrollToTopButton from '@/components/ScrollToTopButton';
 import ReadingModal from '@/components/ReadingModal';
 import * as Haptics from 'expo-haptics';
+import { NightTheme } from '@/constants/theme';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -39,7 +54,7 @@ const BlinkingStar = () => {
   );
 };
 
-const SearchEmptyState = () => {
+const SearchEmptyState = ({ theme }: { theme: 'light' | 'dark' }) => {
   const poeticLines = [
     "This keyword has no gravity here.",
     "The void remains silent to this whisper.",
@@ -52,8 +67,8 @@ const SearchEmptyState = () => {
 
   return (
     <Animated.View entering={FadeIn.duration(800)} style={styles.emptyState}>
-      <SearchX size={32} color="#CCCCCC" strokeWidth={1.5} style={{ marginBottom: 20 }} />
-      <Text style={styles.emptyTextTitle}>Lost in the Flux</Text>
+      <SearchX size={32} color={theme === 'dark' ? NightTheme.textMuted : "#CCCCCC"} strokeWidth={1.5} style={{ marginBottom: 20 }} />
+      <Text style={[styles.emptyTextTitle, { color: theme === 'dark' ? NightTheme.textPrimary : '#111111' }]}>Lost in the Flux</Text>
       <Text style={styles.emptyTextSub}>{randomLine.toUpperCase()}</Text>
     </Animated.View>
   );
@@ -61,7 +76,8 @@ const SearchEmptyState = () => {
 
 export default function NotesScreen() {
   const insets = useSafeAreaInsets();
-  const notes = useNotesStore((state) => state.notes);
+  const theme = useNotesStore(state => state.theme);
+  const notes = useNotesStore(useShallow(state => state.notes));
   const clearNotes = useNotesStore((state) => state.clearNotes);
   const [selectedNote, setSelectedNote] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -73,6 +89,7 @@ export default function NotesScreen() {
   const scrollOffset = useSharedValue(0);
   const searchThresholdMet = useSharedValue(false);
   const isSearchLocked = useSharedValue(false);
+  const manualPullY = useSharedValue(0);
 
   const handleClear = () => {
     Alert.alert(
@@ -98,41 +115,74 @@ export default function NotesScreen() {
   };
 
   useAnimatedReaction(
-    () => scrollOffset.value,
-    (y) => {
-      if (y < -80 && !isSearchLocked.value) {
-        isSearchLocked.value = true;
-        searchThresholdMet.value = true;
-        runOnJS(triggerHaptic)();
+    () => ({ scroll: scrollOffset.value, pull: manualPullY.value }),
+    ({ scroll, pull }) => {
+      const triggerThreshold = Platform.OS === 'ios' ? -80 : 80;
+      const val = Platform.OS === 'ios' ? scroll : pull;
+      const isTriggered = Platform.OS === 'ios' ? (val < triggerThreshold) : (val > triggerThreshold);
+
+      if (isTriggered && !isSearchLocked.value) {
+        if (Platform.OS === 'ios') {
+          isSearchLocked.value = true;
+          searchThresholdMet.value = true;
+          runOnJS(triggerHaptic)();
+        }
       } 
-      else if (y > 50 && isSearchLocked.value && searchQuery.length === 0) {
+      else if (scroll > 50 && isSearchLocked.value && searchQuery.length === 0) {
         isSearchLocked.value = false;
+        manualPullY.value = 0;
       }
       
-      if (y >= 0) {
+      if (scroll >= 0 && Platform.OS === 'ios') {
         searchThresholdMet.value = false;
       }
     },
     [searchQuery]
   );
 
-  const searchBarStyle = useAnimatedStyle(() => {
-    const scrollRevealY = interpolate(scrollOffset.value, [0, -80], [-60, 0], Extrapolate.CLAMP);
-    const scrollRevealOpacity = interpolate(scrollOffset.value, [0, -40], [0, 1], Extrapolate.CLAMP);
+  const toggleSearch = () => {
+    isSearchLocked.value = !isSearchLocked.value;
+    if (isSearchLocked.value) {
+      triggerHaptic();
+    }
+  };
+
+  const onGestureEvent = (event: any) => {
+    'worklet';
+    if (Platform.OS === 'ios' && scrollOffset.value <= 1 && event.nativeEvent.translationY > 0) {
+      manualPullY.value = event.nativeEvent.translationY;
+    }
+  };
+
+  const onHandlerStateChange = (event: any) => {
+    'worklet';
+    if (event.nativeEvent.oldState === 4) { // State.ACTIVE
+      if (manualPullY.value <= 80) {
+        manualPullY.value = withSpring(0);
+      }
+    }
+  };
+
+  const searchWrapperStyle = useAnimatedStyle(() => {
     const isPinned = isSearchLocked.value || searchQuery.length > 0;
-    
     return {
-      transform: [{ translateY: withSpring(isPinned ? 0 : scrollRevealY, { damping: 20, stiffness: 120 }) }],
-      opacity: withTiming(isPinned ? 1 : scrollRevealOpacity, { duration: 200 }),
+      height: withTiming(isPinned ? 70 : 0, { duration: 250 }),
+      opacity: withTiming(isPinned ? 1 : 0, { duration: 250 }),
     };
-  }, [searchQuery]);
+  });
+
+  const searchWrapperProps = useAnimatedProps(() => {
+    return {
+      pointerEvents: (isSearchLocked.value || searchQuery.length > 0 ? 'auto' : 'none') as any,
+    };
+  });
 
   const filteredNotes = useMemo(() => {
     if (!searchQuery) return notes;
     const lowerQuery = searchQuery.toLowerCase();
     return notes.filter(note => 
       note.content.toLowerCase().includes(lowerQuery) ||
-      note.category?.toLowerCase().includes(lowerQuery)
+      (note as any).category?.toLowerCase().includes(lowerQuery)
     );
   }, [notes, searchQuery]);
 
@@ -168,95 +218,134 @@ export default function NotesScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={{ flex: 1 }}
     >
-      <View style={[styles.container, { paddingTop: insets.top + 20 }]}>
-        <Animated.View entering={FadeIn.duration(600)} style={styles.headerRow}>
-          <View>
-            <Text style={styles.headerTitle}>Drift Chronicle</Text>
-            <Text style={styles.headerSubtitle}>LIFETIME SYNTHESIS</Text>
-          </View>
-          
-          {notes.length > 0 && (
-            <TouchableOpacity onPress={handleClear} style={styles.clearButton}>
-              <Text style={styles.clearButtonText}>CLEAR</Text>
-            </TouchableOpacity>
-          )}
-        </Animated.View>
+        <PanGestureHandler 
+          enabled={Platform.OS === 'ios'}
+          onGestureEvent={onGestureEvent} 
+          onHandlerStateChange={onHandlerStateChange}
+          activeOffsetY={[0, 20]} 
+          failOffsetX={[-20, 20]}
+        >
+          <View style={[styles.container, { paddingTop: insets.top + 20, backgroundColor: theme === 'dark' ? NightTheme.background : '#FFFFFF' }]}>
+            <Animated.View entering={FadeIn.duration(600)} style={styles.headerRow}>
+              <View>
+                <Text style={[styles.headerTitle, { color: theme === 'dark' ? NightTheme.textPrimary : '#111111' }]}>Drift Chronicle</Text>
+                <Text style={styles.headerSubtitle}>LIFETIME SYNTHESIS</Text>
+              </View>
+              
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                {Platform.OS === 'android' && (
+                  <TouchableOpacity onPress={toggleSearch} style={[styles.miniBtn, { backgroundColor: isSearchLocked.value ? 'rgba(142, 68, 173, 0.1)' : 'transparent' }]}>
+                    <Search size={22} color={isSearchLocked.value ? "#8E44AD" : (theme === 'dark' ? NightTheme.textSecondary : "#666")} />
+                  </TouchableOpacity>
+                )}
+                {notes.length > 0 && (
+                  <TouchableOpacity onPress={handleClear} style={[styles.clearButton, { backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.05)' : '#F9F9F9' }]}>
+                    <Text style={styles.clearButtonText}>CLEAR ALL</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </Animated.View>
 
-        {/* Hidden Search Reveal */}
-        <View style={styles.searchWrapper}>
-          <Animated.View style={[styles.searchContainer, searchBarStyle]}>
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search chronicle..."
-              placeholderTextColor="#999"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              autoFocus={false}
-              clearButtonMode="while-editing"
-            />
-          </Animated.View>
-        </View>
-        
-        {notes.length === 0 ? (
-          <Animated.View entering={FadeIn.delay(300)} style={styles.emptyState}>
-            <BlinkingStar />
-            <Text style={styles.emptyTextTitle}>Gathering Stardust</Text>
-            <Text style={styles.emptyTextSub}>Your captured thoughts will synthesize here soon.</Text>
-          </Animated.View>
-        ) : filteredNotes.length === 0 ? (
-          <SearchEmptyState />
-        ) : (
-          <View style={styles.listWrapper}>
-            <View style={styles.timelineAxis} />
+            {/* Platform Specific Search Reveal */}
+            <Animated.View 
+              style={[styles.searchWrapper, searchWrapperStyle]} 
+              animatedProps={searchWrapperProps}
+            >
+              <Animated.View style={[
+                styles.searchContainer, 
+                { backgroundColor: theme === 'dark' ? NightTheme.background : '#FFFFFF' }
+              ]}>
+                <View style={{ width: '100%', paddingHorizontal: 22 }}>
+                  <TextInput
+                    style={[
+                      styles.searchInput, 
+                      { 
+                        backgroundColor: theme === 'dark' ? NightTheme.surface : '#F2F2F7', 
+                        color: theme === 'dark' ? NightTheme.textPrimary : '#111',
+                        borderColor: theme === 'dark' ? NightTheme.border : 'transparent',
+                        borderWidth: theme === 'dark' ? 1 : 0
+                      }
+                    ]}
+                    placeholder="Search chronicle..."
+                    placeholderTextColor={theme === 'dark' ? "rgba(232, 230, 224, 0.4)" : "#999"}
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    autoFocus={false}
+                    clearButtonMode="while-editing"
+                    keyboardAppearance={theme === 'dark' ? 'dark' : 'light'}
+                    selectionColor={theme === 'dark' ? NightTheme.accent : '#8E44AD'}
+                    onFocus={() => { isSearchLocked.value = true; }}
+                  />
+                </View>
+              </Animated.View>
+            </Animated.View>
             
-            <FlatList
-              ref={flatListRef}
-              data={filteredNotes}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item, index }) => (
-                <ArchiveNode 
-                  note={item} 
-                  index={index} 
-                  onPress={handleNotePress} 
-                  onDelete={handleDeleteNote}
-                  onSwipeStart={onSwipeStart}
-                  searchQuery={searchQuery}
+            {notes.length === 0 ? (
+              <Animated.View entering={FadeIn.delay(300)} style={styles.emptyState}>
+                <BlinkingStar />
+                <Text style={[styles.emptyTextTitle, { color: theme === 'dark' ? NightTheme.textPrimary : '#111111' }]}>Gathering Stardust</Text>
+                <Text style={[styles.emptyTextSub, { color: theme === 'dark' ? NightTheme.textMuted : '#8E44AD' }]}>Your captured thoughts will synthesize here soon.</Text>
+              </Animated.View>
+            ) : filteredNotes.length === 0 ? (
+              <SearchEmptyState theme={theme} />
+            ) : (
+              <View style={styles.listWrapper}>
+                <View style={[styles.timelineAxis, { backgroundColor: theme === 'dark' ? NightTheme.border : '#EEEEEE' }]} />
+                
+                <FlatList
+                  ref={flatListRef}
+                  data={filteredNotes}
+                  keyExtractor={(item) => item.id}
+                  renderItem={({ item, index }) => (
+                    <ArchiveNode 
+                      note={item} 
+                      index={index} 
+                      onPress={handleNotePress} 
+                      onDelete={handleDeleteNote}
+                      onSwipeStart={onSwipeStart}
+                      searchQuery={searchQuery}
+                    />
+                  )}
+                  contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
+                  showsVerticalScrollIndicator={false}
+                  onScroll={handleScroll}
+                  scrollEventThrottle={16}
+                  overScrollMode="always"
+                  bounces={true}
                 />
-              )}
-              contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
-              showsVerticalScrollIndicator={false}
-              onScroll={handleScroll}
-              scrollEventThrottle={16}
+              </View>
+            )}
+
+            <ScrollToTopButton visible={showScrollTop} onPress={scrollToTop} />
+
+            <ReadingModal 
+              node={selectedNote} 
+              onClose={() => setSelectedNote(null)} 
+              translucent={searchQuery.length > 0}
+              searchQuery={searchQuery}
             />
           </View>
-        )}
-
-        <ScrollToTopButton visible={showScrollTop} onPress={scrollToTop} />
-
-        <ReadingModal 
-          node={selectedNote} 
-          onClose={() => setSelectedNote(null)} 
-          translucent={searchQuery.length > 0}
-          searchQuery={searchQuery}
-        />
-      </View>
-    </KeyboardAvoidingView>
+        </PanGestureHandler>
+      </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
     paddingHorizontal: 24,
   },
   headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 80, 
-    marginTop: 10,
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    marginBottom: 20, 
+    marginTop: 10, 
     width: '100%',
+  },
+  miniBtn: { 
+    padding: 8, 
+    borderRadius: 20 
   },
   headerTitle: {
     fontSize: 24,
@@ -273,9 +362,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   clearButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 12,
     backgroundColor: '#F9F9F9',
   },
   clearButtonText: {
@@ -301,7 +390,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingBottom: 220, // Increased padding to shift it UP
+    paddingBottom: 220,
   },
   starWrapper: {
     marginBottom: 24,
@@ -327,27 +416,28 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   searchWrapper: {
-    height: 0,
+    height: Platform.OS === 'android' ? 70 : 0,
     zIndex: 100,
     overflow: 'visible',
   },
   searchContainer: {
-    position: 'absolute',
-    top: -65, 
-    left: 0,
-    right: 0,
+    position: 'relative',
     height: 60,
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
     zIndex: 100,
+    paddingHorizontal: 0,
+  },
+  noteContent: {
+    fontSize: 17,
+    fontWeight: '300',
+    lineHeight: 26,
+    color: '#111111',
   },
   searchInput: {
     height: 45,
-    backgroundColor: '#F2F2F7',
     borderRadius: 12,
     paddingHorizontal: 16,
     fontSize: 16,
-    color: '#111',
     fontWeight: '400',
   },
 });

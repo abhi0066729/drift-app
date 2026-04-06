@@ -3,6 +3,8 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import Animated, { FadeIn, FadeOut, withSpring } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { CATEGORY_COLORS } from '@/constants/Categories';
+import { NightTheme } from '@/constants/theme';
+import { useNotesStore } from '@/store/useNotesStore';
 
 const ONBOARDING_ASSETS: Record<string, any> = {
   'chronos_nexus_toggle.gif': require('../assets/gifs/chronos_nexus_toggle.gif'),
@@ -17,6 +19,7 @@ interface GhostOverlayProps {
 }
 
 export default function GhostOverlay({ node, onClose }: GhostOverlayProps) {
+  const theme = useNotesStore(state => state.theme);
   if (!node) return null;
 
   const noteImage = node.images && node.images.length > 0 ? node.images[0] : null;
@@ -56,14 +59,14 @@ export default function GhostOverlay({ node, onClose }: GhostOverlayProps) {
         entering={DropAndBounce}
         exiting={FadeOut.duration(200)}
         pointerEvents="box-none" 
-        style={styles.modalContent}
+        style={[styles.modalContent, { backgroundColor: theme === 'dark' ? NightTheme.surface : '#FFFFFF' }]}
       >
         <Text style={[styles.noteCategory, { color: CATEGORY_COLORS[node.category] || '#BBBBBB', marginBottom: 16 }]}>
           {node.category?.toUpperCase()} — DRIFT ONBOARDING
         </Text>
         <ScrollView showsVerticalScrollIndicator={false}>
           {imageSource && (
-            <View style={styles.imageContainer}>
+            <View style={[styles.imageContainer, { backgroundColor: theme === 'dark' ? NightTheme.surface : '#FFFFFF' }]}>
               <Image 
                 source={imageSource} 
                 style={styles.image} 
@@ -72,7 +75,7 @@ export default function GhostOverlay({ node, onClose }: GhostOverlayProps) {
               />
             </View>
           )}
-          <Text style={styles.noteContent}>
+          <Text style={[styles.noteContent, { color: theme === 'dark' ? NightTheme.textPrimary : '#111111' }]}>
             {node.content}
           </Text>
         </ScrollView>

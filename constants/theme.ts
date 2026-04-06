@@ -8,6 +8,22 @@ import { Platform } from 'react-native';
 const tintColorLight = '#0a7ea4';
 const tintColorDark = '#fff';
 
+export const NightTheme = {
+  background: '#0F0E0C',       // Deepest warm black
+  surface: '#161412',          // Cards, overlays
+  surfaceHighlight: '#1A1918', // Pressed states, subtle lifts
+  border: '#232220',           // Separators
+  borderSubtle: '#1A1A18',
+  textPrimary: '#E8E6E0',      // Off-white, soft on eyes
+  textSecondary: '#C8C6C0',    // Dimmer white
+  textMuted: '#4A4A4A',        // Placeholder, extreme fade
+  textDeepMuted: '#3A3A3A',
+  accent: '#7C3AED',           // Core purple brand color
+  accentMuted: 'rgba(124, 58, 237, 0.15)',
+  accentDashed: '#3A2A5A',
+  orangeAccent: '#B45309'
+};
+
 export const Colors = {
   light: {
     text: '#11181C',
@@ -18,12 +34,12 @@ export const Colors = {
     tabIconSelected: tintColorLight,
   },
   dark: {
-    text: '#ECEDEE',
-    background: '#151718',
-    tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
-    tabIconSelected: tintColorDark,
+    text: NightTheme.textPrimary,
+    background: NightTheme.background,
+    tint: NightTheme.accent,
+    icon: NightTheme.textMuted,
+    tabIconDefault: NightTheme.textMuted,
+    tabIconSelected: NightTheme.accent,
   },
 };
 

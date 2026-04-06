@@ -4,6 +4,8 @@ import Animated, { FadeIn, FadeOut, withSpring } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { BlurView } from 'expo-blur';
 import { CATEGORY_COLORS } from '@/constants/Categories';
+import { NightTheme } from '@/constants/theme';
+import { useNotesStore } from '@/store/useNotesStore';
 
 interface ReadingModalProps {
   node: any;
@@ -13,6 +15,7 @@ interface ReadingModalProps {
 }
 
 export default function ReadingModal({ node, onClose, translucent, searchQuery }: ReadingModalProps) {
+  const theme = useNotesStore(state => state.theme);
   if (!node) return null;
 
   const categoriesText = node.categories ? node.categories.join(' + ') : (node.category || '');
@@ -49,7 +52,7 @@ export default function ReadingModal({ node, onClose, translucent, searchQuery }
       exiting={FadeOut.duration(200)} 
       style={[StyleSheet.absoluteFill, { zIndex: 1000 }]}
     >
-      <BlurView intensity={translucent ? 30 : 60} tint="light" style={StyleSheet.absoluteFill}>
+      <BlurView intensity={translucent ? 30 : 60} tint={theme === 'dark' ? 'dark' : 'light'} style={StyleSheet.absoluteFill}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
       </BlurView>
       
@@ -62,10 +65,10 @@ export default function ReadingModal({ node, onClose, translucent, searchQuery }
             width: '88%', 
             maxHeight: '75%', 
             padding: 36, 
-            backgroundColor: translucent ? 'rgba(255, 255, 255, 0.94)' : '#FFFFFF', 
+            backgroundColor: translucent ? (theme === 'dark' ? 'rgba(15, 14, 12, 0.94)' : 'rgba(255, 255, 255, 0.94)') : (theme === 'dark' ? NightTheme.surface : '#FFFFFF'), 
             borderRadius: 24, 
             shadowColor: '#000000', 
-            shadowOpacity: 0.1, 
+            shadowOpacity: theme === 'dark' ? 0.3 : 0.1, 
             shadowRadius: 30, 
             elevation: 15,
             borderWidth: translucent ? 1 : 0,
@@ -90,12 +93,12 @@ export default function ReadingModal({ node, onClose, translucent, searchQuery }
                 contentFit="cover" 
               />
             )}
-            <Text style={[styles.noteContent, { fontSize: 24, lineHeight: 36 }]}>{node.content}</Text>
+            <Text style={[styles.noteContent, { fontSize: 24, lineHeight: 36, color: theme === 'dark' ? NightTheme.textPrimary : '#111111' }]}>{node.content}</Text>
             
             {hasSearch && (
-              <View style={styles.contextFooter}>
+              <View style={[styles.contextFooter, { borderTopColor: theme === 'dark' ? NightTheme.border : '#F0F0F0' }]}>
                 <Text style={styles.contextHeader}>SEMANTIC ECHO</Text>
-                <Text style={styles.contextText}>
+                <Text style={[styles.contextText, { color: theme === 'dark' ? NightTheme.textMuted : '#666666' }]}>
                   {isMatch 
                     ? `This thought resonates directly with your whisper for "${searchQuery}". It is part of your current discovery drift.`
                     : "This context remains visible to guide your semantic drift across the Chronicle."}
