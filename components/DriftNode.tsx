@@ -1,21 +1,38 @@
 import React, { useEffect, memo } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming, withSpring } from 'react-native-reanimated';
+import { StyleSheet, Text, View, Pressable, Dimensions } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming, withSpring, runOnJS, SharedValue } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CATEGORY_COLORS } from '@/constants/Categories';
 import { NightTheme } from '@/constants/theme';
 import { useNotesStore } from '@/store/useNotesStore';
 import * as Haptics from 'expo-haptics';
 
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
 interface DriftNodeProps {
   node: any;
   onPress: (node: any, type: 'dot' | 'text') => void;
+  onDragStart?: (node: any, startX: number, startY: number) => void;
+  onDragUpdateSharedX?: SharedValue<number>;
+  onDragUpdateSharedY?: SharedValue<number>;
+  onDragUpdateSharedCategory?: SharedValue<string | undefined>;
+  onDragEnd?: (x: number, y: number) => void;
+  scrollY?: SharedValue<number>;
   activeView: 'chronos' | 'nexus';
   searchStatus?: 'match' | 'dim' | 'none';
   isFirst?: boolean;
 }
 
-function DriftNode({ node, onPress, activeView, searchStatus = 'none', isFirst }: DriftNodeProps) {
+const CATEGORIES = Object.keys(CATEGORY_COLORS);
+const RING_SPACING = 16;
+const START_RADIUS = 30;
+const MAX_RADIUS = START_RADIUS + (CATEGORIES.length - 1) * RING_SPACING;
+const PADDING = 20;
+const PORTAL_CENTER_X = SCREEN_WIDTH / 2;
+const PORTAL_CENTER_Y = SCREEN_HEIGHT / 2.3;
+
+function DriftNode({ node, onPress, onDragStart, onDragUpdateSharedX, onDragUpdateSharedY, onDragUpdateSharedCategory, onDragEnd, scrollY, activeView, searchStatus = 'none', isFirst }: DriftNodeProps) {
   const theme = useNotesStore(state => state.theme);
   const localYBase = node.unfocusedY - 60;
   const isRefining = node.is_refining;
@@ -100,6 +117,12 @@ function DriftNode({ node, onPress, activeView, searchStatus = 'none', isFirst }
 
   const importanceScore = Math.min(1, Math.max(0, (node.content.length - 15) / 150));
   
+  const dragX = useSharedValue(0);
+  const dragY = useSharedValue(0);
+  const isDragging = useSharedValue(false);
+  const startViewportX = useSharedValue(0);
+  const startViewportY = useSharedValue(0);
+
   const containerStyle = useAnimatedStyle(() => {
     const isNexus = activeView === 'nexus';
     const isPurpleNode = mainColor === '#8E44AD';
@@ -108,8 +131,10 @@ function DriftNode({ node, onPress, activeView, searchStatus = 'none', isFirst }
     else if (searchStatus === 'match') targetOpacity = 1.0;
 
     return {
-      top: withSpring(localYBase, { damping: 25, stiffness: 60 }),
-      zIndex: searchStatus === 'match' ? 100 : (activeView === 'nexus' && (importanceScore > 0.5 || isPurpleNode) ? 20 : 2),
+      top: isDragging.value ? localYBase + dragY.value : withSpring(localYBase + dragY.value, { damping: 25, stiffness: 60 }),
+      left: dragX.value,
+      zIndex: isDragging.value ? 5000 : (searchStatus === 'match' ? 100 : (activeView === 'nexus' && (importanceScore > 0.5 || isPurpleNode) ? 20 : 2)),
+      transform: [{ scale: withSpring(isDragging.value ? 1.25 : 1.0) }],
     };
   }, [activeView, importanceScore, searchStatus, localYBase, mainColor]);
 
@@ -137,15 +162,65 @@ function DriftNode({ node, onPress, activeView, searchStatus = 'none', isFirst }
     };
   }, [activeView, importanceScore, searchStatus, mainColor]);
 
-  const handleDotPress = () => {
-    try { Haptics.selectionAsync(); } catch (e) {}
-    onPress(node, 'dot');
-  };
+  const longPressGesture = Gesture.Pan()
+    .activateAfterLongPress(400)
+    .onStart((event) => {
+        'worklet';
+        isDragging.value = true;
+        startViewportX.value = node.unfocusedX;
+        startViewportY.value = localYBase + 60 - (scrollY?.value || 0);
+        
+        if (onDragStart) runOnJS(onDragStart)(node, startViewportX.value, startViewportY.value);
+        runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Medium);
+    })
+    .onUpdate((event) => {
+      'worklet';
+      dragX.value = event.translationX;
+      dragY.value = event.translationY;
+      
+      const absX = node.unfocusedX + event.translationX;
+      const absY = localYBase + 60 + event.translationY;
+      const viewportY = absY - (scrollY?.value || 0);
+      
+      if (onDragUpdateSharedX) onDragUpdateSharedX.value = absX;
+      if (onDragUpdateSharedY) onDragUpdateSharedY.value = viewportY; // Viewport-relative for Overlay
 
-  const handleTextPress = () => {
-    try { Haptics.selectionAsync(); } catch (e) {}
-    onPress(node, 'text');
-  };
+      if (onDragUpdateSharedCategory) {
+          // ADAPTIVE HALO MATH: The Halo center is sticky to the screen boundaries
+          const haloCenterX = Math.min(Math.max(startViewportX.value, MAX_RADIUS + PADDING), SCREEN_WIDTH - MAX_RADIUS - PADDING);
+          const haloCenterY = Math.min(Math.max(startViewportY.value, MAX_RADIUS + PADDING), SCREEN_HEIGHT - MAX_RADIUS - PADDING);
+
+          const dx = absX - haloCenterX;
+          const dy = viewportY - haloCenterY;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          
+          let newCat: string | undefined = undefined;
+          if (dist > START_RADIUS - 10) {
+              const idx = Math.floor((dist - START_RADIUS + RING_SPACING/2) / RING_SPACING);
+              if (idx >= 0 && idx < CATEGORIES.length) {
+                  newCat = CATEGORIES[idx];
+              }
+          }
+          if (onDragUpdateSharedCategory.value !== newCat) {
+              onDragUpdateSharedCategory.value = newCat;
+          }
+      }
+    })
+    .onEnd((event) => {
+      'worklet';
+      if (onDragEnd) runOnJS(onDragEnd)(node.unfocusedX + event.translationX, localYBase + 60 + event.translationY);
+      isDragging.value = false;
+      dragX.value = withSpring(0);
+      dragY.value = withSpring(0);
+    });
+
+  const tapGesture = Gesture.Tap()
+    .onEnd(() => {
+      'worklet';
+      runOnJS(onPress)(node, 'dot');
+    });
+
+  const composedGesture = Gesture.Exclusive(longPressGesture, tapGesture);
 
   return (
     <Animated.View style={[{ position: 'absolute', width: '100%', height: 120 }, containerStyle]}>
@@ -159,29 +234,18 @@ function DriftNode({ node, onPress, activeView, searchStatus = 'none', isFirst }
         alignItems: 'center', 
         zIndex: 20 
       }, innerContentStyle]}>
-        <TouchableOpacity
-          style={{ width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' }}
-          activeOpacity={1}
-          onPress={handleDotPress}
-        >
-          {/* Background Mask */}
-          <View style={{ position: 'absolute', width: node.nodeRadius * 6, height: node.nodeRadius * 6, borderRadius: node.nodeRadius * 3, backgroundColor: theme === 'dark' ? NightTheme.background : '#FFFFFF' }} />
-          
-          {/* External Pulsating Ring (The "Living" Layer) */}
-          <Animated.View style={[{ position: 'absolute', width: node.nodeRadius * 3.8, height: node.nodeRadius * 3.8, borderRadius: node.nodeRadius * 1.9, borderWidth: 1.2, borderColor: color1, backgroundColor: 'transparent' }, pulseStyle]} />
-          
-          {/* Static Outer Circle (Semantic Boundary) */}
-          <View style={{ position: 'absolute', width: node.nodeRadius * 3.2, height: node.nodeRadius * 3.2, borderRadius: node.nodeRadius * 1.6, borderWidth: 0.8, borderColor: color1, opacity: 0.2 }} />
-          
-          <Animated.View style={[{ position: 'absolute', width: node.nodeRadius * 5, height: node.nodeRadius * 5, borderRadius: node.nodeRadius * 2.5, backgroundColor: isRefining ? 'transparent' : color1, opacity: searchStatus === 'match' ? 0 : (isRefining ? 1 : 0.05), borderWidth: 0.8, borderColor: color1, borderStyle: isRefining ? 'dashed' : 'solid' }, searchPulseStyle]} />
-          
-          {isDual && !isRefining && (
-             <Animated.View style={[{ position: 'absolute', width: node.nodeRadius * 3.5, height: node.nodeRadius * 3.5, borderRadius: node.nodeRadius * 1.75, backgroundColor: color2, opacity: 0.4 }, outerPulseStyle]} />
-          )}
-          
-          {/* 100% Solid Core Dot (Static) */}
-          <View style={[{ position: 'absolute', width: node.nodeRadius * 2, height: node.nodeRadius * 2, borderRadius: node.nodeRadius, backgroundColor: color1, opacity: node.is_refining ? 0.5 : 1.0 }]} />
-        </TouchableOpacity>
+        <GestureDetector gesture={composedGesture}>
+          <Animated.View style={{ width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' }}>
+            <View style={{ position: 'absolute', width: node.nodeRadius * 6, height: node.nodeRadius * 6, borderRadius: node.nodeRadius * 3, backgroundColor: theme === 'dark' ? NightTheme.background : '#FFFFFF' }} />
+            <Animated.View style={[{ position: 'absolute', width: node.nodeRadius * 3.8, height: node.nodeRadius * 3.8, borderRadius: node.nodeRadius * 1.9, borderWidth: 1.2, borderColor: color1, backgroundColor: 'transparent' }, pulseStyle]} />
+            <View style={{ position: 'absolute', width: node.nodeRadius * 3.2, height: node.nodeRadius * 3.2, borderRadius: node.nodeRadius * 1.6, borderWidth: 0.8, borderColor: color1, opacity: 0.2 }} />
+            <Animated.View style={[{ position: 'absolute', width: node.nodeRadius * 5, height: node.nodeRadius * 5, borderRadius: node.nodeRadius * 2.5, backgroundColor: isRefining ? 'transparent' : color1, opacity: searchStatus === 'match' ? 0 : (isRefining ? 1 : 0.05), borderWidth: 0.8, borderColor: color1, borderStyle: isRefining ? 'dashed' : 'solid' }, searchPulseStyle]} />
+            {isDual && !isRefining && (
+               <Animated.View style={[{ position: 'absolute', width: node.nodeRadius * 3.5, height: node.nodeRadius * 3.5, borderRadius: node.nodeRadius * 1.75, backgroundColor: color2, opacity: 0.4 }, outerPulseStyle]} />
+            )}
+            <View style={[{ position: 'absolute', width: node.nodeRadius * 2, height: node.nodeRadius * 2, borderRadius: node.nodeRadius, backgroundColor: color1, opacity: node.is_refining ? 0.5 : 1.0 }]} />
+          </Animated.View>
+        </GestureDetector>
       </Animated.View>
         
       <Animated.View 
@@ -195,25 +259,25 @@ function DriftNode({ node, onPress, activeView, searchStatus = 'none', isFirst }
           justifyContent: 'center' 
         }, innerContentStyle]}
       >
-        <TouchableOpacity 
-          activeOpacity={1.0} 
-          onPress={handleTextPress}
-          style={{ width: '100%', height: '100%', justifyContent: 'center' }}
+        <Pressable 
+          onPress={() => {
+            try { Haptics.selectionAsync(); } catch (e) {}
+            onPress(node, 'text');
+          }}
+          style={({ pressed }) => ({ 
+            width: '100%', 
+            height: '100%', 
+            justifyContent: 'center',
+            opacity: pressed ? 0.7 : 1.0
+          })}
         >
           <Text style={[styles.noteCategory, { color: mainColor, marginBottom: 6, opacity: Math.min(1, node.ageFade + 0.4) }]}>
             {node.is_refining ? 'REFINING...' : node.category?.toUpperCase()}
           </Text>
           <View style={{ maxHeight: 60, overflow: 'hidden' }}>
             <Text numberOfLines={3} style={[styles.noteContent, { color: theme === 'dark' ? NightTheme.textPrimary : '#111111' }, node.is_refining && { color: theme === 'dark' ? NightTheme.textMuted : '#BBBBBB' }]}>{node.content}</Text>
-            {(node.content.length > 80 || node.displayLines > 2) && (
-              <LinearGradient
-                colors={theme === 'dark' ? ['rgba(15, 14, 12, 0)', 'rgba(15, 14, 12, 1)'] : ['rgba(255,255,255,0)', 'rgba(255,255,255,1)']}
-                style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 28 }}
-                pointerEvents="none"
-              />
-            )}
           </View>
-        </TouchableOpacity>
+        </Pressable>
       </Animated.View>
     </Animated.View>
   );

@@ -1,10 +1,13 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, forwardRef, memo } from 'react';
 import { ScrollView, StyleSheet, View, Dimensions } from 'react-native';
-import Animated, { useAnimatedScrollHandler, SharedValue, useAnimatedReaction, runOnJS } from 'react-native-reanimated';
+import Animated, { useAnimatedScrollHandler, SharedValue, useAnimatedReaction, runOnJS, useSharedValue } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 import { CATEGORY_COLORS } from '@/constants/Categories';
 import DriftNode from './DriftNode';
 import { calculateSearchMatch } from '@/utils/noteUtils';
+import ResonanceFeedbackOverlay from './ResonanceFeedbackOverlay';
+import { useNotesStore } from '@/store/useNotesStore';
+import * as Haptics from 'expo-haptics';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const WINDOW_BUFFER = 1500; // Extra pixels above and below
@@ -129,13 +132,49 @@ export default React.memo(React.forwardRef<Animated.ScrollView, UserModeMapProps
     return map;
   }, [mappedNotes]);
 
+  const [draggingNode, setDraggingNode] = useState<any>(null);
+  const [dragOrigin, setDragOrigin] = useState({ x: 0, y: 0 });
+  const activeDragX = useSharedValue(0);
+  const activeDragY = useSharedValue(0);
+  const activeDragCategory = useSharedValue<string | undefined>(undefined);
+
+  // Persistence logic for semantic updates
+  const updateNote = useNotesStore(state => state.updateNote);
+
+  // Haptic Feedback for category boundary crossing (UI Thread)
+  useAnimatedReaction(
+    () => activeDragCategory.value,
+    (curr, prev) => {
+        if (curr !== prev && curr !== undefined) {
+            runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Light);
+        }
+    }
+  );
+
+  const handleDragStart = (node: any, startX: number, startY: number) => {
+    setDragOrigin({ x: startX, y: startY });
+    setDraggingNode(node);
+  };
+
+  const handleDragEnd = (absX: number, absY: number) => {
+    const finalCat = activeDragCategory.value;
+    if (draggingNode && finalCat) {
+        // Persist the new semantic resonance
+        updateNote(draggingNode.id, { 
+            resonances: { [finalCat]: 1.0 } 
+        });
+        try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); } catch(e){}
+    }
+    setDraggingNode(null);
+    activeDragCategory.value = undefined;
+  };
+
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
       const y = event.contentOffset.y;
       scrollY.value = y;
       if (onScroll) runOnJS(onScroll)(y);
       
-      // Update viewport tile window (throttled)
       if (Math.abs(y - windowY) > 900) {
         runOnJS(setWindowY)(y);
       }
@@ -200,49 +239,65 @@ export default React.memo(React.forwardRef<Animated.ScrollView, UserModeMapProps
   }, [mappedNotes, nodeMap, start, end, tileY, tileHeight]);
 
   return (
-    <Animated.ScrollView 
-      ref={ref}
-      contentContainerStyle={{ minHeight: totalHeight, width: '100%' }} 
-      showsVerticalScrollIndicator={false}
-      scrollEventThrottle={16}
-      onScroll={scrollHandler}
-      overScrollMode="always"
-      bounces={true}
-    >
-      {/* Tiled Render Layer: 'Turbo' Accelerated for scaling */}
-      <View 
-        style={{ position: 'absolute', top: tileY, left: 0, width, height: tileHeight, zIndex: 1 }} 
-        pointerEvents="none"
-        shouldRasterizeIOS={true} 
-        renderToHardwareTextureAndroid={true} 
+    <View style={{ flex: 1 }}>
+      <Animated.ScrollView 
+        ref={ref}
+        contentContainerStyle={{ minHeight: totalHeight, width: '100%' }} 
+        showsVerticalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onScroll={scrollHandler}
+        overScrollMode="always"
+        bounces={true}
       >
-        <Svg width={width} height={tileHeight}>
-          <BatchedConnectionLayer 
-            visibleCurves={visibleCurves} 
-            nodeMap={nodeMap} 
-            tileY={tileY} 
-            isNexus={isNexus}
-            searchQuery={searchQuery}
-            width={width}
+        {/* Tiled Render Layer: 'Turbo' Accelerated for scaling */}
+        <View 
+          style={{ position: 'absolute', top: tileY, left: 0, width, height: tileHeight, zIndex: 1 }} 
+          pointerEvents="none"
+          shouldRasterizeIOS={true} 
+          renderToHardwareTextureAndroid={true} 
+        >
+          <Svg width={width} height={tileHeight}>
+            <BatchedConnectionLayer 
+              visibleCurves={visibleCurves} 
+              nodeMap={nodeMap} 
+              tileY={tileY} 
+              isNexus={isNexus}
+              searchQuery={searchQuery}
+              width={width}
+            />
+          </Svg>
+        </View>
+        
+        {visibleNotes.map((node) => {
+          const status = calculateSearchMatch(searchQuery, node);
+          const isFirst = mappedNotes.length > 0 && node.id === mappedNotes[0].id;
+  
+          return (
+            <DriftNode 
+              key={node.id} 
+              node={node} 
+              isFirst={isFirst}
+              activeView={activeView}
+              searchStatus={status}
+              onPress={onNodePress} 
+              onDragStart={handleDragStart}
+              onDragUpdateSharedX={activeDragX}
+              onDragUpdateSharedY={activeDragY}
+              onDragUpdateSharedCategory={activeDragCategory}
+              onDragEnd={handleDragEnd}
+              scrollY={scrollY}
+            />
+          );
+        })}
+      </Animated.ScrollView>
+  
+      {draggingNode && (
+          <ResonanceFeedbackOverlay 
+              activeNodePos={{ x: activeDragX, y: activeDragY }}
+              activeCategory={activeDragCategory}
+              originPos={dragOrigin}
           />
-        </Svg>
-      </View>
-      
-      {visibleNotes.map((node) => {
-        const status = calculateSearchMatch(searchQuery, node);
-        const isFirst = mappedNotes.length > 0 && node.id === mappedNotes[0].id;
-
-        return (
-          <DriftNode 
-            key={node.id} 
-            node={node} 
-            isFirst={isFirst}
-            activeView={activeView}
-            searchStatus={status}
-            onPress={onNodePress} 
-          />
-        );
-      })}
-    </Animated.ScrollView>
+      )}
+    </View>
   );
 }));
