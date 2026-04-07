@@ -120,6 +120,20 @@ export default function ReadingModal({ node, onClose, translucent, searchQuery }
                   </Text>
                 </View>
               )}
+
+              {/* RESONANCE INSIGHT: The 'Purple Context' section */}
+              {Object.keys(node.resonances || {}).length > 1 && (
+                <View style={[styles.resonanceInsight, { backgroundColor: isDark ? 'rgba(128, 0, 128, 0.08)' : 'rgba(128, 0, 128, 0.05)' }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#8E44AD', marginRight: 8 }} />
+                    <Text style={[styles.contextHeader, { color: '#8E44AD', marginBottom: 0 }]}>RESONANCE INSIGHT</Text>
+                  </View>
+                  <Text style={[styles.contextText, { color: isDark ? NightTheme.textPrimary : '#444' }]}>
+                    This thought is primarily categorized as <Text style={{ fontWeight: '700' }}>{Object.keys(node.resonances || {}).sort((a,b) => node.resonances[b]-node.resonances[a])[0]}</Text>, 
+                    but it also shows a strong resonance with <Text style={{ fontWeight: '700' }}>{Object.keys(node.resonances || {}).sort((a,b) => node.resonances[b]-node.resonances[a])[1]}</Text>.
+                  </Text>
+                </View>
+              )}
             </View>
           </ScrollView>
         </Animated.View>
@@ -225,5 +239,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
     fontWeight: '300',
+  },
+  resonanceInsight: {
+    marginTop: 24,
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(142, 68, 173, 0.15)',
   },
 });
