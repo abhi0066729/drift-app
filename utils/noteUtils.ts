@@ -78,17 +78,31 @@ export function processContextualConnections(notes: Note[], width: number, searc
     if (clusterId !== -1) clusterCounts[clusterId] = localIndex + 1;
 
     // --- SHARED SERPENTINE LOGIC ---
-    const isRight = note.is_ghost ? (i % 2 !== 0) : ((i * 7) % 3 === 0 || i % 2 !== 0);
-    const randX = (Math.abs(Math.sin(i * 37)) * 10000) % 1;
-    const randY = (Math.abs(Math.cos(i * 41)) * 10000) % 1;
+    const getStableHash = (id: string) => {
+      let hash = 0;
+      for (let charIdx = 0; charIdx < id.length; charIdx++) {
+        hash = ((hash << 5) - hash) + id.charCodeAt(charIdx);
+        hash |= 0;
+      }
+      return Math.abs(hash);
+    };
+
+    const nodeHash = getStableHash(note.id);
+    const randX = (nodeHash % 1000) / 1000;
+    const randY = ((nodeHash >> 3) % 1000) / 1000;
     
-    const basePadding = 42;
-    const varianceX = note.is_ghost ? (randX * 60) : (randX * 120);
+    // --- SHARED SERPENTINE LOGIC ---
+    // Use hash for stable side assignment
+    const isRight = note.is_ghost ? (i % 2 !== 0) : (nodeHash % 5 <= 2);
+    
+    const basePadding = 50; // Increased padding slightly
+    const varianceX = note.is_ghost ? (randX * 60) : (randX * 130);
     const unfocusedX = isRight ? (width - basePadding - varianceX) : (basePadding + varianceX);
     
+    // Pin Y to a more stable runningY, reduce variance noise to 0 to ensure centering
     const resY = isSearchActive 
       ? (note.searchStatus === 'match' ? currentMatchY : currentDimY + (i * 150))
-      : runningY + (randY - 0.5) * 60;
+      : runningY;
 
     // Increment Y for the next note
     if (isSearchActive && note.searchStatus === 'match') {
@@ -96,10 +110,10 @@ export function processContextualConnections(notes: Note[], width: number, searc
     }
     
     // Physical Spacing: Generous gaps to prevent visual overlap
-    runningY += (note.is_ghost ? 400 : 450); 
+    runningY += (note.is_ghost ? 380 : 420); 
 
     const textTargetWidth = width * 0.52;
-    const PADDING = 60;
+    const PADDING = 65;
     const margin = 20;
     const rightSpace = width - unfocusedX - PADDING - margin;
     const leftSpace = unfocusedX - PADDING - margin;
@@ -107,9 +121,9 @@ export function processContextualConnections(notes: Note[], width: number, searc
     const dynamicWidth = Math.max(140, Math.min(textTargetWidth, available));
     const unfocusedTextLeft = isRight ? unfocusedX - dynamicWidth - PADDING : unfocusedX + PADDING;
 
-    const ageFade = note.is_ghost ? 0.7 : Math.max(0.15, 1 - (i * 0.015));
+    const ageFade = note.is_ghost ? 0.8 : Math.max(0.4, 1 - (i * 0.015)); // High opacity floor
     const importance = note.is_ghost ? 1 : Math.min(1, note.content.length / 85);
-    const nodeRadius = note.is_ghost ? 5 : 4 + (importance * 5);
+    const nodeRadius = note.is_ghost ? 6 : 5 + (importance * 5.5);
     const isGlowing = note.is_ghost || importance >= 0.8;
     const displayLines = note.is_ghost ? 3 : Math.floor(randX * 4) + 2;
 

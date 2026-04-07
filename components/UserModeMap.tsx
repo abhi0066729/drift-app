@@ -33,36 +33,54 @@ const BatchedConnectionLayer = React.memo(({ visibleCurves, nodeMap, tileY, isNe
       if (!targetNode) return;
 
       const status = calculateSearchMatch(searchQuery, node);
-      const groupKey = `${conn.category}-${status}`;
+      const dy = Math.abs(targetNode.unfocusedY - node.unfocusedY);
+      
+      // PROXIMITY FADING: Determine distance bucket (0, 1, 2)
+      let distBucket = 0; // Close/Strong
+      if (dy > 800) distBucket = 1; // Medium/Faint
+      if (dy > 1800) distBucket = 2; // Far/Very Faint
+      
+      const groupKey = `${conn.category}-${status}-${distBucket}`;
       
       if (!groups[groupKey]) {
         groups[groupKey] = [];
-        const color = CATEGORY_COLORS[conn.category] || '#EAEAEA';
+        const color = CATEGORY_COLORS[conn.category] || '#8E44AD';
         
         // Weight the opacity and thickness based on resonance weight (conn.weight)
         const weightMult = conn.weight || 1.0;
-        let opacity = isNexus ? 0.1 * weightMult : ((node.ageFade || 1) * 0.8) * weightMult;
-        const width = isNexus ? 1.5 : (node.importance || 1) * 2 * weightMult + 0.8;
+        let baseOpacity = isNexus ? 0.35 * weightMult : 0.85 * weightMult;
         
-        if (status === 'dim') opacity = 0.02 * weightMult;
-        if (status === 'match') opacity = (isNexus ? 0.2 : 0.6) * weightMult;
+        // Apply distance-based dimming (Solid enough to see clearly)
+        if (distBucket === 1) baseOpacity *= 0.8;
+        if (distBucket === 2) baseOpacity *= 0.6;
+
+        const width = isNexus ? 1.8 : (node.importance || 1) * 2.5 * weightMult + 1.2;
         
-        metadata[groupKey] = { color, opacity, width };
+        if (status === 'dim') baseOpacity *= 0.4;
+        if (status === 'match') baseOpacity = 0.95 * weightMult;
+        
+        metadata[groupKey] = { color, opacity: baseOpacity, width };
       }
 
-      // Identical Curvature Logic
-      const dy = Math.abs(targetNode.unfocusedY - node.unfocusedY);
-      const tangent = Math.max(160, dy * 0.5);
+      // ORGANIC BOWING Logic
+      const tangent = Math.max(160, dy * 0.42);
       const curX = node.unfocusedX;
       const curY = node.unfocusedY - tileY;
       const tgtX = targetNode.unfocusedX;
       const tgtY = targetNode.unfocusedY - tileY;
+      
+      // If X coordinates are nearly identical, bow the curve to prevent "guitar string" look
+      let cp1x = curX;
+      let cp2x = tgtX;
+      if (Math.abs(tgtX - curX) < 10) {
+        // Deterministic bow based on node ID to stay stable across renders
+        const bowDir = (node.id.length % 2 === 0) ? 1 : -1;
+        const bowMag = Math.min(60, dy * 0.15); // Scale bow with distance up to a cap
+        cp1x = curX + (bowMag * bowDir);
+        cp2x = tgtX + (bowMag * bowDir);
+      }
 
-      // Use a simpler curve if they are very far vertically to prevent "loops"
-      const cp1y = curY + tangent;
-      const cp2y = tgtY - tangent;
-
-      const pathD = `M ${curX} ${curY} C ${curX} ${cp1y}, ${tgtX} ${cp2y}, ${tgtX} ${tgtY}`;
+      const pathD = `M ${curX} ${curY} C ${cp1x} ${curY + tangent}, ${cp2x} ${tgtY - tangent}, ${tgtX} ${tgtY}`;
       groups[groupKey].push(pathD);
     });
   });

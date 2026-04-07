@@ -6,7 +6,8 @@ import { Dimensions, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useNotesStore } from '@/store/useNotesStore';
 import { NightTheme } from '@/constants/theme';
-import { CATEGORY_COLORS as GLOBAL_COLORS } from '@/constants/Categories';
+import { CATEGORY_COLORS } from '@/constants/Categories';
+import ReadingModal from './ReadingModal';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   FadeIn,
@@ -35,13 +36,6 @@ const AnimatedPath = Animated.createAnimatedComponent(Path);
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const SPRING_CONFIG = { damping: 24, stiffness: 120, overshootClamping: true };
 
-
-
-const CATEGORY_COLORS: Record<string, string> = {
-  ...GLOBAL_COLORS,
-  Idea: '#F4F1EA', 
-  Synthesis: '#9B59B6'
-};
 
 function ScrubHint({ axisX }: { axisX: number }) {
   const translateY = useSharedValue(0);
@@ -119,60 +113,119 @@ function AnimatedOverlayPath({ node, targetNode, activeCluster, activeNodeOrigin
   const eX = useDerivedValue(() => withSpring(getTargetX(targetNode, activeCluster, activeNodeOriginX), SPRING_CONFIG));
 
   const animatedProps = useAnimatedProps(() => {
-    const focusColor = rootCategories && rootCategories.length > 0 ? (CATEGORY_COLORS[rootCategories[0]] || CATEGORY_COLORS.Synthesis) : CATEGORY_COLORS.Synthesis;
+    const focusColor = rootCategories && rootCategories.length > 0 ? (CATEGORY_COLORS[rootCategories[0]] || '#8E44AD') : '#8E44AD';
     const commonCategory = node.categories.find((c: string) => targetNode.categories.includes(c));
-    const strokeColor = activeCluster.value !== -1 ? focusColor : (commonCategory ? (CATEGORY_COLORS[commonCategory] || '#111111') : CATEGORY_COLORS.Synthesis);
+    const strokeColor = activeCluster.value !== -1 ? focusColor : (commonCategory ? (CATEGORY_COLORS[commonCategory] || '#8E44AD') : '#8E44AD');
     const thickness = node.importance * 1.5 + 0.5;
     const dy = Math.abs(eY.value - sY.value);
     const tangent = Math.max(160, dy * 0.6);
+    
+    let cp1x = sX.value;
+    let cp2x = eX.value;
+    // Add organic bowing if line is nearly vertical
+    if (Math.abs(eX.value - sX.value) < 15) {
+      const bowDir = (node.id.length % 2 === 0) ? 1 : -1;
+      const bowMag = Math.min(50, dy * 0.15);
+      cp1x = sX.value + (bowMag * bowDir);
+      cp2x = eX.value + (bowMag * bowDir);
+    }
 
     return {
-      d: `M ${sX.value} ${sY.value} C ${sX.value} ${sY.value + tangent}, ${eX.value} ${eY.value - tangent}, ${eX.value} ${eY.value}`,
+      d: `M ${sX.value} ${sY.value} C ${cp1x} ${sY.value + tangent}, ${cp2x} ${eY.value - tangent}, ${eX.value} ${eY.value}`,
       stroke: strokeColor,
-      strokeWidth: withTiming(thickness),
-      opacity: withTiming(node.ageFade * 0.4),
+      strokeWidth: withTiming(thickness + 0.5),
+      opacity: withTiming(node.ageFade * 0.7),
     };
   });
   return <AnimatedPath fill="none" animatedProps={animatedProps} />;
 }
 
-function CategoryRing({ cat, idx, node, activeCluster, activeNodeOriginY, activeNodeOriginX }: any) {
-  const currentX = useDerivedValue(() => getTargetX(node, activeCluster, activeNodeOriginX));
+function CategoryRing({ cat, idx, node, activeCluster, activeNodeOriginY, activeNodeOriginX, isFocused }: any) {
   const currentY = useDerivedValue(() => getTargetY(node, activeCluster, activeNodeOriginY));
+  const currentX = useDerivedValue(() => getTargetX(node, activeCluster, activeNodeOriginX));
+  
   const animatedProps = useAnimatedProps(() => {
     const isHybrid = node.categories.length > 1;
-    const isFocused = activeCluster.value !== -1;
+    const isMiddleRing = idx > 0;
+    const radiusMultiplier = isFocused ? (2.8 + idx * 1.5) : (2.2 + idx * 1.2);
+
     return {
       cx: withSpring(currentX.value, SPRING_CONFIG),
       cy: withSpring(currentY.value, SPRING_CONFIG),
-      r: isFocused ? node.nodeRadius * (3.2 + idx * 1.8) : node.nodeRadius * (2.2 + idx * 1.5),
-      stroke: CATEGORY_COLORS[cat] || '#111111',
+      r: node.nodeRadius * radiusMultiplier,
+      stroke: isMiddleRing ? 'none' : (CATEGORY_COLORS[cat] || '#8E44AD'),
       strokeWidth: isFocused ? '1.5' : '1',
+      fill: isMiddleRing ? (CATEGORY_COLORS[cat] || '#8E44AD') : 'none',
+      fillOpacity: isMiddleRing ? 0.3 : 0,
       strokeOpacity: withTiming((isHybrid ? 0.3 : 0.05) * node.ageFade * (isFocused ? 3 : 1)),
+      strokeDasharray: node.is_refining ? '3 3' : 'none',
       opacity: (node.isGlowing || node.nodeRadius > 5 || isHybrid) ? 1 : 0,
     };
   });
-  return <AnimatedCircle fill="none" animatedProps={animatedProps} />;
+  return <AnimatedCircle animatedProps={animatedProps} />;
 }
 
 function AnimatedNodeDot({ node, activeCluster, activeNodeOriginY, activeNodeOriginX, rootCategories, isDark }: any) {
   const currentY = useDerivedValue(() => getTargetY(node, activeCluster, activeNodeOriginY));
   const currentX = useDerivedValue(() => getTargetX(node, activeCluster, activeNodeOriginX));
+  const nodeMaskProps = useAnimatedProps(() => {
+    const isFocused = activeCluster.value !== -1;
+    const maxIdx = Math.max(0, node.categories.length - 1);
+    const radiusMultiplier = isFocused ? (3.2 + maxIdx * 1.8) : (2.2 + maxIdx * 1.5);
+    return {
+      cx: withSpring(currentX.value, SPRING_CONFIG), cy: withSpring(currentY.value, SPRING_CONFIG),
+      r: node.nodeRadius * radiusMultiplier - 0.5,
+      fill: isDark ? NightTheme.background : '#FFFFFF',
+      opacity: node.ageFade,
+    };
+  });
+  
   const animatedPropsCore = useAnimatedProps(() => {
-    const defaultColor = isDark ? '#E8E6E0' : '#111111';
-    const focusColor = rootCategories && rootCategories.length > 0 ? (CATEGORY_COLORS[rootCategories[0]] || defaultColor) : defaultColor;
+    const defaultColor = '#8E44AD';
+    const focusColor = (rootCategories && rootCategories.length > 0) 
+      ? (CATEGORY_COLORS[rootCategories[0]] || defaultColor) 
+      : (CATEGORY_COLORS[node.categories[0]] || defaultColor);
+
     return {
       cx: withSpring(currentX.value, SPRING_CONFIG), cy: withSpring(currentY.value, SPRING_CONFIG),
       r: node.nodeRadius * 1.2,
-      fill: focusColor,
-      opacity: withTiming(node.ageFade + 0.3),
+      fill: node.is_refining ? 'transparent' : focusColor,
+      stroke: node.is_refining ? focusColor : 'none',
+      strokeWidth: node.is_refining ? 1 : 0,
+      strokeDasharray: node.is_refining ? '2 2' : 'none',
+      opacity: withTiming(node.ageFade > 0.5 ? 1.0 : 0.8), // Solid floor
     };
   });
+
+  const pulseProps = useAnimatedProps(() => {
+    const defaultColor = '#8E44AD';
+    const focusColor = (rootCategories && rootCategories.length > 0) 
+      ? (CATEGORY_COLORS[rootCategories[0]] || defaultColor) 
+      : (CATEGORY_COLORS[node.categories[0]] || defaultColor);
+    
+    return {
+      cx: withSpring(currentX.value, SPRING_CONFIG), cy: withSpring(currentY.value, SPRING_CONFIG),
+      r: withRepeat(
+        withTiming(node.nodeRadius * 2.0, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
+        -1, true
+      ),
+      stroke: focusColor,
+      strokeWidth: 1.2,
+      fill: 'none',
+      opacity: withRepeat(
+        withTiming(0.4, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
+        -1, true
+      ),
+    };
+  });
+
   return (
     <React.Fragment>
+      <AnimatedCircle animatedProps={nodeMaskProps} />
+      <AnimatedCircle animatedProps={pulseProps} />
       <AnimatedCircle animatedProps={animatedPropsCore} />
       {node.categories.map((cat: string, idx: number) => (
-        <CategoryRing key={cat} cat={cat} idx={idx} node={node} activeCluster={activeCluster} activeNodeOriginY={activeNodeOriginY} activeNodeOriginX={activeNodeOriginX} />
+        <CategoryRing key={cat} cat={cat} idx={idx} node={node} activeCluster={activeCluster} activeNodeOriginY={activeNodeOriginY} activeNodeOriginX={activeNodeOriginX} isFocused={activeCluster.value !== -1} />
       ))}
     </React.Fragment>
   );
@@ -364,22 +417,11 @@ export default function KineticFocusMap({ rootNode, mappedNotes, onClose }: any)
           </View>
         </GestureDetector>
         {readingNode && (
-          <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(200)} style={[StyleSheet.absoluteFill, { backgroundColor: isDark ? 'rgba(0,0,0,0.85)' : 'rgba(255,255,255,0.92)', zIndex: 200, justifyContent: 'center', alignItems: 'center' }]}>
-            <GestureDetector gesture={closeReadingNodeTap}><Animated.View style={StyleSheet.absoluteFill} /></GestureDetector>
-            <Animated.View 
-              entering={DropAndBounce}
-              exiting={FadeOut.duration(200)}
-              style={{ width: '85%', maxHeight: '70%', padding: 36, backgroundColor: isDark ? NightTheme.surface : '#FFFFFF', borderRadius: 16, shadowColor: '#000000', shadowOpacity: isDark ? 0.4 : 0.08, shadowRadius: 30, elevation: 10 }}
-            >
-              <Text style={[styles.noteCategory, { color: CATEGORY_COLORS[readingNode.categories[0]] || '#BBBBBB', marginBottom: 12 }]}>{readingNode.categories.join(' + ')} — SYNTHESIS</Text>
-              <ScrollView showsVerticalScrollIndicator={false}>
-                {readingNode.images && readingNode.images.length > 0 && (
-                  <Image source={{ uri: readingNode.images[0] }} style={{ width: '100%', height: 200, borderRadius: 12, marginBottom: 16 }} transition={200} contentFit="cover" />
-                )}
-                <Text style={[styles.noteContent, { fontSize: 24, lineHeight: 36, color: isDark ? NightTheme.textPrimary : '#111111' }]}>{readingNode.content}</Text>
-              </ScrollView>
-            </Animated.View>
-          </Animated.View>
+          <ReadingModal 
+            node={readingNode} 
+            onClose={() => setReadingNode(null)} 
+            translucent 
+          />
         )}
     </Animated.View>
   );

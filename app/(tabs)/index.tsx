@@ -108,31 +108,42 @@ export default function HomeScreen() {
   const handleDoubleTapSeed = (event: any) => {
     if (event.nativeEvent.state === State.ACTIVE) {
       const seedData = [
-        { id: `s1-${Date.now()}`, content: "Cracked the logic for the spatial canvas today. The math finally feels liquid. Stability is coming.", created_at: Date.now() - 100000, entities_json: JSON.stringify({ category: 'Creative', emotion: 'focused', resonances: { 'Creative': 0.8, 'Study': 0.5 } }) },
-        { id: `s2-${Date.now()}`, content: "Feeling that Sunday evening dread again. Why does the future feel so heavy sometimes? Too many open tabs in my mind.", created_at: Date.now() - 200000, entities_json: JSON.stringify({ category: 'Journal', emotion: 'anxious', resonances: { 'Journal': 0.9, 'Dream': 0.4 } }) },
-        { id: `s3-${Date.now()}`, content: "The way the light hit the coffee shop window. Small moments. Life is actually okay. Grateful for the quiet.", created_at: Date.now() - 300000, entities_json: JSON.stringify({ category: 'Journal', emotion: 'peaceful', resonances: { 'Journal': 0.7, 'Idea': 0.2 } }) },
-        { id: `s4-${Date.now()}`, content: "What if the UI was just a single line? Drift Whisper. Minimalism in search as a core principle. No bars, just focus.", created_at: Date.now() - 400000, entities_json: JSON.stringify({ category: 'Idea', emotion: 'excited', resonances: { 'Idea': 0.85, 'Research': 0.6 } }) },
-        { id: `s5-${Date.now()}`, content: "Lunch at the corner place. Overpriced but the sandwich was solid. Need to stop spending 20$ on bread.", created_at: Date.now() - 500000, entities_json: JSON.stringify({ category: 'Journal', emotion: 'neutral', resonances: { 'Journal': 0.9 } }) },
-        { id: `s6-${Date.now()}`, content: "Need to finish plain components by Thursday. Blocked by the styling logic. Rahul's feedback was helpful though.", created_at: Date.now() - 600000, entities_json: JSON.stringify({ category: 'Todo', emotion: 'stressed', resonances: { 'Todo': 0.9, 'Meeting': 0.5 } }) },
-        { id: `s7-${Date.now()}`, content: "Actually proud of how far this app has come. It feels like a second brain. Kinetic energy in every tap.", created_at: Date.now() - 700000, entities_json: JSON.stringify({ category: 'Creative', emotion: 'proud', resonances: { 'Creative': 0.9, 'Journal': 0.6 } }) },
-        { id: `s8-${Date.now()}`, content: "Anxious about the release. What if nobody gets it? What if the drift is too subtle? Trust the process.", created_at: Date.now() - 800000, entities_json: JSON.stringify({ category: 'Journal', emotion: 'anxious', resonances: { 'Journal': 0.8, 'Dream': 0.5 } }) },
-        { id: `s9-${Date.now()}`, content: "Idea: Orbital node rings for synthesis-coded connection curves. Visually represent high-relevance matches.", created_at: Date.now() - 900000, entities_json: JSON.stringify({ category: 'Idea', emotion: 'dreamy', resonances: { 'Idea': 0.9, 'Study': 0.5 } }) },
-        { id: `s10-${Date.now()}`, content: "Deep work session: 4 hours. No distractions. The 'Focus' mode background should be more translucent.", created_at: Date.now() - 1000000, entities_json: JSON.stringify({ category: 'Study', emotion: 'focused', resonances: { 'Study': 0.85, 'Idea': 0.4 } }) },
-        { id: `s11-${Date.now()}`, content: "Running in the rain. Cold but clear. Physical movement always resets the cognitive drift.", created_at: Date.now() - 1100000, entities_json: JSON.stringify({ category: 'Journal', emotion: 'balanced', resonances: { 'Journal': 0.9, 'Reflection': 0.3 } }) },
-        { id: `s12-${Date.now()}`, content: "The 'People' tab is a ghost town. Need to populate it with the Matrix logic soon. The grid should be cramped.", created_at: Date.now() - 1200000, entities_json: JSON.stringify({ category: 'Todo', emotion: 'determined', resonances: { 'Todo': 0.8, 'Research': 0.5 } }) },
-        { id: `s13-${Date.now()}`, content: "Coffee #3. Pushing the limits of caffeine today. Logic is flowing but the heart rate is high.", created_at: Date.now() - 1300000, entities_json: JSON.stringify({ category: 'Journal', emotion: 'jittery', resonances: { 'Journal': 0.9 } }) },
-        { id: `s14-${Date.now()}`, content: "Met Rahul today. He suggested the 'hidden search' reveal gesture. It feels genius. Interface-less discovery.", created_at: Date.now() - 1400000, entities_json: JSON.stringify({ category: 'Meeting', emotion: 'inspired', resonances: { 'Meeting': 0.9, 'Idea': 0.8 } }) },
-        { id: `s15-${Date.now()}`, content: "Late night reflections. Is the app for others, or just for me to understand myself? Both, probably.", created_at: Date.now() - 1500000, entities_json: JSON.stringify({ category: 'Reflection', emotion: 'contemplative', resonances: { 'Reflection': 0.9, 'Dream': 0.6 } }) },
-        { id: `s16-${Date.now()}`, content: "Todo: Fix the shadow color on Android. The 'Glow' is barely visible on some devices. Needs more elevation.", created_at: Date.now() - 1600000, entities_json: JSON.stringify({ category: 'Todo', emotion: 'focused', resonances: { 'Todo': 0.85, 'Creative': 0.3 } }) },
-        { id: `s17-${Date.now()}`, content: "Found an old note from 2022. It's funny how consistent my anxieties are. The wavelength remains.", created_at: Date.now() - 1700000, entities_json: JSON.stringify({ category: 'Reflection', emotion: 'melancholy', resonances: { 'Reflection': 0.9, 'Journal': 0.7 } }) },
-        { id: `s18-${Date.now()}`, content: "Maybe the notes should have a 'stability' rating. Purple for stable, blue for refining. Automated transitions.", created_at: Date.now() - 1800000, entities_json: JSON.stringify({ category: 'Idea', emotion: 'analytical', resonances: { 'Idea': 0.8, 'Research': 0.6 } }) },
-        { id: `s19-${Date.now()}`, content: "Total silence in the room. Just the sound of the keyboard. This is where the best ideas hide.", created_at: Date.now() - 1900000, entities_json: JSON.stringify({ category: 'Journal', emotion: 'serene', resonances: { 'Journal': 0.8, 'Reflection': 0.5 } }) },
-        { id: `s20-${Date.now()}`, content: "Finalizing the MVP spec. 1 week testing cycle starting soon. The Drift feels real now.", created_at: Date.now() - 2000000, entities_json: JSON.stringify({ category: 'Creative', emotion: 'excited', resonances: { 'Creative': 0.8, 'Idea': 0.4 } }) },
+        { id: `p1-${Date.now()}`, content: "Primary signal localized. Single-dimension thought flow.", created_at: Date.now() - 100000, entities_json: JSON.stringify({ category: 'Idea', emotion: 'focused' }) },
+        { id: `p2-${Date.now()}`, content: "Journal entry from the morning. Simple reflection.", created_at: Date.now() - 200000, entities_json: JSON.stringify({ category: 'Journal', emotion: 'calm' }) },
+        { id: `p3-${Date.now()}`, content: "Deep work session. Focused on a single task.", created_at: Date.now() - 300000, entities_json: JSON.stringify({ category: 'Study', emotion: 'concentrated' }) },
+        { id: `p4-${Date.now()}`, content: "Running late. No time for deep thought.", created_at: Date.now() - 400000, entities_json: JSON.stringify({ category: 'Todo', emotion: 'hurried' }) },
+        { id: `p5-${Date.now()}`, content: "Lunch was good. Not much else to say.", created_at: Date.now() - 500000, entities_json: JSON.stringify({ category: 'Journal', emotion: 'neutral' }) },
+        { id: `p6-${Date.now()}`, content: "Abstract ideation. Exploring one thread at a time.", created_at: Date.now() - 600000, entities_json: JSON.stringify({ category: 'Idea', emotion: 'curious' }) },
+        { id: `p7-${Date.now()}`, content: "Task #24 finalized. Moving to next item.", created_at: Date.now() - 700000, entities_json: JSON.stringify({ category: 'Todo', emotion: 'efficient' }) },
+        { id: `p8-${Date.now()}`, content: "Quiet evening. Single category mindset.", created_at: Date.now() - 800000, entities_json: JSON.stringify({ category: 'Reflection', emotion: 'still' }) },
+        { id: `p9-${Date.now()}`, content: "Another focused ideation point.", created_at: Date.now() - 900000, entities_json: JSON.stringify({ category: 'Idea', emotion: 'clear' }) },
+        { id: `p10-${Date.now()}`, content: "Final baseline entry. Pure dimension.", created_at: Date.now() - 1000000, entities_json: JSON.stringify({ category: 'Journal', emotion: 'grounded' }) },
       ];
       
       seedData.reverse().forEach(n => addNote(n as any));
       try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch(e){}
-      Alert.alert("Emotional Wavelengths Localized", "20 diverse thoughts have been imported into your Drift.");
+      Alert.alert("Pure Baseline Initialized", "10 single-dimension thoughts have been imported.");
+    }
+  };
+
+  const handleDoubleTapResonance = (event: any) => {
+    if (event.nativeEvent.state === State.ACTIVE) {
+      const resonanceData = [
+        { id: `r1-${Date.now()}`, content: "SYNTHESIS: The intersection of Creative flow and Study disciplines. A hybrid masterpiece.", created_at: Date.now() - 150000, entities_json: JSON.stringify({ category: 'Creative', emotion: 'euphoric', resonances: { 'Creative': 0.9, 'Study': 0.7 } }) },
+        { id: `r2-${Date.now()}`, content: "DREAM-IDEATION: Mapping subconscious metaphors onto real-world technical problems.", created_at: Date.now() - 250000, entities_json: JSON.stringify({ category: 'Dream', emotion: 'ethereal', resonances: { 'Dream': 0.8, 'Idea': 0.8 } }) },
+        { id: `r3-${Date.now()}`, content: "JOURNAL-ACTION: Turning emotional anxiety into productive Todo lists.", created_at: Date.now() - 350000, entities_json: JSON.stringify({ category: 'Journal', emotion: 'determined', resonances: { 'Journal': 0.7, 'Todo': 0.9 } }) },
+        { id: `r4-${Date.now()}`, content: "RESEARCH-REFLECTION: Critiquing theoretical models against personal history.", created_at: Date.now() - 450000, entities_json: JSON.stringify({ category: 'Research', emotion: 'analytical', resonances: { 'Research': 0.8, 'Reflection': 0.6 } }) },
+        { id: `r5-${Date.now()}`, content: "MEETING-CREATIVE: Synthesis between user feedback and aesthetic vision.", created_at: Date.now() - 550000, entities_json: JSON.stringify({ category: 'Meeting', emotion: 'inspired', resonances: { 'Meeting': 0.8, 'Creative': 0.8 } }) },
+        { id: `r6-${Date.now()}`, content: "STUDY-JOURNAL: Documenting the psychological state of deep learning.", created_at: Date.now() - 650000, entities_json: JSON.stringify({ category: 'Study', emotion: 'deep', resonances: { 'Study': 0.9, 'Journal': 0.5 } }) },
+        { id: `r7-${Date.now()}`, content: "IDEA-TODO: Bridging the gap between a vision and the next concrete step.", created_at: Date.now() - 750000, entities_json: JSON.stringify({ category: 'Idea', emotion: 'urgent', resonances: { 'Idea': 0.9, 'Todo': 0.7 } }) },
+        { id: `r8-${Date.now()}`, content: "REFLECTION-DREAM: Is this reality or just a really high-performance simulation?", created_at: Date.now() - 850000, entities_json: JSON.stringify({ category: 'Reflection', emotion: 'mystic', resonances: { 'Reflection': 0.8, 'Dream': 0.8 } }) },
+        { id: `r9-${Date.now()}`, content: "ACTION-CREATIVE: Pure kinetic expression in the codebase. Hard logic vs liquid design.", created_at: Date.now() - 950000, entities_json: JSON.stringify({ category: 'Action', emotion: 'kinetic', resonances: { 'Action': 0.9, 'Creative': 0.6 } }) },
+        { id: `r10-${Date.now()}`, content: "FINAL SYNTHESIS: The ultimate convergence of every dimensional wavelength.", created_at: Date.now() - 1050000, entities_json: JSON.stringify({ category: 'Synthesis', emotion: 'complete', resonances: { 'Synthesis': 1.0, 'Dream': 0.5, 'Idea': 0.5, 'Journal': 0.5 } }) },
+      ];
+      
+      resonanceData.reverse().forEach(n => addNote(n as any));
+      try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch(e){}
+      Alert.alert("Resonance Spectrum Localized", "10 high-dimensional synthesized thoughts have been added.");
     }
   };
 
@@ -250,10 +261,12 @@ export default function HomeScreen() {
         <View style={[styles.container, { paddingTop: insets.top + 20, backgroundColor: theme === 'dark' ? NightTheme.background : '#FFFFFF' }]}>
           <View style={[styles.header, { backgroundColor: theme === 'dark' ? NightTheme.background : '#FFFFFF' }]}>
             <View style={styles.headerTextContainer}>
-              <View>
-                <Text style={[styles.title, { color: theme === 'dark' ? '#E8E6E0' : '#111111' }]}>Drift Map</Text>
-                <Text style={styles.subtitle}>Kinetic Semantic Synthesis</Text>
-              </View>
+              <TapGestureHandler onHandlerStateChange={handleDoubleTapResonance} numberOfTaps={2}>
+                <View>
+                  <Text style={[styles.title, { color: theme === 'dark' ? '#E8E6E0' : '#111111' }]}>Drift Map</Text>
+                  <Text style={styles.subtitle}>Kinetic Semantic Synthesis</Text>
+                </View>
+              </TapGestureHandler>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                 {Platform.OS === 'android' && (
                   <TouchableOpacity onPress={toggleSearch} style={[styles.themeToggleBtn, { backgroundColor: isSearchLocked.value ? 'rgba(142, 68, 173, 0.1)' : 'transparent' }]}>

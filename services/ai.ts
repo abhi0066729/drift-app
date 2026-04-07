@@ -32,8 +32,22 @@ function scrubJSON(text: string): string | null {
   let clean = text.replace(/```json/gi, '').replace(/```/g, '').trim();
   const start = clean.indexOf('{');
   const end = clean.lastIndexOf('}');
-  if (start === -1 || end === -1 || end < start) return null;
-  return clean.substring(start, end + 1);
+  
+  if (start !== -1 && end !== -1 && end > start) {
+      return clean.substring(start, end + 1);
+  }
+
+  // KEYWORD-DRILL FALLBACK
+  // If the AI was "chatty" and didn't output valid JSON, we scan for keywords
+  const validCategories = ['Journal','Study','Idea','Todo','Dream','Research','Quote','Meeting','Reflection','Creative'];
+  const lowerText = clean.toLowerCase();
+  for (const cat of validCategories) {
+      if (lowerText.includes(cat.toLowerCase())) {
+          return JSON.stringify({ category: cat, emotion: 'Neutral' });
+      }
+  }
+
+  return null;
 }
 
 /**
@@ -56,12 +70,16 @@ export async function extractRealtime(text: string): Promise<{ category: NoteCat
         messages: [
           { 
             role: 'system', 
-            content: `Respond with ONLY JSON. Pick ONE: Journal, Study, Idea, Todo, Dream, Research, Quote, Meeting, Reflection, Creative.
-Example: "Buy milk" -> {"category": "Todo", "emotion": "Neutral"}`
+            content: `You are a strict JSON engine. Respond with ONLY valid JSON. NOTHING ELSE. No preamble. No conversation.
+            
+            SCHEMA: {"category": "category_name", "emotion": "emotion_name"}
+            CATEGORIES: [Journal, Study, Idea, Todo, Dream, Research, Quote, Meeting, Reflection, Creative]
+            
+            If unsure, default to "Journal".`
           },
-          { role: 'user', content: text }
+          { role: 'user', content: `Analyze: "${text}"` }
         ],
-        max_tokens: 60,
+        max_tokens: 30,
         temperature: 0.1,
       }),
     });

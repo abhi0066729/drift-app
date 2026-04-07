@@ -24,10 +24,10 @@ function DriftNode({ node, onPress, activeView, searchStatus = 'none', isFirst }
   const primaryCat = sortedResonances[0]?.[0] || node.category;
   const secondaryCat = sortedResonances.length > 1 && (sortedResonances[1][1] as number) > 0.2 ? sortedResonances[1][0] : primaryCat;
   
-  const color1 = isRefining ? '#4A90E2' : (CATEGORY_COLORS[primaryCat] || '#111111');
+  const color1 = isRefining ? '#4A90E2' : (CATEGORY_COLORS[primaryCat] || '#8E44AD');
   const color2 = isRefining ? '#9013FE' : (CATEGORY_COLORS[secondaryCat] || color1);
   const mainColor = color1;
-  const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
+  const isDual = sortedResonances.length > 1 && primaryCat !== secondaryCat;
   
   const pulseScale = useSharedValue(1);
   const pulseOpacity = useSharedValue(0.6);
@@ -56,12 +56,12 @@ function DriftNode({ node, onPress, activeView, searchStatus = 'none', isFirst }
   useEffect(() => {
     if (node.is_ghost || isFirst || isRefining) {
       pulseScale.value = withRepeat(
-        withTiming(isRefining ? 1.8 : 2.2, { duration: isRefining ? 800 : 1500, easing: Easing.out(Easing.ease) }),
-        -1, false
+        withTiming(1.6, { duration: 1200, easing: Easing.inOut(Easing.ease) }),
+        -1, true
       );
       pulseOpacity.value = withRepeat(
-        withTiming(0, { duration: isRefining ? 800 : 1500, easing: Easing.out(Easing.ease) }),
-        -1, false
+        withTiming(0.4, { duration: 1200, easing: Easing.inOut(Easing.ease) }),
+        -1, true
       );
       
       if (!isRefining) {
@@ -78,7 +78,7 @@ function DriftNode({ node, onPress, activeView, searchStatus = 'none', isFirst }
         outerPulseOpacity.value = 0;
       }
     } else {
-      pulseScale.value = 1; pulseOpacity.value = 0.2;
+      pulseScale.value = withTiming(1.1); pulseOpacity.value = 0.15;
       outerPulseScale.value = 1; outerPulseOpacity.value = 0.05;
     }
   }, [node.is_ghost, isFirst, isRefining]);
@@ -108,7 +108,6 @@ function DriftNode({ node, onPress, activeView, searchStatus = 'none', isFirst }
     else if (searchStatus === 'match') targetOpacity = 1.0;
 
     return {
-      opacity: withTiming(targetOpacity, { duration: 400, easing: Easing.out(Easing.cubic) }),
       top: withSpring(localYBase, { damping: 25, stiffness: 60 }),
       zIndex: searchStatus === 'match' ? 100 : (activeView === 'nexus' && (importanceScore > 0.5 || isPurpleNode) ? 20 : 2),
     };
@@ -128,8 +127,13 @@ function DriftNode({ node, onPress, activeView, searchStatus = 'none', isFirst }
     if (searchStatus === 'dim') targetScale = targetScale * 0.8;
     else if (searchStatus === 'match') targetScale = targetScale * 1.15;
 
+    let targetOpacity = isNexus ? 0.3 + (importanceScore * 0.7) : 1.0;
+    if (searchStatus === 'dim') targetOpacity = 0.4;
+    else if (searchStatus === 'match') targetOpacity = 1.0;
+
     return {
-      transform: [{ scale: withSpring(targetScale, { damping: 20, stiffness: 90 }) }]
+      transform: [{ scale: withSpring(targetScale, { damping: 20, stiffness: 90 }) }],
+      opacity: withTiming(targetOpacity, { duration: 400 })
     };
   }, [activeView, importanceScore, searchStatus, mainColor]);
 
@@ -160,13 +164,23 @@ function DriftNode({ node, onPress, activeView, searchStatus = 'none', isFirst }
           activeOpacity={1}
           onPress={handleDotPress}
         >
-          <AnimatedLinearGradient colors={[color1, color2]} style={[{ position: 'absolute', width: node.nodeRadius * 5, height: node.nodeRadius * 5, borderRadius: node.nodeRadius * 2.5 }, searchPulseStyle]} />
-          <AnimatedLinearGradient colors={[color1, color2]} style={[{ position: 'absolute', width: node.nodeRadius * 2, height: node.nodeRadius * 2, borderRadius: node.nodeRadius }, outerPulseStyle]} />
-          <AnimatedLinearGradient colors={[color1, color2]} style={[{ position: 'absolute', width: node.nodeRadius * 2, height: node.nodeRadius * 2, borderRadius: node.nodeRadius }, pulseStyle]} />
-          <LinearGradient colors={[color1, color2]} pointerEvents="none" style={{ width: node.nodeRadius * 2, height: node.nodeRadius * 2, borderRadius: node.nodeRadius, opacity: node.is_refining ? 0.3 : node.ageFade + 0.2 }} />
-          {node.is_refining && (
-            <View style={{ position: 'absolute', width: node.nodeRadius * 4, height: node.nodeRadius * 4, borderRadius: node.nodeRadius * 2, borderWidth: 1, borderColor: mainColor, opacity: 0.5 }} />
+          {/* Background Mask */}
+          <View style={{ position: 'absolute', width: node.nodeRadius * 6, height: node.nodeRadius * 6, borderRadius: node.nodeRadius * 3, backgroundColor: theme === 'dark' ? NightTheme.background : '#FFFFFF' }} />
+          
+          {/* External Pulsating Ring (The "Living" Layer) */}
+          <Animated.View style={[{ position: 'absolute', width: node.nodeRadius * 3.8, height: node.nodeRadius * 3.8, borderRadius: node.nodeRadius * 1.9, borderWidth: 1.2, borderColor: color1, backgroundColor: 'transparent' }, pulseStyle]} />
+          
+          {/* Static Outer Circle (Semantic Boundary) */}
+          <View style={{ position: 'absolute', width: node.nodeRadius * 3.2, height: node.nodeRadius * 3.2, borderRadius: node.nodeRadius * 1.6, borderWidth: 0.8, borderColor: color1, opacity: 0.2 }} />
+          
+          <Animated.View style={[{ position: 'absolute', width: node.nodeRadius * 5, height: node.nodeRadius * 5, borderRadius: node.nodeRadius * 2.5, backgroundColor: isRefining ? 'transparent' : color1, opacity: searchStatus === 'match' ? 0 : (isRefining ? 1 : 0.05), borderWidth: 0.8, borderColor: color1, borderStyle: isRefining ? 'dashed' : 'solid' }, searchPulseStyle]} />
+          
+          {isDual && !isRefining && (
+             <Animated.View style={[{ position: 'absolute', width: node.nodeRadius * 3.5, height: node.nodeRadius * 3.5, borderRadius: node.nodeRadius * 1.75, backgroundColor: color2, opacity: 0.4 }, outerPulseStyle]} />
           )}
+          
+          {/* 100% Solid Core Dot (Static) */}
+          <View style={[{ position: 'absolute', width: node.nodeRadius * 2, height: node.nodeRadius * 2, borderRadius: node.nodeRadius, backgroundColor: color1, opacity: node.is_refining ? 0.5 : 1.0 }]} />
         </TouchableOpacity>
       </Animated.View>
         

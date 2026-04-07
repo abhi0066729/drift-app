@@ -1,11 +1,13 @@
 import React from 'react';
-import { StyleSheet, Text, View, Pressable, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, Pressable, ScrollView, Dimensions, Platform } from 'react-native';
 import Animated, { FadeIn, FadeOut, withSpring } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { BlurView } from 'expo-blur';
 import { CATEGORY_COLORS } from '@/constants/Categories';
 import { NightTheme } from '@/constants/theme';
 import { useNotesStore } from '@/store/useNotesStore';
+
+const { width } = Dimensions.get('window');
 
 interface ReadingModalProps {
   node: any;
@@ -18,27 +20,39 @@ export default function ReadingModal({ node, onClose, translucent, searchQuery }
   const theme = useNotesStore(state => state.theme);
   if (!node) return null;
 
-  const categoriesText = node.categories ? node.categories.join(' + ') : (node.category || '');
-  const color = CATEGORY_COLORS[node.categories?.[0] || node.category] || '#BBBBBB';
+  let finalCategory = (node.categories && node.categories.length > 0) ? node.categories[0] : (node.category || '');
+  let finalEmotion = node.emotion || '';
   
-  // Semantic Echo Logic
+  // Robust parsing for nodes from different sources (Chronicle vs Map)
+  if (node.entities_json) {
+    try {
+      const parsed = JSON.parse(node.entities_json);
+      if (!finalCategory) finalCategory = parsed.category || (parsed.categories && parsed.categories[0]);
+      if (!finalEmotion) finalEmotion = parsed.emotion;
+    } catch (e) {}
+  }
+  
+  if (!finalCategory) finalCategory = 'Journal';
+
+  const headerTitle = finalEmotion 
+    ? `${finalCategory.toUpperCase()} · ${finalEmotion.toUpperCase()}`
+    : finalCategory.toUpperCase();
+
+  const color = CATEGORY_COLORS[finalCategory] || '#8E44AD';
+  
   const hasSearch = searchQuery && searchQuery.length > 0;
   const isMatch = hasSearch && (
     node.content.toLowerCase().includes(searchQuery!.toLowerCase()) ||
     node.category?.toLowerCase().includes(searchQuery!.toLowerCase())
   );
 
-  // Custom high-energy Drop & Bounce animation
   const DropAndBounce = () => {
     'worklet';
     return {
-      initialValues: {
-        transform: [{ translateY: -500 }, { scale: 0.9 }],
-        opacity: 0,
-      },
+      initialValues: { transform: [{ translateY: -500 }, { scale: 0.9 }], opacity: 0 },
       animations: {
         transform: [
-          { translateY: withSpring(0, { damping: 10, stiffness: 95, mass: 1 }) },
+          { translateY: withSpring(0, { damping: 12, stiffness: 100, mass: 1 }) },
           { scale: withSpring(1) }
         ],
         opacity: withSpring(1),
@@ -46,65 +60,67 @@ export default function ReadingModal({ node, onClose, translucent, searchQuery }
     };
   };
 
+  const isDark = theme === 'dark';
+
   return (
     <Animated.View 
       entering={FadeIn.duration(200)} 
       exiting={FadeOut.duration(200)} 
       style={[StyleSheet.absoluteFill, { zIndex: 1000 }]}
     >
-      <BlurView intensity={translucent ? 30 : 60} tint={theme === 'dark' ? 'dark' : 'light'} style={StyleSheet.absoluteFill}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-      </BlurView>
+      <Pressable style={StyleSheet.absoluteFill} onPress={onClose}>
+        <BlurView intensity={isDark ? 40 : 65} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
+      </Pressable>
       
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }} pointerEvents="box-none">
         <Animated.View 
           entering={DropAndBounce}
           exiting={FadeOut.duration(200)}
-          pointerEvents="box-none" 
-          style={{ 
-            width: '88%', 
-            maxHeight: '75%', 
-            padding: 36, 
-            backgroundColor: translucent ? (theme === 'dark' ? 'rgba(15, 14, 12, 0.94)' : 'rgba(255, 255, 255, 0.94)') : (theme === 'dark' ? NightTheme.surface : '#FFFFFF'), 
-            borderRadius: 24, 
-            shadowColor: '#000000', 
-            shadowOpacity: theme === 'dark' ? 0.3 : 0.1, 
-            shadowRadius: 30, 
-            elevation: 15,
-            borderWidth: translucent ? 1 : 0,
-            borderColor: 'rgba(142, 68, 173, 0.1)'
-          }}
+          style={[styles.contentContainer, { backgroundColor: isDark ? 'rgba(15, 14, 12, 0.85)' : 'rgba(255, 255, 255, 0.75)' }]}
         >
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <Text style={[styles.noteCategory, { color }]}>{categoriesText} — {translucent ? 'CONTEXT' : 'FOCUS'}</Text>
-            {isMatch && (
-              <View style={styles.matchBadge}>
-                <Text style={styles.matchBadgeText}>SEARCH ECHO</Text>
-              </View>
-            )}
+          {/* Header section matching ThoughtCloud avatar+name layout */}
+          <View style={styles.header}>
+            <View style={[styles.avatarPlaceholder, { backgroundColor: `${color}20` }]}>
+              <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: color, opacity: 0.15 }} />
+            </View>
+            <View style={styles.headerText}>
+              <Text style={[styles.title, { color: isDark ? NightTheme.textPrimary : '#111' }]} numberOfLines={1}>{headerTitle}</Text>
+              <Text style={[styles.resonanceLabel, { color }]}>
+                {isMatch ? 'SEARCH RESONANCE' : (translucent ? 'SEMANTIC ECHO' : 'FOCUS CORE')}
+              </Text>
+            </View>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false}>
-            {node.images && node.images.length > 0 && (
-              <Image 
-                source={{ uri: node.images[0] }} 
-                style={{ width: '100%', height: 200, borderRadius: 12, marginBottom: 16 }} 
-                transition={200} 
-                contentFit="cover" 
-              />
-            )}
-            <Text style={[styles.noteContent, { fontSize: 24, lineHeight: 36, color: theme === 'dark' ? NightTheme.textPrimary : '#111111' }]}>{node.content}</Text>
-            
-            {hasSearch && (
-              <View style={[styles.contextFooter, { borderTopColor: theme === 'dark' ? NightTheme.border : '#F0F0F0' }]}>
-                <Text style={styles.contextHeader}>SEMANTIC ECHO</Text>
-                <Text style={[styles.contextText, { color: theme === 'dark' ? NightTheme.textMuted : '#666666' }]}>
-                  {isMatch 
-                    ? `This thought resonates directly with your whisper for "${searchQuery}". It is part of your current discovery drift.`
-                    : "This context remains visible to guide your semantic drift across the Chronicle."}
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+            {/* Main Note Card matching ThoughtCloud list items */}
+            <View style={[styles.noteCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]}>
+              {node.images && node.images.length > 0 && (
+                <Image 
+                  source={{ uri: node.images[0] }} 
+                  style={styles.noteImage} 
+                  transition={200} 
+                  contentFit="cover" 
+                />
+              )}
+              <Text style={[styles.noteContent, { color: isDark ? NightTheme.textPrimary : '#333' }]}>{node.content}</Text>
+              
+              <View style={[styles.cardFooter, { borderTopColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]}>
+                <Text style={[styles.footerDate, { color: isDark ? NightTheme.textMuted : '#999' }]}>
+                  {new Date(node.created_at || Date.now()).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                 </Text>
               </View>
-            )}
+
+              {hasSearch && (
+                <View style={[styles.contextFooter, { borderTopColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]}>
+                  <Text style={[styles.contextHeader, { color }]}>SEMANTIC ECHO</Text>
+                  <Text style={[styles.contextText, { color: isDark ? NightTheme.textMuted : '#666' }]}>
+                    {isMatch 
+                      ? `This thought resonates directly with your whisper for "${searchQuery}".`
+                      : "This context remains visible to guide your semantic drift."}
+                  </Text>
+                </View>
+              )}
+            </View>
           </ScrollView>
         </Animated.View>
       </View>
@@ -113,37 +129,101 @@ export default function ReadingModal({ node, onClose, translucent, searchQuery }
 }
 
 const styles = StyleSheet.create({
-  noteCategory: { fontSize: 9, fontWeight: '700', letterSpacing: 2, textTransform: 'uppercase' },
-  noteContent: { fontSize: 18, fontWeight: '300', lineHeight: 28, color: '#111111' },
-  matchBadge: {
-    backgroundColor: 'rgba(142, 68, 173, 0.1)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
+  contentContainer: {
+    width: '90%',
+    maxHeight: '82%',
+    borderRadius: 32,
+    overflow: 'hidden',
+    paddingTop: 24,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.15,
+        shadowRadius: 20,
+      },
+      android: {
+        elevation: 20,
+      }
+    }),
+    borderWidth: 1,
+    borderColor: 'rgba(142, 68, 173, 0.1)',
   },
-  matchBadgeText: {
-    fontSize: 8,
-    color: '#8E44AD',
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    marginBottom: 20,
+  },
+  avatarPlaceholder: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(142, 68, 173, 0.1)',
+  },
+  headerText: {
+    flex: 1,
+    marginLeft: 16,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '300',
+    letterSpacing: 0.5,
+  },
+  resonanceLabel: {
+    fontSize: 9,
     fontWeight: '700',
-    letterSpacing: 1,
+    marginTop: 4,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+  },
+  scrollContent: {
+    paddingBottom: 40,
+    paddingHorizontal: 20,
+  },
+  noteCard: {
+    padding: 24,
+    borderRadius: 24,
+    borderWidth: 1,
+  },
+  noteImage: {
+    width: '100%',
+    height: 220,
+    borderRadius: 16,
+    marginBottom: 20,
+  },
+  noteContent: {
+    fontSize: 16,
+    lineHeight: 28,
+    fontWeight: '300',
+  },
+  cardFooter: {
+    marginTop: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+  },
+  footerDate: {
+    fontSize: 10,
+    textAlign: 'right',
+    fontWeight: '500',
+    letterSpacing: 0.5,
   },
   contextFooter: {
-    marginTop: 32,
-    paddingTop: 24,
+    marginTop: 20,
+    paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
   },
   contextHeader: {
     fontSize: 9,
     fontWeight: '700',
-    color: '#8E44AD',
     letterSpacing: 2,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   contextText: {
-    fontSize: 13,
-    color: '#666666',
-    lineHeight: 20,
+    fontSize: 12,
+    lineHeight: 18,
     fontWeight: '300',
   },
 });

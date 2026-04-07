@@ -1,42 +1,144 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback } from 'react-native';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNotesStore } from '@/store/useNotesStore';
 import * as Crypto from 'expo-crypto';
 import { useRouter, useFocusEffect } from 'expo-router';
-import Animated, { FadeInDown, useAnimatedStyle, withTiming, useSharedValue, withRepeat } from 'react-native-reanimated';
+import Animated, { 
+  FadeIn, 
+  FadeInDown, 
+  useAnimatedStyle, 
+  withTiming, 
+  useSharedValue, 
+  withRepeat, 
+  withSequence,
+  Easing,
+  interpolateColor,
+  useDerivedValue,
+  SharedValue
+} from 'react-native-reanimated';
 import { extractRealtime, extractDeep, NoteCategory } from '@/services/ai';
 import { LinearGradient } from 'expo-linear-gradient';
 import { NightTheme } from '@/constants/theme';
+import { CATEGORY_COLORS } from '@/constants/Categories';
 
-const CATEGORY_COLORS: Record<NoteCategory | string, string> = {
-  Journal: '#8E44AD', 
-  Study: '#5B8C5A',
-  Idea: '#111111',
-  Todo: '#4A90E2',
-  Dream: '#8E44AD',
-  Research: '#3E5C76',
-  Quote: '#D4AF37',
-  Meeting: '#5A5A5A',
-  Reflection: '#8E44AD',
-  Creative: '#E74C3C',
+const { width, height } = Dimensions.get('window');
+
+// --- Universal Intent Engine (Semantic Roots) ---
+// Focused on word stems to catch various forms (e.g., 'meeting' vs 'meet')
+const SEMANTIC_INTENTS: Partial<Record<NoteCategory, RegExp[]>> = {
+  Todo: [
+    /task/i, /todo/i, /buy/i, /remind/i, /finish/i, /action/i, /check/i, /urgent/i, /must/i, /checklist/i, /\[ \]/
+  ],
+  Idea: [
+    /idea/i, /concept/i, /brainstorm/i, /maybe/i, /what if/i, /project/i, /vision/i, /bulb/i, /innov/i, /potential/i
+  ],
+  Meeting: [
+    /meet/i, /sync/i, /huddl/i, /call/i, /agend/i, /discuss/i, /participant/i, /zoom/i, /teams/i, /skype/i, /invite/i, /calend/i, /huddle/i
+  ],
+  Dream: [
+    /dream/i, /nightm/i, /vivid/i, /vision/i, /last night/i, /slept/i, /woke up/i, /unconsc/i, /dreaming/i
+  ],
+  Study: [
+    /learn/i, /read/i, /study/i, /course/i, /lesson/i, /exam/i, /test/i, /acad/i, /grad/i, /chapter/i, /book/i
+  ],
+  Research: [
+    /data/i, /analy/i, /expe/i, /scien/i, /hypo/i, /evidence/i, /stats/i, /finding/i, /investig/i, /discov/i
+  ],
+  Quote: [
+    /said/i, /stated/i, /mention/i, /wrote/i, /author/i, /remark/i, /"|'|“|”/
+  ],
+  Reflection: [
+    /think/i, /feel/i, /wonder/i, /realiz/i, /honestly/i, /insight/i, /thought/i, /believe/i, /gratit/i, /reflex/i, /ponder/i, /meditat/i
+  ],
+  Creative: [
+    /poem/i, /lyrics/i, /story/i, /novel/i, /sketch/i, /design/i, /art/i, /doodle/i, /paint/i, /compo/i, /melody/i, /prototyp/i
+  ]
 };
 
-function predictLocal(text: string): NoteCategory | null {
-  const low = text.toLowerCase().trim();
-  if (low.startsWith('- [ ]') || low.startsWith('[]') || low.startsWith('v ') || low.startsWith('check ') || low.includes('todo')) return 'Todo';
-  if (low.startsWith('idea:') || low.startsWith('bulb:') || low.includes('idea')) return 'Idea';
-  if (low.startsWith('dream:') || low.startsWith('last night')) return 'Dream';
-  if (low.startsWith('study:') || low.startsWith('research:') || low.includes('read')) return 'Study';
-  if (low === 'i' || low === 'my' || low === 'today' || low.includes('feeling')) return 'Journal';
-  return 'Journal'; // Default to Journal for local flux
-}
+// --- Stardust Component ---
+const PARTICLE_COUNT = 18;
+const Particle = ({ index }: { index: number }) => {
+  const x = useSharedValue(Math.random() * width);
+  const y = useSharedValue(Math.random() * height);
+  const opacity = useSharedValue(0.1 + Math.random() * 0.4);
+
+  useEffect(() => {
+    const duration = 8000 + Math.random() * 10000;
+    x.value = withRepeat(withTiming(x.value + (Math.random() - 0.5) * 150, { duration, easing: Easing.inOut(Easing.sin) }), -1, true);
+    y.value = withRepeat(withTiming(y.value + (Math.random() - 0.5) * 150, { duration, easing: Easing.inOut(Easing.sin) }), -1, true);
+  }, []);
+
+  const style = useAnimatedStyle(() => ({
+    left: x.value,
+    top: y.value,
+    opacity: opacity.value,
+    transform: [{ scale: 0.5 + (index % 3) * 0.2 }],
+  }));
+
+  return <Animated.View style={[styles.particle, style]} />;
+};
+
+// --- Neural Nebula Blob ---
+const NebulaBlob = ({ activeColor, duration, radius, isTyping, speedMultiplier }: { activeColor: SharedValue<string>, duration: number, radius: number, isTyping: boolean, speedMultiplier: SharedValue<number> }) => {
+  const tx = useSharedValue(0);
+  const ty = useSharedValue(0);
+  const scale = useSharedValue(1);
+
+  useEffect(() => {
+    tx.value = withRepeat(withSequence(
+      withTiming(radius, { duration, easing: Easing.inOut(Easing.sin) }),
+      withTiming(-radius, { duration, easing: Easing.inOut(Easing.sin) })
+    ), -1, true);
+    
+    ty.value = withRepeat(withSequence(
+      withTiming(-radius * 0.5, { duration: duration * 1.2, easing: Easing.inOut(Easing.sin) }),
+      withTiming(radius * 0.5, { duration: duration * 1.2, easing: Easing.inOut(Easing.sin) })
+    ), -1, true);
+  }, []);
+
+  useEffect(() => {
+    scale.value = withTiming(isTyping ? 1.4 : 1.0, { duration: 1000 });
+  }, [isTyping]);
+
+  const style = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: tx.value * speedMultiplier.value }, 
+      { translateY: ty.value * speedMultiplier.value }, 
+      { scale: scale.value }
+    ],
+    backgroundColor: activeColor.value,
+  }));
+
+  return <Animated.View style={[styles.blob, style]} />;
+};
+
+const NeuralNebula = ({ baseColor, isTyping, isSynthesizing }: { baseColor: string, isTyping: boolean, isSynthesizing: boolean }) => {
+  const colorValue = useSharedValue(baseColor);
+  const speedMultiplier = useSharedValue(1);
+
+  useEffect(() => {
+    colorValue.value = withTiming(baseColor, { duration: 1000 });
+  }, [baseColor]);
+
+  useEffect(() => {
+    speedMultiplier.value = withTiming(isSynthesizing ? 1.8 : (isTyping ? 1.2 : 1.0), { duration: 800 });
+  }, [isSynthesizing, isTyping]);
+
+  return (
+    <View style={styles.nebulaRoot} pointerEvents="none">
+      <NebulaBlob activeColor={colorValue} radius={60} duration={6000} isTyping={isTyping} speedMultiplier={speedMultiplier} />
+      <NebulaBlob activeColor={colorValue} radius={90} duration={8000} isTyping={isTyping} speedMultiplier={speedMultiplier} />
+      <NebulaBlob activeColor={colorValue} radius={40} duration={5000} isTyping={isTyping} speedMultiplier={speedMultiplier} />
+    </View>
+  );
+};
 
 export default function CaptureScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [inputText, setInputText] = useState('');
-  const [predictedCategory, setPredictedCategory] = useState<string>('Journal');
+  const [predictedCategory, setPredictedCategory] = useState<NoteCategory>('Journal');
   const [predictionStatus, setPredictionStatus] = useState<'flux' | 'anchored'>('flux');
   const [emotionHint, setEmotionHint] = useState('');
   const [isTypingSync, setIsTypingSync] = useState(false);
@@ -44,254 +146,233 @@ export default function CaptureScreen() {
   const addNote = useNotesStore(state => state.addNote);
   const updateNote = useNotesStore(state => state.updateNote);
   const theme = useNotesStore(state => state.theme);
-
-  const pulseOpacity = useSharedValue(0.1);
-
-  useEffect(() => {
-    if (isTypingSync) {
-      pulseOpacity.value = withRepeat(withTiming(0.3, { duration: 800 }), -1, true);
-    } else {
-      pulseOpacity.value = withTiming(0.1, { duration: 400 });
-    }
-  }, [isTypingSync]);
-
-  useEffect(() => {
-    // 1. Instantly predict local top resonances
-    const local = predictLocal(inputText);
-    if (local) {
-      setPredictedCategory(local);
-    }
-    
-    // Always fall back to flux state while typing
-    setPredictionStatus('flux');
-
-    if (inputText.length < 3) return;
-    
-    // 2. Token-saving buffer
-    let delay = 3000;
-    const lastChar = inputText.trim().slice(-1);
-    if (['.', '!', '?', '\n'].includes(lastChar)) {
-      delay = 800; // Punctuation pause
-    }
-
-    const timeoutId = setTimeout(async () => {
-      setIsTypingSync(true);
-      try {
-        const result = await extractRealtime(inputText);
-        if (result && result.category) {
-          setPredictedCategory(result.category);
-          setEmotionHint(result.emotion || '');
-          setPredictionStatus('anchored');
-        }
-      } catch (err) {
-        console.warn('Realtime prediction failed:', err);
-      }
-      setIsTypingSync(false);
-    }, delay);
-
-    return () => clearTimeout(timeoutId);
-  }, [inputText]);
-
-  const auraStyle = useAnimatedStyle(() => ({
-    opacity: pulseOpacity.value,
-    transform: [{ scale: 1 + pulseOpacity.value * 0.5 }]
-  }));
+  const isDark = theme === 'dark';
 
   const inputRef = useRef<TextInput>(null);
+  
+  // --- Proactive Logic Refs ---
+  const lastStrideWordCount = useRef(0);
+  const lastStrideTime = useRef(0);
+
+  // --- Scored Heuristic Engine (Semantic Root Mode) ---
+  const predictLocal = useCallback((text: string): NoteCategory => {
+    const low = text.toLowerCase();
+    if (!low.trim()) return 'Journal';
+
+    let bestCategory: NoteCategory = 'Journal';
+    let highestScore = 0;
+
+    for (const [cat, patterns] of Object.entries(SEMANTIC_INTENTS)) {
+      let score = 0;
+      patterns.forEach(pattern => {
+        const matches = low.match(pattern);
+        if (matches) score += matches.length;
+      });
+
+      if (score > highestScore) {
+        highestScore = score;
+        bestCategory = cat as NoteCategory;
+      }
+    }
+
+    return bestCategory;
+  }, []);
+
+  const runPredictionAI = async (text: string) => {
+    setIsTypingSync(true);
+    try {
+      const result = await extractRealtime(text);
+      if (result && result.category) {
+        setPredictedCategory(result.category);
+        setEmotionHint(result.emotion || '');
+        setPredictionStatus('anchored');
+      }
+    } catch (err) {}
+    setIsTypingSync(false);
+  };
+
+  useEffect(() => {
+    const currentLocal = predictLocal(inputText);
+    setPredictedCategory(currentLocal);
+    setPredictionStatus('flux');
+
+    const words = inputText.trim().split(/\s+/).filter(Boolean);
+    const wordCount = words.length;
+
+    // --- PROACTIVE STRIDE TRIGGER ---
+    // If user adds 5 words and hasn't triggered AI in 2+ seconds
+    const timeSinceLastStride = Date.now() - lastStrideTime.current;
+    if (wordCount >= 4 && (wordCount - lastStrideWordCount.current >= 4) && timeSinceLastStride > 2000) {
+      lastStrideWordCount.current = wordCount;
+      lastStrideTime.current = Date.now();
+      runPredictionAI(inputText);
+    }
+
+    // --- PAUSE TRIGGER ---
+    if (inputText.length < 3) return;
+    const timeoutId = setTimeout(() => {
+      runPredictionAI(inputText);
+    }, 1000);
+
+    return () => clearTimeout(timeoutId);
+  }, [inputText, predictLocal]);
 
   useFocusEffect(
     useCallback(() => {
-      return () => {
-        Keyboard.dismiss();
-      };
+      return () => Keyboard.dismiss();
     }, [])
   );
 
   const handleCapture = useCallback(() => {
     if (!inputText.trim()) return;
-
     const noteId = Crypto.randomUUID();
-    const currentText = inputText;
+    const currentCategory = predictedCategory;
 
     addNote({
       id: noteId,
-      content: currentText,
+      content: inputText,
       created_at: Date.now(),
       source_type: 'text',
       is_refining: true,
       entities_json: JSON.stringify({ 
-        category: predictedCategory, 
+        category: currentCategory, 
         emotion: emotionHint || 'Neutral',
         clusterId: -1,
-        resonances: { [predictedCategory]: 1.0 }
+        resonances: { [currentCategory]: 1.0 }
       }),
     });
 
-    extractDeep(currentText).then(aiResult => {
-      if (aiResult) {
-        updateNote(noteId, {
-          is_refining: false,
-          entities_json: JSON.stringify({ ...aiResult, clusterId: -1 })
-        });
-      } else {
-        updateNote(noteId, { is_refining: false });
-      }
-    }).catch(() => {
-      updateNote(noteId, { is_refining: false });
-    });
-
+    extractDeep(inputText).then(aiResult => {
+      updateNote(noteId, { is_refining: false, entities_json: JSON.stringify({ ...(aiResult || {}), clusterId: -1 }) });
+    }).catch(() => updateNote(noteId, { is_refining: false }));
+    
     setInputText('');
     router.push('/');
   }, [inputText, predictedCategory, emotionHint]);
 
   const ribbonColor = CATEGORY_COLORS[predictedCategory] || '#8E44AD';
-  
   const isFlux = predictionStatus === 'flux';
-  const labelText = inputText.length > 0 ? (isTypingSync ? 'AI SYNTHESIZING...' : (isFlux ? `${predictedCategory}?` : predictedCategory.toUpperCase())) : 'WAITING FOR THOUGHT';
+  const labelText = inputText.trim().length > 0 
+    ? (isTypingSync ? 'AI SYNTHESIZING...' : (isFlux ? `${predictedCategory.toUpperCase()}?` : predictedCategory.toUpperCase())) 
+    : 'WAITING FOR THOUGHT';
 
   return (
     <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
-      <KeyboardAvoidingView style={[styles.container, { backgroundColor: theme === 'dark' ? NightTheme.background : '#FFFFFF' }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <View style={[styles.inner, { paddingTop: insets.top + 20 }]}>
+      <View style={[styles.container, { backgroundColor: isDark ? NightTheme.background : '#FFFFFF' }]}>
+        <KeyboardAvoidingView style={StyleSheet.absoluteFill} behavior={undefined}>
           
-          {/* Dual-Layer Aura */}
-          <Animated.View style={[styles.auraContainer, auraStyle]}>
-            {isFlux ? (
-               <LinearGradient
-                  colors={[ribbonColor, 'transparent']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.auraFlux}
-               />
-            ) : (
-               <View style={[styles.auraAnchored, { backgroundColor: ribbonColor }]} />
-            )}
-          </Animated.View>
+          <NeuralNebula baseColor={ribbonColor} isTyping={inputText.length > 0} isSynthesizing={isTypingSync} />
+          <View style={StyleSheet.absoluteFill} pointerEvents="none">
+            {[...Array(PARTICLE_COUNT)].map((_, i) => <Particle key={i} index={i} />)}
+          </View>
 
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => router.back()} style={[styles.backButton, { backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.05)' : '#F9F9F9' }]}>
-              <Text style={[styles.backButtonText, { color: theme === 'dark' ? NightTheme.textPrimary : '#111111' }]}>✕</Text>
-            </TouchableOpacity>
+          <View style={[styles.inner, { paddingTop: insets.top + 20 }]}>
+            
+            <Animated.View entering={FadeIn.duration(800)} style={styles.header}>
+              <View>
+                <Text style={[styles.headerTitle, { color: isDark ? NightTheme.textPrimary : '#111111' }]}>Drift Lens</Text>
+                <Text style={styles.headerSubtitle}>INPUT STREAM</Text>
+              </View>
 
-            <View style={styles.semanticHub}>
-              <Text style={styles.captureTitle}>Zenith Capture</Text>
-              
-              <View style={[
-                styles.predictionBadge, 
-                { 
-                  borderColor: isFlux ? '#CCCCCC' : ribbonColor,
-                  borderStyle: isFlux ? 'dashed' : 'solid',
-                  backgroundColor: isFlux ? 'transparent' : `${ribbonColor}11`
-                }
-              ]}>
-                <Text style={[
-                  styles.categoryLabel, 
-                  { 
-                    color: inputText.length > 0 ? (isFlux ? '#666666' : ribbonColor) : '#BBBBBB',
-                    fontStyle: isFlux && inputText.length > 0 ? 'italic' : 'normal',
-                    fontWeight: isFlux ? '400' : '700'
-                  }
-                ]}>
+              <View style={styles.actionRow}>
+                <TouchableOpacity 
+                  style={[styles.commitButton, { backgroundColor: inputText.trim().length > 0 ? (isDark ? NightTheme.accent : '#8E44AD') : (isDark ? 'rgba(255,255,255,0.05)' : '#F5F5F5') }]} 
+                  onPress={handleCapture}
+                  disabled={inputText.trim().length === 0}
+                >
+                  <Text style={[styles.commitButtonText, { color: inputText.trim().length > 0 ? '#FFFFFF' : (isDark ? NightTheme.textMuted : '#BBBBBB') }]}>COMMIT</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity onPress={() => router.back()} style={[styles.closeButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F9F9F9' }]}>
+                  <Text style={[styles.closeButtonText, { color: isDark ? NightTheme.textPrimary : '#111111' }]}>✕</Text>
+                </TouchableOpacity>
+              </View>
+            </Animated.View>
+
+            <View style={styles.hubWrapper}>
+              <View style={styles.predictionBadge}>
+                <View style={[styles.badgeLine, { backgroundColor: isFlux ? (isDark ? '#333' : '#EEEEEE') : ribbonColor }]} />
+                <Text style={[styles.categoryLabel, { color: inputText.trim().length > 0 ? (isFlux ? (isDark ? '#777' : '#888') : ribbonColor) : '#BBBBBB' }]}>
                   {labelText}
                 </Text>
+                <View style={[styles.badgeLine, { backgroundColor: isFlux ? (isDark ? '#333' : '#EEEEEE') : ribbonColor }]} />
               </View>
             </View>
 
-            <TouchableOpacity 
-              style={[styles.commitButton, { backgroundColor: inputText.trim().length > 0 ? (theme === 'dark' ? NightTheme.accent : '#8E44AD') : (theme === 'dark' ? 'rgba(255,255,255,0.05)' : '#F5F5F5') }]} 
-              onPress={handleCapture}
-              disabled={inputText.trim().length === 0}
-            >
-              <Text style={[styles.commitButtonText, { color: inputText.trim().length > 0 ? '#FFFFFF' : (theme === 'dark' ? NightTheme.textMuted : '#BBBBBB') }]}>Commit</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.content}>
-            <TextInput
-              ref={inputRef}
-              style={[styles.input, { color: theme === 'dark' ? NightTheme.textPrimary : '#111111' }]}
-              placeholder="What's your mind drifting to?"
-              placeholderTextColor={theme === 'dark' ? NightTheme.textMuted : "#E0E0E0"}
-              multiline
-              value={inputText}
-              onChangeText={setInputText}
-              textAlignVertical="top"
-              selectionColor={theme === 'dark' ? NightTheme.accent : "#8E44AD"}
-            />
-          </View>
-
-          <Animated.View entering={FadeInDown.delay(200)} style={styles.footerHint}>
-            <View style={[styles.hintContainer, { backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.05)' : '#F9F9F9' }]}>
-              <Text style={[styles.hintText, { color: theme === 'dark' ? NightTheme.accent : '#8E44AD' }]}>
-                {isTypingSync ? 'AI SYNTHESIZING...' : (predictionStatus === 'anchored' && emotionHint ? `${emotionHint.toUpperCase()} ENERGY DETECTED \u2728` : 'ZENITH COORDINATE ENGINE READY')}
-              </Text>
+            <View style={styles.content}>
+              <TextInput
+                ref={inputRef}
+                style={[styles.input, { color: isDark ? NightTheme.textPrimary : '#111111' }]}
+                placeholder="What's your mind drifting to?"
+                placeholderTextColor={isDark ? 'rgba(232, 230, 224, 0.4)' : "#999999"}
+                multiline
+                value={inputText}
+                onChangeText={setInputText}
+                textAlign="center"
+                selectionColor={isDark ? NightTheme.accent : "#8E44AD"}
+                autoFocus
+              />
             </View>
-          </Animated.View>
-        </View>
-      </KeyboardAvoidingView>
+
+            <Animated.View entering={FadeInDown.delay(400)} style={styles.footerHint}>
+               <Text style={[styles.hintText, { color: isDark ? '#A29BFE' : '#8E44AD' }]}>
+                 {isTypingSync ? 'DETECTING RESONANCE...' : (predictionStatus === 'anchored' && emotionHint ? `${emotionHint.toUpperCase()} ENERGY DETECTED` : 'ZENITH COORDINATE ENGINE ACTIVE')}
+               </Text>
+            </Animated.View>
+          </View>
+        </KeyboardAvoidingView>
+      </View>
     </TouchableWithoutFeedback>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
-  inner: { flex: 1 },
-  auraContainer: {
-    position: 'absolute',
-    top: -100,
-    alignSelf: 'center',
-    width: 400,
-    height: 400,
-    borderRadius: 200,
-    zIndex: -1,
-  },
-  auraFlux: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 200,
-    opacity: 0.2, // 50/50 aura split feeling via gradient
-  },
-  auraAnchored: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 200,
-    opacity: 0.15,
-  },
+  container: { flex: 1 },
+  inner: { flex: 1, paddingHorizontal: 24, zIndex: 10 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingBottom: 20,
+    marginBottom: 40,
   },
-  backButton: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: '#F9F9F9',
-    justifyContent: 'center', alignItems: 'center',
-  },
-  backButtonText: { fontSize: 14, color: '#111111', fontWeight: '300' },
-  semanticHub: { alignItems: 'center', flex: 1 },
-  captureTitle: { fontSize: 12, fontWeight: '300', color: '#BBBBBB', letterSpacing: 1.2, marginBottom: 8 },
-  predictionBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  categoryLabel: { fontSize: 9, letterSpacing: 2.0 },
-  commitButton: {
-    paddingHorizontal: 16, paddingVertical: 8, borderRadius: 18,
-  },
-  commitButtonText: {
-    fontWeight: '700', fontSize: 10,
-    letterSpacing: 1.5, textTransform: 'uppercase',
-  },
-  content: { flex: 1, paddingHorizontal: 32 },
+  headerTitle: { fontSize: 24, fontWeight: '300', letterSpacing: 1.5 },
+  headerSubtitle: { fontSize: 10, marginTop: 4, color: '#8E44AD', textTransform: 'uppercase', letterSpacing: 2.5, fontWeight: '700' },
+  actionRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  commitButton: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20 },
+  commitButtonText: { fontWeight: '700', fontSize: 10, letterSpacing: 1.5 },
+  closeButton: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
+  closeButtonText: { fontSize: 18, fontWeight: '300' },
+  hubWrapper: { alignItems: 'center', marginBottom: 20 },
+  predictionBadge: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  badgeLine: { height: 1, width: 20 },
+  categoryLabel: { fontSize: 9, letterSpacing: 2.0, textTransform: 'uppercase', fontWeight: '700' },
+  content: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingBottom: 120 },
   input: {
-    fontSize: 24, fontWeight: '300', lineHeight: 36,
-    color: '#111111', marginTop: 40, minHeight: 300,
+    fontSize: 28, fontWeight: '300', lineHeight: 42,
+    width: '100%', minHeight: 200, paddingBottom: 100,
   },
-  footerHint: { position: 'absolute', bottom: 40, width: '100%', alignItems: 'center' },
-  hintContainer: { paddingHorizontal: 20, paddingVertical: 6, borderRadius: 15, backgroundColor: '#F9F9F9' },
-  hintText: { fontSize: 8, color: '#8E44AD', fontWeight: '700', letterSpacing: 1.5 },
+  footerHint: { position: 'absolute', bottom: 50, left: 0, right: 0, alignItems: 'center', justifyContent: 'center' },
+  hintText: { fontSize: 8, fontWeight: '700', letterSpacing: 2, opacity: 0.6, textAlign: 'center' },
+  nebulaRoot: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: -1,
+  },
+  blob: {
+    width: 380,
+    height: 380,
+    borderRadius: 190,
+    position: 'absolute',
+    opacity: 0.1,
+    filter: 'blur(80px)',
+  },
+  particle: {
+    position: 'absolute',
+    width: 2.5,
+    height: 2.5,
+    borderRadius: 1.25,
+    backgroundColor: '#8E44AD',
+  }
 });
