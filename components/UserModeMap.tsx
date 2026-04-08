@@ -1,4 +1,4 @@
-import React, { useState, useMemo, forwardRef, memo } from 'react';
+import React, { useState, useMemo, forwardRef, memo, useRef } from 'react';
 import { ScrollView, StyleSheet, View, Dimensions } from 'react-native';
 import Animated, { useAnimatedScrollHandler, SharedValue, useAnimatedReaction, runOnJS, useSharedValue } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
@@ -8,6 +8,10 @@ import { calculateSearchMatch } from '@/utils/noteUtils';
 import ResonanceFeedbackOverlay from './ResonanceFeedbackOverlay';
 import { useNotesStore } from '@/store/useNotesStore';
 import * as Haptics from 'expo-haptics';
+import { useSQLiteContext } from 'expo-sqlite';
+import { IntelligenceService } from '@/services/IntelligenceService';
+import { DatabaseService } from '@/services/DatabaseService';
+import { NoteCategory } from '@/services/ai';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const WINDOW_BUFFER = 1500; // Extra pixels above and below
@@ -121,6 +125,7 @@ interface UserModeMapProps {
 export default React.memo(React.forwardRef<Animated.ScrollView, UserModeMapProps>((props, ref) => {
   const { mappedNotes, activeView, searchQuery, onNodePress, onScroll, scrollY, totalHeight, width } = props;
   const isNexus = activeView === 'nexus';
+  const db = useSQLiteContext();
   
   // --- TEMPORAL WINDOWING STATE ---
   const [windowY, setWindowY] = useState(0);
@@ -132,7 +137,10 @@ export default React.memo(React.forwardRef<Animated.ScrollView, UserModeMapProps
     return map;
   }, [mappedNotes]);
 
-  const [draggingNode, setDraggingNode] = useState<any>(null);
+  // THE FIX: Use ref for draggingNode so handleDragEnd always sees the LATEST value.
+  // State closes over stale values when RNGH locks gesture callbacks at gesture-start.
+  const draggingNodeRef = useRef<any>(null);
+  const [draggingNode, setDraggingNode] = useState<any>(null); // Keep state only for rendering the overlay
   const [dragOrigin, setDragOrigin] = useState({ x: 0, y: 0 });
   const activeDragX = useSharedValue(0);
   const activeDragY = useSharedValue(0);
@@ -153,20 +161,55 @@ export default React.memo(React.forwardRef<Animated.ScrollView, UserModeMapProps
 
   const handleDragStart = (node: any, startX: number, startY: number) => {
     setDragOrigin({ x: startX, y: startY });
-    setDraggingNode(node);
+    draggingNodeRef.current = node; // Mutable ref — always current, never stale
+    setDraggingNode(node);          // State — just for displaying the overlay
   };
 
-  const handleDragEnd = (absX: number, absY: number) => {
-    const finalCat = activeDragCategory.value;
-    if (draggingNode && finalCat) {
-        // Persist the new semantic resonance
-        updateNote(draggingNode.id, { 
+  const handleDragEnd = async (absX: number, absY: number, committedCategory?: string) => {
+    const finalCat = committedCategory as NoteCategory;
+    const node = draggingNodeRef.current; // Read from REF — guaranteed to have the node
+
+    console.log('[handleDragEnd] node:', node?.id, '| category:', finalCat);
+    
+    if (node && finalCat) {
+        // 1. Parse existing entities safely
+        let originalEntities: Record<string, any> = {};
+        try {
+            originalEntities = JSON.parse(node.entities_json || '{}');
+        } catch(e) {}
+
+        const oldCat = originalEntities.category;
+
+        // 2. Build new metadata string
+        const newEntitiesStr = JSON.stringify({
+            ...originalEntities,
+            category: finalCat,
+            resonances: { [finalCat]: 1.0 }
+        });
+
+        // 3A. Instant visual update (Zustand) — triggers real-time map re-render
+        updateNote(node.id, { 
+            entities_json: newEntitiesStr,
             resonances: { [finalCat]: 1.0 } 
         });
+
+        // 3B. Permanent SQLite update (background, non-blocking)
+        DatabaseService.updateNoteMetadata(db, node.id, newEntitiesStr);
+
+        // 3C. Intelligence log (background, non-blocking)
+        IntelligenceService.logResonanceEvent(db, {
+            noteId: node.id,
+            oldCategory: oldCat,
+            newCategory: finalCat,
+            content: node.content
+        });
+
         try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); } catch(e){}
+        console.log(`[SYNC] Note ${node.id} re-tethered: ${oldCat} → ${finalCat}`);
     }
+    
+    draggingNodeRef.current = null;
     setDraggingNode(null);
-    activeDragCategory.value = undefined;
   };
 
   const scrollHandler = useAnimatedScrollHandler({

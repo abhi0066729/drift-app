@@ -1,5 +1,6 @@
 import React, { memo } from 'react';
 import { StyleSheet, View, Text, Dimensions } from 'react-native';
+import { useNotesStore } from '@/store/useNotesStore';
 import Animated, { 
   useAnimatedStyle, 
   withSpring, 
@@ -60,11 +61,11 @@ const ActiveTether = memo(({ activeNodePos, haloCenter }: any) => {
 const OrbitRing = memo(({ cat, idx, activeCategory, haloCenter }: any) => {
     const color = CATEGORY_COLORS[cat];
     const radius = START_RADIUS + idx * RING_SPACING;
+    const theme = useNotesStore(state => state.theme);
+    const isDark = theme === 'dark';
     
     const animatedStyle = useAnimatedStyle(() => {
         const isActive = activeCategory.value === cat;
-        const opacity = isActive ? 1.0 : 0.08;
-        const borderWidth = isActive ? 2.5 : 0.8;
         const scale = isActive ? withSpring(1.02) : withSpring(1.0);
 
         return {
@@ -74,9 +75,10 @@ const OrbitRing = memo(({ cat, idx, activeCategory, haloCenter }: any) => {
             width: radius * 2,
             height: radius * 2,
             borderRadius: radius,
-            borderWidth,
-            borderColor: isActive ? color : '#FFFFFF',
-            opacity,
+            borderWidth: isActive ? 2.5 : 1.0,
+            // Inactive rings: use category color at low opacity — visible on both light & dark
+            borderColor: isActive ? color : (isDark ? 'rgba(255,255,255,0.2)' : `${color}88`),
+            opacity: isActive ? 1.0 : (isDark ? 0.6 : 0.8),
             transform: [{ scale }],
             borderStyle: isActive ? 'solid' : 'dashed' as any,
             zIndex: isActive ? 100 : 1,

@@ -17,7 +17,7 @@ interface DriftNodeProps {
   onDragUpdateSharedX?: SharedValue<number>;
   onDragUpdateSharedY?: SharedValue<number>;
   onDragUpdateSharedCategory?: SharedValue<string | undefined>;
-  onDragEnd?: (x: number, y: number) => void;
+  onDragEnd?: (x: number, y: number, category: string | undefined) => void;
   scrollY?: SharedValue<number>;
   activeView: 'chronos' | 'nexus';
   searchStatus?: 'match' | 'dim' | 'none';
@@ -130,11 +130,15 @@ function DriftNode({ node, onPress, onDragStart, onDragUpdateSharedX, onDragUpda
     if (searchStatus === 'dim') targetOpacity = 0.05;
     else if (searchStatus === 'match') targetOpacity = 1.0;
 
+    // While dragging: ghost the origin node so the user focuses on the halo
+    const dragOpacity = isDragging.value ? withTiming(0.12, { duration: 200 }) : withTiming(targetOpacity, { duration: 300 });
+
     return {
       top: isDragging.value ? localYBase + dragY.value : withSpring(localYBase + dragY.value, { damping: 25, stiffness: 60 }),
       left: dragX.value,
       zIndex: isDragging.value ? 5000 : (searchStatus === 'match' ? 100 : (activeView === 'nexus' && (importanceScore > 0.5 || isPurpleNode) ? 20 : 2)),
       transform: [{ scale: withSpring(isDragging.value ? 1.25 : 1.0) }],
+      opacity: dragOpacity,
     };
   }, [activeView, importanceScore, searchStatus, localYBase, mainColor]);
 
@@ -208,10 +212,18 @@ function DriftNode({ node, onPress, onDragStart, onDragUpdateSharedX, onDragUpda
     })
     .onEnd((event) => {
       'worklet';
-      if (onDragEnd) runOnJS(onDragEnd)(node.unfocusedX + event.translationX, localYBase + 60 + event.translationY);
+      // CRITICAL: Capture category HERE on the UI thread before clearing it.
+      // If we clear first, the JS thread reads undefined.
+      const committedCategory = onDragUpdateSharedCategory?.value;
+      if (onDragEnd) runOnJS(onDragEnd)(
+        node.unfocusedX + event.translationX, 
+        localYBase + 60 + event.translationY,
+        committedCategory
+      );
       isDragging.value = false;
       dragX.value = withSpring(0);
       dragY.value = withSpring(0);
+      if (onDragUpdateSharedCategory) onDragUpdateSharedCategory.value = undefined;
     });
 
   const tapGesture = Gesture.Tap()

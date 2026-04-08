@@ -78,16 +78,18 @@ export function processContextualConnections(notes: Note[], width: number, searc
     if (clusterId !== -1) clusterCounts[clusterId] = localIndex + 1;
 
     // --- SHARED SERPENTINE LOGIC ---
-    const getStableHash = (id: string) => {
+    // Inclusion of category ensures that changing the category physically shifts the node's Lane
+    const getStableHash = (id: string, cat: string) => {
+      const seed = id + cat;
       let hash = 0;
-      for (let charIdx = 0; charIdx < id.length; charIdx++) {
-        hash = ((hash << 5) - hash) + id.charCodeAt(charIdx);
+      for (let charIdx = 0; charIdx < seed.length; charIdx++) {
+        hash = ((hash << 5) - hash) + seed.charCodeAt(charIdx);
         hash |= 0;
       }
       return Math.abs(hash);
     };
 
-    const nodeHash = getStableHash(note.id);
+    const nodeHash = getStableHash(note.id, category);
     const randX = (nodeHash % 1000) / 1000;
     const randY = ((nodeHash >> 3) % 1000) / 1000;
     

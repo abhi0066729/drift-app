@@ -36,5 +36,15 @@ export async function initDatabase(db: SQLite.SQLiteDatabase) {
       date INTEGER,
       completed_at INTEGER
     );
+
+    CREATE TABLE IF NOT EXISTS resonance_events (
+      id TEXT PRIMARY KEY NOT NULL,
+      note_id TEXT NOT NULL,
+      old_category TEXT,
+      new_category TEXT NOT NULL,
+      content_peek TEXT,
+      timestamp INTEGER NOT NULL,
+      FOREIGN KEY (note_id) REFERENCES notes(id)
+    );
   `);
 }
