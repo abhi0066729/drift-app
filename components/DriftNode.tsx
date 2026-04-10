@@ -1,7 +1,7 @@
 import React, { useEffect, memo } from 'react';
 import { StyleSheet, Text, View, Pressable, Dimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming, withSpring, runOnJS, SharedValue } from 'react-native-reanimated';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming, withSpring, runOnJS, type SharedValue } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CATEGORY_COLORS } from '@/constants/Categories';
 import { NightTheme } from '@/constants/theme';
@@ -22,6 +22,8 @@ interface DriftNodeProps {
   activeView: 'chronos' | 'nexus';
   searchStatus?: 'match' | 'dim' | 'none';
   isFirst?: boolean;
+  isInHull?: boolean;
+  nexusCoords?: { x: number, y: number };
 }
 
 const CATEGORIES = Object.keys(CATEGORY_COLORS);
@@ -32,7 +34,7 @@ const PADDING = 20;
 const PORTAL_CENTER_X = SCREEN_WIDTH / 2;
 const PORTAL_CENTER_Y = SCREEN_HEIGHT / 2.3;
 
-function DriftNode({ node, onPress, onDragStart, onDragUpdateSharedX, onDragUpdateSharedY, onDragUpdateSharedCategory, onDragEnd, scrollY, activeView, searchStatus = 'none', isFirst }: DriftNodeProps) {
+function DriftNode({ node, onPress, onDragStart, onDragUpdateSharedX, onDragUpdateSharedY, onDragUpdateSharedCategory, onDragEnd, scrollY, activeView, searchStatus = 'none', isFirst, isInHull, nexusCoords }: DriftNodeProps) {
   const theme = useNotesStore(state => state.theme);
   const localYBase = node.unfocusedY - 60;
   const isRefining = node.is_refining;
@@ -125,22 +127,25 @@ function DriftNode({ node, onPress, onDragStart, onDragUpdateSharedX, onDragUpda
 
   const containerStyle = useAnimatedStyle(() => {
     const isNexus = activeView === 'nexus';
-    const isPurpleNode = mainColor === '#8E44AD';
-    let targetOpacity = isNexus ? 0.25 + (importanceScore * 0.75) : 0.9;
+    // Spectral Culling: Dim notes that aren't in a cluster during Nexus mode
+    // Boosted slightly (0.08 -> 0.22) for better visibility of the "Whisper" state
+    let targetOpacity = isNexus ? (isInHull ? 0.35 + (importanceScore * 0.65) : 0.22) : 0.9;
     if (searchStatus === 'dim') targetOpacity = 0.05;
     else if (searchStatus === 'match') targetOpacity = 1.0;
 
     // While dragging: ghost the origin node so the user focuses on the halo
+    const currentBaseX = isNexus ? (nexusCoords?.x || node.unfocusedX) : node.unfocusedX;
+    const currentBaseY = isNexus ? (nexusCoords?.y ?? node.unfocusedY) : node.unfocusedY;
     const dragOpacity = isDragging.value ? withTiming(0.12, { duration: 200 }) : withTiming(targetOpacity, { duration: 300 });
 
     return {
-      top: isDragging.value ? localYBase + dragY.value : withSpring(localYBase + dragY.value, { damping: 25, stiffness: 60 }),
-      left: dragX.value,
-      zIndex: isDragging.value ? 5000 : (searchStatus === 'match' ? 100 : (activeView === 'nexus' && (importanceScore > 0.5 || isPurpleNode) ? 20 : 2)),
+      top: isDragging.value ? localYBase + dragY.value : withSpring(currentBaseY - 60 + dragY.value, { damping: 25, stiffness: 60 }),
+      left: withSpring(currentBaseX + dragX.value, { damping: 28, stiffness: 80 }),
+      zIndex: isDragging.value ? 5000 : (searchStatus === 'match' ? 100 : (activeView === 'nexus' && isInHull ? 20 : 2)),
       transform: [{ scale: withSpring(isDragging.value ? 1.25 : 1.0) }],
       opacity: dragOpacity,
     };
-  }, [activeView, importanceScore, searchStatus, localYBase, mainColor]);
+  }, [activeView, importanceScore, searchStatus, localYBase, mainColor, nexusCoords, node.unfocusedX, node.unfocusedY, isInHull]);
 
   const innerContentStyle = useAnimatedStyle(() => {
     const isNexus = activeView === 'nexus';
@@ -152,19 +157,30 @@ function DriftNode({ node, onPress, onDragStart, onDragUpdateSharedX, onDragUpda
     if (isChronos && isBlackNode) viewMultiplier = 1.05; 
     if (isNexus && isPurpleNode) viewMultiplier = 1.1; 
     
-    let targetScale = (isNexus ? 0.6 + (importanceScore * 0.5) : 0.85) * viewMultiplier;
+    const isUrgentTodo = node.category === 'Todo' && node.urgency === 'high';
+    
+    let targetScale = (isNexus ? (isInHull ? 0.6 + (importanceScore * 0.5) : 0.45) : 0.85) * viewMultiplier;
     if (searchStatus === 'dim') targetScale = targetScale * 0.8;
     else if (searchStatus === 'match') targetScale = targetScale * 1.15;
 
-    let targetOpacity = isNexus ? 0.3 + (importanceScore * 0.7) : 1.0;
+    // Nexus 9.0: The Vanishing Action (Leaning Forward)
+    if (isUrgentTodo && isNexus) {
+      targetScale = targetScale * 1.25;
+    }
+
+    let targetOpacity = isNexus ? (isInHull ? 0.6 + (importanceScore * 0.4) : 0.0) : 1.0;
     if (searchStatus === 'dim') targetOpacity = 0.4;
     else if (searchStatus === 'match') targetOpacity = 1.0;
 
     return {
-      transform: [{ scale: withSpring(targetScale, { damping: 20, stiffness: 90 }) }],
+      transform: [
+        { scale: withSpring(targetScale, { damping: 20, stiffness: 90 }) },
+        { rotateX: isUrgentTodo && isNexus ? withRepeat(withTiming('-15deg', { duration: 2000 }), -1, true) : '0deg' },
+        { perspective: 1000 }
+      ],
       opacity: withTiming(targetOpacity, { duration: 400 })
     };
-  }, [activeView, importanceScore, searchStatus, mainColor]);
+  }, [activeView, importanceScore, searchStatus, mainColor, isInHull]);
 
   const longPressGesture = Gesture.Pan()
     .activateAfterLongPress(400)
@@ -239,7 +255,7 @@ function DriftNode({ node, onPress, onDragStart, onDragUpdateSharedX, onDragUpda
       <Animated.View style={[{ 
         position: 'absolute', 
         top: 60 - node.nodeRadius * 4, 
-        left: node.unfocusedX - node.nodeRadius * 4, 
+        left: -node.nodeRadius * 4, 
         width: node.nodeRadius * 8, 
         height: node.nodeRadius * 8, 
         justifyContent: 'center', 
@@ -265,7 +281,7 @@ function DriftNode({ node, onPress, onDragStart, onDragUpdateSharedX, onDragUpda
           zIndex: 10, 
           position: 'absolute', 
           top: 30, 
-          left: node.unfocusedTextLeft, 
+          left: (node.isRight ? -node.dynamicWidth - PADDING : PADDING), 
           width: node.dynamicWidth, 
           height: 60, 
           justifyContent: 'center' 
@@ -301,6 +317,9 @@ export default memo(DriftNode, (prev, next) => {
     prev.node.unfocusedY === next.node.unfocusedY &&
     prev.node.unfocusedX === next.node.unfocusedX &&
     prev.activeView === next.activeView &&
+    prev.isInHull === next.isInHull &&
+    prev.nexusCoords?.x === next.nexusCoords?.x &&
+    prev.nexusCoords?.y === next.nexusCoords?.y &&
     prev.searchStatus === next.searchStatus &&
     prev.isFirst === next.isFirst
   );

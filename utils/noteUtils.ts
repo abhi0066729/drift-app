@@ -1,4 +1,46 @@
 import { Note } from '@/store/useNotesStore';
+import { CATEGORY_COLORS } from '@/constants/Categories';
+
+export interface NebulaHubData {
+  id: string;
+  x: number;
+  y: number;
+  title: string;
+  color: string;
+  summary?: string;
+  notes: any[];
+  satellites: Array<{ x: number, y: number, isBridge?: boolean }>;
+  narrative?: Array<{ icon: string, label: string }>;
+}
+
+export interface ThoughtChainEntry {
+  id: string;
+  date: string;
+  snippet: string;
+  category: string;
+  fullNote: any;
+}
+
+export interface NexusMatrixData {
+  clusters: Array<{
+    id: string;
+    topic: string;
+    count: number;
+    color: string;
+    notes: any[];
+  }>;
+  flashes: Array<{
+    id: string;
+    topic: string;
+    title: string;
+    body: string;
+    count: number;
+    days: number;
+    color: string;
+    isSignal?: boolean;
+  }>;
+  moodTimeline: Array<{ emotion: string, color: string }>;
+}
 
 export function generateFullGhostPool(limit: number = 5): Note[] {
   // Ordered by narrative priority: Welcome -> Core UI -> Navigation -> AI/Advanced
@@ -29,6 +71,9 @@ export function generateMockUserNotes(): Note[] {
     { category: 'Todo', content: "Buy oat milk and coffee beans." },
     { category: 'Journal', content: "Feeling exhausted. The math behind the 3D physics engine is finally clicking though. Just need to rest." },
     { category: 'Study', content: "Reading Essentialism. The core thesis is simple: Almost everything is noise. We need to fiercely protect our focus." },
+    { category: 'Idea', content: "What if the note-taking app could sense your pulse and offer 'calm' categories when you are stressed?" },
+    { category: 'Study', content: "Reading the React Native documentation on high-performance SVG rendering. Interesting stuff about hardware acceleration." },
+    { category: 'Todo', content: "Schedule the intelligence sync for tomorrow." },
   ];
 
   return thoughts.map((item, idx) => ({
@@ -129,10 +174,26 @@ export function processContextualConnections(notes: Note[], width: number, searc
     const isGlowing = note.is_ghost || importance >= 0.8;
     const displayLines = note.is_ghost ? 3 : Math.floor(randX * 4) + 2;
 
+    // --- NEXUS: SEMANTIC DRIFT (X-Axis) ---
+    // Instead of random X, we project toward category-specific semantic lanes
+    const categoryLanes: Record<string, number> = {
+        'Journal': 0.15,
+        'Idea': 0.85,
+        'Todo': 0.35,
+        'Study': 0.65,
+        'Research': 0.55,
+        'Creative': 0.75,
+        'Reflection': 0.25,
+        'Dream': 0.45
+    };
+    const targetNexusPct = categoryLanes[category] || 0.5;
+    const nexusX = 60 + (targetNexusPct * (width - 120)) + (randX * 40 - 20);
+
     return {
       ...note,
       isRight,
       unfocusedX,
+      nexusX, // The "Meaning" X coordinate
       unfocusedY: resY,
       unfocusedTextLeft,
       dynamicWidth,
@@ -177,6 +238,89 @@ export function processContextualConnections(notes: Note[], width: number, searc
   return processedNotes;
 }
 
+/**
+ * Nexus 6.0: Celestial Hub Engine
+ * Calculatively selects "Major Topics" based on discussion density 
+ * and generates spatial portals for topic-centric clustering.
+ */
+export function calculateCelestialHubs(processedNotes: any[], width: number) {
+    const counts: Record<string, number> = {};
+    const nodesByCategory: Record<string, any[]> = {};
+    
+    // 1. Density Scan
+    processedNotes.forEach(node => {
+        const cat = node.category || 'Reflections';
+        counts[cat] = (counts[cat] || 0) + 1;
+        if (!nodesByCategory[cat]) nodesByCategory[cat] = [];
+        nodesByCategory[cat].push(node);
+    });
+
+    // 2. Rank Topics: Lowered threshold to 1 so the screen is never blank!
+    const rankedCategories = Object.entries(counts)
+        .sort((a, b) => (b[1] as number) - (a[1] as number))
+        .slice(0, 4)
+        .map(entry => entry[0]);
+
+    if (rankedCategories.length === 0) return { hubs: [], hubIds: new Set<string>(), coordMap: {} };
+
+    const hubs: any[] = [];
+    const hubIds = new Set<string>();
+    const coordMap: Record<string, { x: number, y: number }> = {};
+
+    rankedCategories.forEach((cat, index) => {
+        const nodes = nodesByCategory[cat];
+        const count = nodes.length;
+        
+        const laneWidth = width / (rankedCategories.length + 1);
+        const centerX = (index + 1) * laneWidth;
+        
+        const sortedY = [...nodes].sort((a, b) => a.unfocusedY - b.unfocusedY);
+        const centerY = sortedY[Math.floor(count / 2)].unfocusedY;
+
+        nodes.forEach((n, idx) => {
+            hubIds.add(n.id);
+            const stackOffset = (idx - Math.floor(count / 2)) * 90;
+            coordMap[n.id] = {
+                x: centerX + (Math.sin(idx * 0.5) * 20),
+                y: centerY + stackOffset
+            };
+        });
+
+        hubs.push({
+            id: `hub-${cat}`,
+            category: cat,
+            title: cat.toUpperCase(),
+            count,
+            center: { x: centerX, y: centerY },
+            color: CATEGORY_COLORS[cat] || '#8E44AD',
+            nodes: nodes.map(n => ({ id: n.id })),
+            bounds: {
+                minX: centerX - 60,
+                maxX: centerX + 60,
+                minY: centerY - (count * 45),
+                maxY: centerY + (count * 45)
+            }
+        });
+    });
+
+    return { hubs, hubIds, coordMap };
+}
+
+function createHullDescriptor(category: string, nodes: any[]) {
+    const minX = Math.min(...nodes.map(n => n.nexusX));
+    const maxX = Math.max(...nodes.map(n => n.nexusX));
+    const minY = Math.min(...nodes.map(n => n.unfocusedY));
+    const maxY = Math.max(...nodes.map(n => n.unfocusedY));
+
+    return {
+        id: `hull-${category}-${minY}`,
+        category,
+        nodes: nodes.map(n => ({ x: n.nexusX, y: n.unfocusedY, r: n.nodeRadius })),
+        center: { x: (minX + maxX) / 2, y: (minY + maxY) / 2 },
+        bounds: { minX, maxX, minY, maxY }
+    };
+}
+
 export function calculateSearchMatch(query: string, note: any): 'match' | 'dim' | 'none' {
   if (!query || query.trim() === '') return 'none';
   
@@ -215,4 +359,102 @@ export function calculateSearchMatch(query: string, note: any): 'match' | 'dim' 
   }
 
   return 'dim';
+}
+
+/**
+ * Nexus 9.0: The Drift Pulse
+ * Analyzes note patterns from the last 48 hours to create a soulful mental observation.
+ */
+export function generateMentalPattern(notes: any[]): string {
+  if (notes.length === 0) return "your mind is quiet... waiting for the first spark";
+  
+  const now = Date.now();
+  const recentNotes = notes.filter(n => (now - n.created_at) < (48 * 60 * 60 * 1000));
+  
+  if (recentNotes.length < 3) return "you're just beginning to drift into a new rhythm";
+
+  const categories = recentNotes.map(n => n.category);
+  const catCounts: Record<string, number> = {};
+  categories.forEach(c => catCounts[c] = (catCounts[c] || 0) + 1);
+  
+  const dominant = Object.entries(catCounts).sort((a,b) => b[1]-a[1])[0];
+  const totalFocus = dominant[1] / recentNotes.length;
+
+  if (totalFocus > 0.6) return `you've been unusually focused on ${dominant[0].toLowerCase()} this week`;
+  if (recentNotes.length > 8) return "your mind has been building toward something significant";
+  if (Object.keys(catCounts).length > 5) return `today feels scattered — ${Object.keys(catCounts).length} topics, no clear centre`;
+  
+  return "something is unresolved — you keep circling it";
+}
+
+/**
+ * Nexus 9.0: The Echo Chain
+ * Finds the actual chain of thoughts that created or relate to a specific insight.
+ */
+export function findThoughtChain(activeNote: any, allNotes: any[]): ThoughtChainEntry[] {
+  // Find notes in the same category or explicitly linked
+  const chain = allNotes
+    .filter(n => n.id !== activeNote.id && n.category === activeNote.category)
+    .sort((a,b) => a.created_at - b.created_at)
+    .slice(-4) // Show the last 4 leading up to this
+    .map(n => ({
+      id: n.id,
+      date: new Date(n.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+      snippet: n.content.substring(0, 45) + (n.content.length > 45 ? '...' : ''),
+      category: n.category,
+      fullNote: n
+    }));
+    
+  return chain;
+}
+
+/**
+ * Nexus 10.0: The Mirror Matrix Data Engine
+ * Compiles all notes into Surface Cards, Cluster Cards, and Mood Threads.
+ */
+export function generateNexusMatrix(allNotes: any[]): NexusMatrixData {
+  const clusters: any[] = [];
+  const flashes: any[] = [];
+  const moodTimeline: any[] = [];
+  
+  // 1. Group by Topic (Mocked for now using Category)
+  const grouped: Record<string, any[]> = {};
+  allNotes.forEach(n => {
+    const cat = n.category || 'Journal';
+    if (!grouped[cat]) grouped[cat] = [];
+    grouped[cat].push(n);
+  });
+
+  Object.entries(grouped).slice(0, 4).forEach(([cat, notes]) => {
+    clusters.push({
+      id: `cluster-${cat}`,
+      topic: cat,
+      count: notes.length,
+      color: CATEGORY_COLORS[cat] || '#8E44AD',
+      notes: notes.slice(0, 3) // Show top 3 snippets
+    });
+
+    if (notes.length >= 3) {
+      flashes.push({
+        id: `flash-${cat}`,
+        topic: cat,
+        title: `You've circled this ${notes.length} times`,
+        body: `Across ${notes.length} separate notes, your thinking keeps returning to ${cat.toLowerCase()}. The pattern suggests this is building into something significant.`,
+        count: notes.length,
+        days: 6, // Mocked timeframe
+        color: CATEGORY_COLORS[cat] || '#7c3aed'
+      });
+    }
+  });
+
+  // 2. Generate Mood Timeline (Last 8 notes today)
+  allNotes.slice(0, 8).forEach(n => {
+    const emotion = n.emotion || 'neutral';
+    moodTimeline.push({
+      emotion,
+      color: CATEGORY_COLORS[n.category] || '#2e2e2e'
+    });
+  });
+
+  return { clusters, flashes, moodTimeline };
 }

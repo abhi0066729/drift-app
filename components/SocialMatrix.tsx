@@ -17,9 +17,17 @@ import Animated, {
 import { Svg, Path, Circle, Defs, RadialGradient, Stop, G } from 'react-native-svg';
 import { Image } from 'expo-image';
 import { PanGestureHandler, GestureHandlerRootView, PinchGestureHandler, TapGestureHandler } from 'react-native-gesture-handler';
-import { Users, Sparkles, Zap, Plus, Minus, Maximize2 } from 'lucide-react-native';
+import { Users, Sparkles, Zap, Plus, Minus, Maximize2, Hash } from 'lucide-react-native';
 import { Person } from '@/utils/peopleUtils';
 import { NightTheme } from '@/constants/theme';
+
+export interface Entity {
+  id: string;
+  name: string;
+  type: 'person' | 'topic';
+  count: number;
+  categoryContext: Record<string, number>;
+}
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const NODE_GAP = 180;
@@ -62,18 +70,18 @@ const ConnectionLine = ({
   );
 };
 
-const PersonNode = ({ 
-  person, 
+const EntityNode = ({ 
+  entity, 
   xOffset,
   yOffset,
   onPress,
   theme,
   matrixScale
 }: { 
-  person: Person, 
+  entity: Entity, 
   xOffset: number,
   yOffset: number,
-  onPress: (p: Person) => void,
+  onPress: (e: Entity) => void,
   theme: 'light' | 'dark',
   matrixScale: SharedValue<number>
 }) => {
@@ -84,37 +92,49 @@ const PersonNode = ({
       transform: [
         { translateX: CENTER_X + xOffset * matrixScale.value - 32 },
         { translateY: yOffset * matrixScale.value - 32 },
-        { scale: withSpring(matrixScale.value * (1 + (person.mentionCount * 0.05)), SPRING_CONFIG) }
+        { scale: withSpring(matrixScale.value * (1 + (entity.count * 0.05)), SPRING_CONFIG) }
       ],
     };
   });
 
-  const avatarUrl = `https://boring-avatars-api.vercel.app/api/avatar?name=${encodeURIComponent(person.name)}&variant=beam`;
+  const avatarUrl = `https://boring-avatars-api.vercel.app/api/avatar?name=${encodeURIComponent(entity.name)}&variant=beam`;
 
   return (
     <Animated.View style={[styles.nodeContainer, animatedStyle]}>
       <Pressable 
-        onPress={() => onPress(person)}
+        onPress={() => onPress(entity)}
         style={({ pressed }) => [
           styles.avatarCircle,
           { 
-            borderColor: isDark ? 'rgba(142, 68, 173, 0.5)' : 'rgba(142, 68, 173, 0.3)',
+            borderColor: isDark ? (entity.type === 'person' ? 'rgba(142, 68, 173, 0.5)' : 'rgba(52, 152, 219, 0.5)') : 'rgba(142, 68, 173, 0.3)',
             backgroundColor: isDark ? NightTheme.surface : '#FFF'
           },
           pressed && { scale: 0.9, opacity: 0.8 }
         ]}
       >
-        <Image source={{ uri: avatarUrl }} style={styles.avatarImage} contentFit="cover" transition={300} />
-        {person.mentionCount > 2 && (
-          <View style={styles.highResonanceBadge}>
+        {entity.type === 'person' ? (
+          <Image source={{ uri: avatarUrl }} style={styles.avatarImage} contentFit="cover" transition={300} />
+        ) : (
+          <View style={[styles.topicIcon, { backgroundColor: isDark ? 'rgba(52, 152, 219, 0.1)' : '#EBF5FB' }]}>
+            <Hash size={24} color={isDark ? '#3498DB' : '#2980B9'} strokeWidth={1.5} />
+          </View>
+        )}
+        
+        {entity.count > 2 && (
+          <View style={[styles.highResonanceBadge, { backgroundColor: entity.type === 'person' ? '#8E44AD' : '#3498DB' }]}>
              <Zap size={8} color="#FFF" fill="#FFF" />
           </View>
         )}
       </Pressable>
       <View style={[styles.labelContainer, { backgroundColor: isDark ? 'rgba(15,14,12,0.8)' : 'rgba(255,255,255,0.8)' }]}>
         <Text style={[styles.nodeName, { color: isDark ? NightTheme.textPrimary : '#111' }]} numberOfLines={1}>
-          {person.name}
+          {entity.name}
         </Text>
+        {(Object.keys(entity.categoryContext).length > 0) && (
+          <Text style={[styles.nodeSubLabel, { color: isDark ? NightTheme.textSecondary : '#666' }]} numberOfLines={1}>
+            {(Object.entries(entity.categoryContext) as [string, number][]).sort((a,b) => b[1]-a[1])[0][0]}
+          </Text>
+        )}
       </View>
     </Animated.View>
   );
@@ -126,9 +146,9 @@ export const SocialMatrix = ({
   onPersonPress, 
   theme 
 }: { 
-  people: Person[], 
-  connections: Connection[],
-  onPersonPress: (p: Person) => void,
+  people: Entity[], 
+  connections: any[],
+  onPersonPress: (e: Entity) => void,
   theme: 'light' | 'dark'
 }) => {
   const scale = useSharedValue(0.9);
@@ -137,8 +157,8 @@ export const SocialMatrix = ({
   const START_Y = 120;
 
   // Vertical layout calculations
-  const peopleWithPositions = useMemo(() => {
-    const sorted = [...people].sort((a,b) => b.mentionCount - a.mentionCount);
+  const entitiesWithPositions = useMemo(() => {
+    const sorted = [...people].sort((a,b) => b.count - a.count);
     return sorted.map((p, i) => {
       const yOffset = START_Y + (i + 1) * NODE_GAP;
       // Tighter vertical layout: reduce stagger
@@ -160,18 +180,18 @@ export const SocialMatrix = ({
 
   const connectionLines = useMemo(() => {
     const mePos = { x: CENTER_X, y: START_Y };
-    return peopleWithPositions.map((p, i) => {
+    return entitiesWithPositions.map((p, i) => {
       return (
         <ConnectionLine 
           key={`conn-${i}`}
           sourcePos={mePos}
           targetPos={{ x: CENTER_X + p.xOffset * scale.value, y: p.yOffset * scale.value }}
-          strength={p.mentionCount}
+          strength={p.count}
           theme={theme}
         />
       );
     });
-  }, [peopleWithPositions, theme, scale.value]);
+  }, [entitiesWithPositions, theme, scale.value]);
 
   return (
     <GestureHandlerRootView style={[styles.root, { backgroundColor: theme === 'dark' ? NightTheme.background : '#FFFFFF' }]}>
@@ -202,10 +222,10 @@ export const SocialMatrix = ({
                <Text style={[styles.centerLabel, { color: theme === 'dark' ? NightTheme.textSecondary : '#8E44AD' }]}>ME</Text>
             </Animated.View>
 
-            {peopleWithPositions.map((p) => (
-              <PersonNode 
+            {entitiesWithPositions.map((p) => (
+              <EntityNode 
                 key={p.id}
-                person={p}
+                entity={p}
                 xOffset={p.xOffset}
                 yOffset={p.yOffset}
                 onPress={onPersonPress}
@@ -336,6 +356,19 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '700',
     textAlign: 'center',
+  },
+  nodeSubLabel: {
+    fontSize: 7,
+    fontWeight: '500',
+    textAlign: 'center',
+    marginTop: 1,
+    opacity: 0.8,
+  },
+  topicIcon: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   hintContainer: {
     position: 'absolute',

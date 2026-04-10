@@ -21,7 +21,14 @@ export const NightTheme = {
   accent: '#7C3AED',           // Core purple brand color
   accentMuted: 'rgba(124, 58, 237, 0.15)',
   accentDashed: '#3A2A5A',
-  orangeAccent: '#B45309'
+  orangeAccent: '#B45309',
+  shadowLarge: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.44,
+    shadowRadius: 10.32,
+    elevation: 24,
+  }
 };
 
 export const Colors = {

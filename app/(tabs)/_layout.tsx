@@ -1,6 +1,6 @@
 import { preloadNavigationAssets } from '@/utils/assetLoader';
 import { Tabs } from 'expo-router';
-import { FileText, Home, PlusCircle, Users } from 'lucide-react-native';
+import { FileText, Home, PlusCircle, Activity } from 'lucide-react-native';
 import React, { useEffect } from 'react';
 
 const PAPER = '#f5f0e8';
@@ -43,10 +43,10 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="people"
+        name="pulse"
         options={{
-          title: 'People',
-          tabBarIcon: ({ color }) => <Users size={24} color={color} />,
+          title: 'Pulse',
+          tabBarIcon: ({ color }) => <Activity size={24} color={color} />,
         }}
       />
     </Tabs>

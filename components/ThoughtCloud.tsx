@@ -10,7 +10,7 @@ import { Image } from 'expo-image';
 const { height } = Dimensions.get('window');
 
 interface ThoughtCloudProps {
-  person: Person | null;
+  person: { name: string; mentionCount?: number; count?: number } | null;
   notes: Note[];
   onClose: () => void;
   theme: 'light' | 'dark';
@@ -48,7 +48,7 @@ export default function ThoughtCloud({ person, notes, onClose, theme }: ThoughtC
             </View>
             <View style={styles.headerText}>
               <Text style={[styles.name, { color: isDark ? NightTheme.textPrimary : '#111' }]}>{person.name}</Text>
-              <Text style={styles.resonanceLabel}>{person.mentionCount} SHARED RESONANCES</Text>
+              <Text style={styles.resonanceLabel}>{person.mentionCount ?? person.count ?? 0} SHARED RESONANCES</Text>
             </View>
             <Pressable onPress={onClose} style={[styles.closeBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
               <X size={20} color={isDark ? NightTheme.textPrimary : '#111'} />

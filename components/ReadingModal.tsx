@@ -6,6 +6,7 @@ import { BlurView } from 'expo-blur';
 import { CATEGORY_COLORS } from '@/constants/Categories';
 import { NightTheme } from '@/constants/theme';
 import { useNotesStore } from '@/store/useNotesStore';
+import { findThoughtChain } from '@/utils/noteUtils';
 
 const { width } = Dimensions.get('window');
 
@@ -120,6 +121,39 @@ export default function ReadingModal({ node, onClose, translucent, searchQuery }
                   </Text>
                 </View>
               )}
+
+              {/* THE ECHO CHAIN: The Thought Mirror */}
+              <View style={styles.echoChainContainer}>
+                <View style={styles.echoHeader}>
+                  <Text style={[styles.contextHeader, { color: '#7C3AED' }]}>THE ECHO CHAIN</Text>
+                  <Text style={[styles.echoSubtitle, { color: isDark ? NightTheme.textMuted : '#999' }]}>
+                    Tracing the evolution of this thought
+                  </Text>
+                </View>
+
+                {findThoughtChain(node, useNotesStore.getState().notes).length > 0 ? (
+                  findThoughtChain(node, useNotesStore.getState().notes).map((echo, i) => (
+                    <View key={echo.id} style={styles.echoItem}>
+                      <View style={styles.echoTimeline}>
+                        <View style={[styles.echoDot, { backgroundColor: CATEGORY_COLORS[echo.category] }]} />
+                        {i < 3 && <View style={styles.echoLine} />}
+                      </View>
+                      <View style={styles.echoContent}>
+                        <Text style={[styles.echoDate, { color: CATEGORY_COLORS[echo.category] }]}>
+                          {echo.date}
+                        </Text>
+                        <Text style={[styles.echoSnippet, { color: isDark ? NightTheme.textSecondary : '#666' }]}>
+                          {echo.snippet}
+                        </Text>
+                      </View>
+                    </View>
+                  ))
+                ) : (
+                  <Text style={[styles.contextText, { color: isDark ? NightTheme.textMuted : '#999', fontStyle: 'italic', paddingLeft: 4 }]}>
+                    This is a lone spark — let it drift and find its ensemble.
+                  </Text>
+                )}
+              </View>
 
               {/* RESONANCE INSIGHT: The 'Purple Context' section */}
               {Object.keys(node.resonances || {}).length > 1 && (
@@ -246,5 +280,56 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(142, 68, 173, 0.15)',
+  },
+  echoChainContainer: {
+    marginTop: 32,
+    paddingTop: 24,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(124, 58, 237, 0.1)',
+  },
+  echoHeader: {
+    marginBottom: 20,
+  },
+  echoSubtitle: {
+    fontSize: 10,
+    fontWeight: '400',
+    marginTop: 2,
+    letterSpacing: 0.2,
+  },
+  echoItem: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  echoTimeline: {
+    width: 20,
+    alignItems: 'center',
+  },
+  echoDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginTop: 6,
+  },
+  echoLine: {
+    flex: 1,
+    width: 1,
+    backgroundColor: 'rgba(124, 58, 237, 0.15)',
+    marginVertical: 4,
+  },
+  echoContent: {
+    flex: 1,
+    paddingLeft: 12,
+    paddingBottom: 16,
+  },
+  echoDate: {
+    fontSize: 9,
+    fontWeight: '700',
+    marginBottom: 4,
+    letterSpacing: 0.5,
+  },
+  echoSnippet: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '300',
   },
 });

@@ -305,36 +305,38 @@ export default function HomeScreen() {
                 </TapGestureHandler>
               ) : (
                 <View style={{ flex: 1 }}>
-                <Animated.View 
-                  style={[
-                    styles.searchContainer, 
-                    searchBarStyle,
-                    { backgroundColor: theme === 'dark' ? NightTheme.background : 'rgba(255,255,255,0.95)' }
-                  ]}
-                  animatedProps={searchWrapperProps}
-                >
-                  <View style={{ width: '100%' }}>
-                    <TextInput
-                      style={[
-                        styles.searchInput,
-                        { 
-                          backgroundColor: theme === 'dark' ? NightTheme.surface : '#F2F2F7',
-                          color: theme === 'dark' ? NightTheme.textPrimary : '#111',
-                          borderColor: theme === 'dark' ? NightTheme.border : 'transparent',
-                          borderWidth: theme === 'dark' ? 1 : 0
-                        }
-                      ]}
-                      placeholder="Search your thoughts..."
-                      placeholderTextColor={theme === 'dark' ? "rgba(232, 230, 224, 0.4)" : "#999"}
-                      value={searchQuery}
-                      onChangeText={setSearchQuery}
-                      autoFocus={false}
-                      clearButtonMode="while-editing"
-                      keyboardAppearance={theme === 'dark' ? 'dark' : 'light'}
-                      selectionColor={theme === 'dark' ? NightTheme.accent : '#8E44AD'}
-                    />
-                  </View>
-                </Animated.View>
+                {activeView === 'chronos' && (
+                  <Animated.View 
+                    style={[
+                      styles.searchContainer, 
+                      searchBarStyle,
+                      { backgroundColor: theme === 'dark' ? NightTheme.background : 'rgba(255,255,255,0.95)' }
+                    ]}
+                    animatedProps={searchWrapperProps}
+                  >
+                    <View style={{ width: '100%' }}>
+                      <TextInput
+                        style={[
+                          styles.searchInput,
+                          { 
+                            backgroundColor: theme === 'dark' ? NightTheme.surface : '#F2F2F7',
+                            color: theme === 'dark' ? NightTheme.textPrimary : '#111',
+                            borderColor: theme === 'dark' ? NightTheme.border : 'transparent',
+                            borderWidth: theme === 'dark' ? 1 : 0
+                          }
+                        ]}
+                        placeholder="Search your thoughts..."
+                        placeholderTextColor={theme === 'dark' ? "rgba(232, 230, 224, 0.4)" : "#999"}
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                        autoFocus={false}
+                        clearButtonMode="while-editing"
+                        keyboardAppearance={theme === 'dark' ? 'dark' : 'light'}
+                        selectionColor={theme === 'dark' ? NightTheme.accent : '#8E44AD'}
+                      />
+                    </View>
+                  </Animated.View>
+                )}
     
                   <TapGestureHandler onHandlerStateChange={handleDoubleTapSeed} numberOfTaps={2}>
                     <View style={{ flex: 1 }}>
@@ -342,6 +344,7 @@ export default function HomeScreen() {
                         ref={mapRef}
                         mappedNotes={mappedNotes} 
                         activeView={activeView} 
+                        theme={theme}
                         searchQuery={searchQuery}
                         onNodePress={handleNodePress} 
                         scrollY={scrollOffset}

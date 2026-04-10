@@ -1,11 +1,15 @@
 import React, { useState, useMemo, forwardRef, memo, useRef } from 'react';
 import { ScrollView, StyleSheet, View, Dimensions } from 'react-native';
-import Animated, { useAnimatedScrollHandler, SharedValue, useAnimatedReaction, runOnJS, useSharedValue } from 'react-native-reanimated';
-import Svg, { Path } from 'react-native-svg';
+import Animated, { useAnimatedScrollHandler, type SharedValue, useAnimatedReaction, runOnJS, useSharedValue } from 'react-native-reanimated';
+import Svg, { Path, Line, G } from 'react-native-svg';
 import { CATEGORY_COLORS } from '@/constants/Categories';
 import DriftNode from './DriftNode';
-import { calculateSearchMatch } from '@/utils/noteUtils';
+import { calculateSearchMatch, calculateCelestialHubs } from '@/utils/noteUtils';
+import CelestialPortal from './CelestialPortal';
 import ResonanceFeedbackOverlay from './ResonanceFeedbackOverlay';
+import NexusHullLayer from './NexusHullLayer';
+import NexusSummaryGlass from './NexusSummaryGlass';
+import NexusSurfaceMatrix from './NexusSurfaceMatrix';
 import { useNotesStore } from '@/store/useNotesStore';
 import * as Haptics from 'expo-haptics';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -14,17 +18,55 @@ import { DatabaseService } from '@/services/DatabaseService';
 import { NoteCategory } from '@/services/ai';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const WINDOW_BUFFER = 1500; // Extra pixels above and below
+const WINDOW_BUFFER = 1500; // Baseline buffer
+
+// High-Performance Filament Layer: Connects satellites to their Topic Centroids
+const HubFilamentLayer = React.memo(({ hubs, nodeMap, tileY, coordMap }: { 
+  hubs: any[], 
+  nodeMap: Record<string, any>,
+  tileY: number,
+  coordMap: Record<string, { x: number, y: number }>
+}) => {
+  return (
+    <>
+      {hubs.map(hub => (
+        hub.nodes.map((nodeMeta: any, i: number) => {
+          const targetNode = nodeMap[nodeMeta.id];
+          const coords = coordMap ? coordMap[nodeMeta.id] : null;
+          if (!targetNode || !coords) return null;
+
+          const startX = hub.center.x;
+          const startY = hub.center.y - tileY;
+          const endX = coords.x;
+          const endY = coords.y - tileY;
+
+          return (
+            <Line 
+              key={`${hub.id}-${nodeMeta.id}`}
+              x1={startX} y1={startY}
+              x2={endX} y2={endY}
+              stroke={hub.color}
+              strokeWidth={1.2}
+              opacity={0.15}
+            />
+          );
+        })
+      ))}
+    </>
+  );
+});
 
 // High-Performance SVG Optimizer: Render Connection Streams in category batches
 // This consolidates hundreds of draw calls into ~10 per window
-const BatchedConnectionLayer = React.memo(({ visibleCurves, nodeMap, tileY, isNexus, searchQuery, width }: { 
+const BatchedConnectionLayer = React.memo(({ visibleCurves, nodeMap, tileY, isNexus, searchQuery, width, hullIds, hubs }: { 
   visibleCurves: any[], 
   nodeMap: Record<string, any>, 
   tileY: number, 
   isNexus: boolean,
   searchQuery: string,
-  width: number
+  width: number,
+  hullIds: Set<string>,
+  hubs: any[]
 }) => {
   if (visibleCurves.length === 0) return null;
 
@@ -55,7 +97,12 @@ const BatchedConnectionLayer = React.memo(({ visibleCurves, nodeMap, tileY, isNe
         
         // Weight the opacity and thickness based on resonance weight (conn.weight)
         const weightMult = conn.weight || 1.0;
-        let baseOpacity = isNexus ? 0.35 * weightMult : 0.85 * weightMult;
+        
+        // Spectral Culling for Nexus connections (using Immutable Set lookup)
+        const nodeInHull = hullIds.has(node.id) || hullIds.has(targetNode.id);
+        let baseOpacity = isNexus 
+           ? (nodeInHull ? 0.35 * weightMult : 0.05) 
+           : 0.85 * weightMult;
         
         // Apply distance-based dimming (Solid enough to see clearly)
         if (distBucket === 1) baseOpacity *= 0.8;
@@ -71,10 +118,10 @@ const BatchedConnectionLayer = React.memo(({ visibleCurves, nodeMap, tileY, isNe
 
       // ORGANIC BOWING Logic
       const tangent = Math.max(160, dy * 0.42);
-      const curX = node.unfocusedX;
-      const curY = node.unfocusedY - tileY;
-      const tgtX = targetNode.unfocusedX;
-      const tgtY = targetNode.unfocusedY - tileY;
+      const curX = isNexus ? (node.nexusX ?? node.unfocusedX ?? 0) : (node.unfocusedX ?? 0);
+      const curY = isNexus ? ((node.nexusY ?? node.unfocusedY) - tileY) : (node.unfocusedY - tileY);
+      const tgtX = isNexus ? (targetNode.nexusX ?? targetNode.unfocusedX ?? 0) : (targetNode.unfocusedX ?? 0);
+      const tgtY = isNexus ? ((targetNode.nexusY ?? targetNode.unfocusedY) - tileY) : (targetNode.unfocusedY - tileY);
       
       // If X coordinates are nearly identical, bow the curve to prevent "guitar string" look
       let cp1x = curX;
@@ -92,7 +139,8 @@ const BatchedConnectionLayer = React.memo(({ visibleCurves, nodeMap, tileY, isNe
     });
   });
 
-  return (
+
+return (
     <>
       {Object.entries(groups).map(([key, paths]) => {
         const { color, opacity, width } = metadata[key];
@@ -120,10 +168,11 @@ interface UserModeMapProps {
   scrollY: SharedValue<number>;
   width: number;
   totalHeight: number;
+  theme: 'light' | 'dark';
 }
 
 export default React.memo(React.forwardRef<Animated.ScrollView, UserModeMapProps>((props, ref) => {
-  const { mappedNotes, activeView, searchQuery, onNodePress, onScroll, scrollY, totalHeight, width } = props;
+  const { mappedNotes, activeView, searchQuery, onNodePress, onScroll, scrollY, totalHeight, width, theme } = props;
   const isNexus = activeView === 'nexus';
   const db = useSQLiteContext();
   
@@ -166,12 +215,12 @@ export default React.memo(React.forwardRef<Animated.ScrollView, UserModeMapProps
   };
 
   const handleDragEnd = async (absX: number, absY: number, committedCategory?: string) => {
-    const finalCat = committedCategory as NoteCategory;
-    const node = draggingNodeRef.current; // Read from REF — guaranteed to have the node
+    const node = draggingNodeRef.current;
+    const finalCat = (committedCategory || node?.category) as NoteCategory;
 
     console.log('[handleDragEnd] node:', node?.id, '| category:', finalCat);
     
-    if (node && finalCat) {
+    if (node && committedCategory && finalCat !== node.category) {
         // 1. Parse existing entities safely
         let originalEntities: Record<string, any> = {};
         try {
@@ -227,8 +276,9 @@ export default React.memo(React.forwardRef<Animated.ScrollView, UserModeMapProps
   // Binary Search Utility: Find the start and end indices of visible nodes
   // This is way faster than .filter() for 2000+ items
   const findRangeIndices = (y: number) => {
-    const minY = y - WINDOW_BUFFER;
-    const maxY = y + SCREEN_HEIGHT + WINDOW_BUFFER;
+    const currentBuffer = isNexus ? 2500 : WINDOW_BUFFER;
+    const minY = y - currentBuffer;
+    const maxY = y + SCREEN_HEIGHT + currentBuffer;
     
     // Find first node with Y > minY
     let low = 0, high = mappedNotes.length - 1, start = 0;
@@ -260,8 +310,26 @@ export default React.memo(React.forwardRef<Animated.ScrollView, UserModeMapProps
     return mappedNotes.slice(start, end + 1);
   }, [mappedNotes, start, end]);
 
-  const tileY = useMemo(() => Math.max(0, windowY - WINDOW_BUFFER), [windowY]);
+  const tileY = useMemo(() => Math.max(0, windowY - (isNexus ? 2500 : WINDOW_BUFFER)), [windowY, isNexus]);
   const tileHeight = SCREEN_HEIGHT + (WINDOW_BUFFER * 2);
+
+  const nexusData = useMemo(() => {
+    if (!isNexus) return { hubs: [], hubIds: new Set<string>(), coordMap: {} };
+    // For Nexus mode, we consider the ENTIRE mappedNotes pool to find constellation members,
+    // ensuring they are never culled by temporal windowing while in gravitational 2D space.
+    return calculateCelestialHubs(mappedNotes, width);
+  }, [mappedNotes, isNexus, width]);
+
+  const nexusHulls = nexusData.hubs;
+  const nexusHullIds = nexusData.hubIds;
+  const nexusCoords = nexusData.coordMap;
+
+  // Independent Nexus Render List: Includes ALL nodes in constellations 
+  // (Prevents the 'popping' glitch caused by 1D temporal culling in a 2D space)
+  const nexusVisibleNotes = useMemo(() => {
+    if (!isNexus) return [];
+    return mappedNotes.filter(n => nexusHullIds.has(n.id));
+  }, [mappedNotes, isNexus, nexusHullIds]);
 
   const visibleCurves = useMemo(() => {
     const minY = tileY;
@@ -285,7 +353,13 @@ export default React.memo(React.forwardRef<Animated.ScrollView, UserModeMapProps
     <View style={{ flex: 1 }}>
       <Animated.ScrollView 
         ref={ref}
-        contentContainerStyle={{ minHeight: totalHeight, width: '100%' }} 
+        contentContainerStyle={{ 
+          minHeight: totalHeight, 
+          width: '100%',
+          paddingHorizontal: 20,
+          paddingTop: 0,
+          paddingBottom: 80,
+        }} 
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
         onScroll={scrollHandler}
@@ -293,45 +367,77 @@ export default React.memo(React.forwardRef<Animated.ScrollView, UserModeMapProps
         bounces={true}
       >
         {/* Tiled Render Layer: 'Turbo' Accelerated for scaling */}
-        <View 
-          style={{ position: 'absolute', top: tileY, left: 0, width, height: tileHeight, zIndex: 1 }} 
-          pointerEvents="none"
-          shouldRasterizeIOS={true} 
-          renderToHardwareTextureAndroid={true} 
-        >
-          <Svg width={width} height={tileHeight}>
-            <BatchedConnectionLayer 
-              visibleCurves={visibleCurves} 
-              nodeMap={nodeMap} 
-              tileY={tileY} 
-              isNexus={isNexus}
-              searchQuery={searchQuery}
-              width={width}
-            />
-          </Svg>
-        </View>
+        {!isNexus && (
+          <View 
+            style={{ position: 'absolute', top: tileY, left: 0, width, height: tileHeight, zIndex: 1 }} 
+            pointerEvents="none"
+            shouldRasterizeIOS={true} 
+            renderToHardwareTextureAndroid={true} 
+          >
+            <Svg width={width} height={tileHeight}>
+              <NexusHullLayer hulls={nexusHulls} activeView={activeView} />
+              {!isNexus && (
+                <BatchedConnectionLayer 
+                  visibleCurves={visibleCurves} 
+                  nodeMap={nodeMap} 
+                  tileY={tileY} 
+                  isNexus={isNexus}
+                  searchQuery={searchQuery}
+                  width={width}
+                  hullIds={nexusHullIds}
+                  hubs={nexusHulls}
+                />
+              )}
+            </Svg>
+          </View>
+        )}
+
+        {/* Floating Celestial Hubs */}
+        {!isNexus && (
+          <View style={StyleSheet.absoluteFill} pointerEvents="none">
+            {nexusHulls.map(hub => (
+              <CelestialPortal 
+                key={hub.id}
+                hub={hub}
+                activeView={activeView}
+              />
+            ))}
+          </View>
+        )}
         
-        {visibleNotes.map((node) => {
-          const status = calculateSearchMatch(searchQuery, node);
-          const isFirst = mappedNotes.length > 0 && node.id === mappedNotes[0].id;
-  
-          return (
-            <DriftNode 
-              key={node.id} 
-              node={node} 
-              isFirst={isFirst}
-              activeView={activeView}
-              searchStatus={status}
-              onPress={onNodePress} 
-              onDragStart={handleDragStart}
-              onDragUpdateSharedX={activeDragX}
-              onDragUpdateSharedY={activeDragY}
-              onDragUpdateSharedCategory={activeDragCategory}
-              onDragEnd={handleDragEnd}
-              scrollY={scrollY}
-            />
-          );
-        })}
+        {/* --- HARD REALM SPLIT --- */}
+        {isNexus ? (
+          // THE MIRROR MATRIX: Insight Dashboard
+          <NexusSurfaceMatrix 
+            notes={mappedNotes} 
+            theme={theme}
+            onPress={onNodePress} 
+          />
+        ) : (
+          // REALM 2: CHRONOS TIMELINE (Temporal Windowing)
+          visibleNotes.map((node) => {
+            const status = calculateSearchMatch(searchQuery, node);
+            const isFirst = mappedNotes.length > 0 && node.id === mappedNotes[0].id;
+    
+            return (
+              <DriftNode 
+                key={`chronos-${node.id}`} 
+                node={node} 
+                isFirst={isFirst}
+                activeView={activeView}
+                searchStatus={status}
+                onPress={onNodePress} 
+                onDragStart={handleDragStart}
+                onDragUpdateSharedX={activeDragX}
+                onDragUpdateSharedY={activeDragY}
+                onDragUpdateSharedCategory={activeDragCategory}
+                onDragEnd={handleDragEnd}
+                scrollY={scrollY}
+                isInHull={false}
+              />
+            );
+          })
+        )}
       </Animated.ScrollView>
   
       {draggingNode && (
