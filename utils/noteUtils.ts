@@ -1,4 +1,5 @@
 import { Note } from '@/store/useNotesStore';
+export type { Note };
 import { CATEGORY_COLORS } from '@/constants/Categories';
 
 export interface NebulaHubData {
@@ -11,6 +12,7 @@ export interface NebulaHubData {
   notes: any[];
   satellites: Array<{ x: number, y: number, isBridge?: boolean }>;
   narrative?: Array<{ icon: string, label: string }>;
+  insight?: string;
 }
 
 export interface ThoughtChainEntry {
@@ -457,4 +459,82 @@ export function generateNexusMatrix(allNotes: any[]): NexusMatrixData {
   });
 
   return { clusters, flashes, moodTimeline };
+}
+
+/**
+ * Nexus 12.0: The Resonance Engine
+ * Lightweight keyword-overlap utility for Zero-Latency 'Memory Echoes'.
+ */
+export function calculateResonanceScore(text: string, reference: string): number {
+  if (!text || !reference) return 0;
+  const t = text.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+  const r = reference.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+  if (t.length === 0) return 0;
+  
+  const matches = t.filter(word => r.includes(word));
+  return matches.length / Math.max(t.length, 1);
+}
+
+export function findResonantNote(text: string, notes: Note[]): Note | null {
+  if (text.length < 15) return null; // Wait for a short sentence fragment
+  let bestMatch: Note | null = null;
+  let highestScore = 0;
+
+  for (const note of notes) {
+    if (note.is_ghost) continue;
+    const score = calculateResonanceScore(text, note.content);
+    if (score > highestScore && score > 0.6) { // 60% keyword overlap threshold
+      highestScore = score;
+      bestMatch = note;
+    }
+  }
+
+  return bestMatch;
+}
+
+/**
+ * Nexus 12.0: The Habit Insight Engine
+ * Generates soulful-clinical hybrid observations based on note patterns.
+ */
+export function generateSmartInsight(category: string, notes: Note[]): string {
+  const catNotes = notes.filter(n => {
+    try {
+      const parsed = JSON.parse(n.entities_json || '{}');
+      return parsed.category === category;
+    } catch(e) { return false; }
+  });
+
+  if (catNotes.length < 3) return "this thread is just beginning to find its voice";
+
+  const hours = catNotes.map(n => new Date(n.created_at).getHours());
+  const lateNight = hours.filter(h => h > 21 || h < 5).length;
+  const morning = hours.filter(h => h >= 5 && h < 12).length;
+
+  const total = catNotes.length;
+  if (lateNight / total > 0.6) return `your subconscious reaches for ${category.toLowerCase()} mostly in the deep night (${lateNight}x)`;
+  if (morning / total > 0.6) return `you frame your ${category.toLowerCase()} thoughts mostly in the early light (${morning}x)`;
+  
+  return `you've returned to ${category.toLowerCase()} ${total} times this cycle — it's seeking a synthesis`;
+}
+
+/**
+ * Nexus 12.0: The Mental Momentum Engine
+ */
+export function getMentalMomentum(notes: Note[]): Record<string, number> {
+  const momentum: Record<string, number> = {};
+  const now = Date.now();
+  const past24h = now - (24 * 60 * 60 * 1000);
+
+  notes.forEach(note => {
+    let cat = 'Journal';
+    try {
+      const parsed = JSON.parse(note.entities_json || '{}');
+      cat = parsed.category || 'Journal';
+    } catch(e){}
+
+    const weight = (note.created_at > past24h) ? 2 : 1;
+    momentum[cat] = (momentum[cat] || 0) + weight;
+  });
+
+  return momentum;
 }

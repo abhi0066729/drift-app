@@ -24,6 +24,23 @@ const RefiningPulse = () => {
   return <Animated.View style={[styles.refiningPulse, style]} />;
 };
 
+const ResonancePulse = ({ color }: { color: string }) => {
+  const scale = useSharedValue(1);
+  const opacity = useSharedValue(0.3);
+
+  React.useEffect(() => {
+    scale.value = withRepeat(withTiming(2.2, { duration: 2500 }), -1, true);
+    opacity.value = withRepeat(withTiming(0, { duration: 2500 }), -1, false);
+  }, []);
+
+  const style = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    opacity: opacity.value,
+  }));
+
+  return <Animated.View style={[styles.refiningPulse, { backgroundColor: color }, style]} />;
+};
+
 const SearchMatchPulse = ({ color }: { color: string }) => {
   const scale = useSharedValue(1);
   const opacity = useSharedValue(0.6);
@@ -147,6 +164,7 @@ export default function ArchiveNode({
           <View style={styles.nodeColumn}>
             {isRefining && <RefiningPulse />}
             {isMatch && <SearchMatchPulse color={nodeColor} />}
+            {(!isRefining && !isMatch && (Date.now() - note.created_at < 12 * 3600000)) && <ResonancePulse color={nodeColor} />}
             <View style={[
               styles.dot, 
               { backgroundColor: nodeColor },

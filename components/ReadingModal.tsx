@@ -6,7 +6,7 @@ import { BlurView } from 'expo-blur';
 import { CATEGORY_COLORS } from '@/constants/Categories';
 import { NightTheme } from '@/constants/theme';
 import { useNotesStore } from '@/store/useNotesStore';
-import { findThoughtChain } from '@/utils/noteUtils';
+import { findThoughtChain, generateSmartInsight } from '@/utils/noteUtils';
 
 const { width } = Dimensions.get('window');
 
@@ -38,6 +38,8 @@ export default function ReadingModal({ node, onClose, translucent, searchQuery }
   const headerTitle = finalEmotion 
     ? `${finalCategory.toUpperCase()} · ${finalEmotion.toUpperCase()}`
     : finalCategory.toUpperCase();
+
+  const subconsciousInsight = generateSmartInsight(finalCategory, useNotesStore.getState().notes);
 
   const color = CATEGORY_COLORS[finalCategory] || '#8E44AD';
   
@@ -86,8 +88,8 @@ export default function ReadingModal({ node, onClose, translucent, searchQuery }
             </View>
             <View style={styles.headerText}>
               <Text style={[styles.title, { color: isDark ? NightTheme.textPrimary : '#111' }]} numberOfLines={1}>{headerTitle}</Text>
-              <Text style={[styles.resonanceLabel, { color }]}>
-                {isMatch ? 'SEARCH RESONANCE' : (translucent ? 'SEMANTIC ECHO' : 'FOCUS CORE')}
+              <Text style={[styles.subconsciousHeader, { color }]}>
+                {subconsciousInsight.toUpperCase()}
               </Text>
             </View>
           </View>
@@ -216,15 +218,15 @@ const styles = StyleSheet.create({
     marginLeft: 16,
   },
   title: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '300',
     letterSpacing: 0.5,
   },
-  resonanceLabel: {
-    fontSize: 9,
-    fontWeight: '700',
+  subconsciousHeader: {
+    fontSize: 7,
+    fontWeight: '800',
     marginTop: 4,
-    letterSpacing: 2,
+    letterSpacing: 1.5,
     textTransform: 'uppercase',
   },
   scrollContent: {

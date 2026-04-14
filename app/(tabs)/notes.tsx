@@ -25,6 +25,7 @@ import ScrollToTopButton from '@/components/ScrollToTopButton';
 import ReadingModal from '@/components/ReadingModal';
 import * as Haptics from 'expo-haptics';
 import { NightTheme } from '@/constants/theme';
+import { generateMentalPattern, generateSmartInsight } from '@/utils/noteUtils';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -227,9 +228,14 @@ export default function NotesScreen() {
         >
           <View style={[styles.container, { paddingTop: insets.top + 20, backgroundColor: theme === 'dark' ? NightTheme.background : '#FFFFFF' }]}>
             <Animated.View entering={FadeIn.duration(600)} style={styles.headerRow}>
-              <View>
+              <View style={{ flex: 1 }}>
                 <Text style={[styles.headerTitle, { color: theme === 'dark' ? NightTheme.textPrimary : '#111111' }]}>Drift Chronicle</Text>
-                <Text style={styles.headerSubtitle}>LIFETIME SYNTHESIS</Text>
+                <Text style={styles.headerSubtitle}>
+                   {generateMentalPattern(notes).toUpperCase()}
+                </Text>
+                <Text style={[styles.observationText, { color: NightTheme.accent }]}>
+                   {generateSmartInsight('General', notes).toUpperCase()}
+                </Text>
               </View>
               
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
@@ -354,12 +360,19 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
   },
   headerSubtitle: {
-    fontSize: 10,
+    fontSize: 9,
     marginTop: 4,
     color: '#8E44AD',
     textTransform: 'uppercase',
-    letterSpacing: 2.5,
+    letterSpacing: 2.0,
     fontWeight: '700',
+    opacity: 0.6,
+  },
+  observationText: {
+    fontSize: 7,
+    marginTop: 2,
+    fontWeight: '800',
+    letterSpacing: 1.5,
   },
   clearButton: {
     paddingVertical: 8,

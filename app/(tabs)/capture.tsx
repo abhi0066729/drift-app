@@ -21,6 +21,10 @@ import { extractRealtime, extractDeep, NoteCategory } from '@/services/ai';
 import { LinearGradient } from 'expo-linear-gradient';
 import { NightTheme } from '@/constants/theme';
 import { CATEGORY_COLORS } from '@/constants/Categories';
+import { findResonantNote, Note } from '@/utils/noteUtils';
+import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import { Alert } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
 
@@ -134,6 +138,40 @@ const NeuralNebula = ({ baseColor, isTyping, isSynthesizing }: { baseColor: stri
   );
 };
 
+// --- Memory Echo View (Spectral Ghost) ---
+const MemoryEcho = ({ note, theme }: { note: Note | null, theme: 'light' | 'dark' }) => {
+  if (!note) return null;
+  const isDark = theme === 'dark';
+  
+  return (
+    <Animated.View 
+      entering={FadeIn.duration(1000)} 
+      exiting={withTiming(0, { duration: 500 }) as any}
+      style={styles.echoContainer}
+    >
+      <Text style={[styles.echoLabel, { color: NightTheme.accent }]}>MEMORY ECHO</Text>
+      <Text 
+        style={[styles.echoContent, { color: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.2)' }]} 
+        numberOfLines={2}
+      >
+        "{note.content}"
+      </Text>
+    </Animated.View>
+  );
+};
+
+// --- Soft Predictive Hint (Interactive) ---
+const SoftHint = ({ label, onPress, theme }: { label: string, onPress: () => void, theme: 'dark' | 'light' }) => {
+  const isDark = theme === 'dark';
+  return (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.6} style={styles.hintPill}>
+       <Text style={[styles.hintPillText, { color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)' }]}>
+          [{label}?]
+       </Text>
+    </TouchableOpacity>
+  );
+};
+
 export default function CaptureScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -142,7 +180,11 @@ export default function CaptureScreen() {
   const [predictionStatus, setPredictionStatus] = useState<'flux' | 'anchored'>('flux');
   const [emotionHint, setEmotionHint] = useState('');
   const [isTypingSync, setIsTypingSync] = useState(false);
+  const [resonantNote, setResonantNote] = useState<Note | null>(null);
+  const [showSmartAction, setShowSmartAction] = useState(false);
+  const [lastActionNode, setLastActionNode] = useState<{ id: string, category: string } | null>(null);
   
+  const notes = useNotesStore(state => state.notes);
   const addNote = useNotesStore(state => state.addNote);
   const updateNote = useNotesStore(state => state.updateNote);
   const theme = useNotesStore(state => state.theme);
@@ -208,6 +250,10 @@ export default function CaptureScreen() {
       runPredictionAI(inputText);
     }
 
+    // --- MEMORY RESONANCE ---
+    const resonance = findResonantNote(inputText, notes);
+    setResonantNote(resonance);
+
     // --- PAUSE TRIGGER ---
     if (inputText.length < 3) return;
     const timeoutId = setTimeout(() => {
@@ -215,7 +261,7 @@ export default function CaptureScreen() {
     }, 1000);
 
     return () => clearTimeout(timeoutId);
-  }, [inputText, predictLocal]);
+  }, [inputText, predictLocal, notes]);
 
   useFocusEffect(
     useCallback(() => {
@@ -246,9 +292,30 @@ export default function CaptureScreen() {
       updateNote(noteId, { is_refining: false, entities_json: JSON.stringify({ ...(aiResult || {}), clusterId: -1 }) });
     }).catch(() => updateNote(noteId, { is_refining: false }));
     
+    setLastActionNode({ id: noteId, category: currentCategory });
+    setShowSmartAction(true);
+    setTimeout(() => {
+      setShowSmartAction(false);
+      if (inputRef.current) inputRef.current.focus();
+    }, 4000);
+
     setInputText('');
-    router.push('/');
+    // router.push('/'); // Remove immediate redirect to allow post-capture action
   }, [inputText, predictedCategory, emotionHint]);
+
+  const handleSmartAction = () => {
+    if (!lastActionNode) return;
+    try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch(e){}
+    Alert.alert("Sentient Action", `Synthesizing ${lastActionNode.category} with your active threads.`);
+    setShowSmartAction(false);
+    router.push('/');
+  };
+
+  const handleSkipRefinement = () => {
+    setPredictionStatus('anchored');
+    setEmotionHint('Direct Capture');
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch(e){}
+  };
 
   const ribbonColor = CATEGORY_COLORS[predictedCategory] || '#8E44AD';
   const isFlux = predictionStatus === 'flux';
@@ -292,9 +359,14 @@ export default function CaptureScreen() {
             <View style={styles.hubWrapper}>
               <View style={styles.predictionBadge}>
                 <View style={[styles.badgeLine, { backgroundColor: isFlux ? (isDark ? '#333' : '#EEEEEE') : ribbonColor }]} />
-                <Text style={[styles.categoryLabel, { color: inputText.trim().length > 0 ? (isFlux ? (isDark ? '#777' : '#888') : ribbonColor) : '#BBBBBB' }]}>
-                  {labelText}
-                </Text>
+                <View style={{ alignItems: 'center' }}>
+                  <Text style={[styles.categoryLabel, { color: inputText.trim().length > 0 ? (isFlux ? (isDark ? '#777' : '#888') : ribbonColor) : '#BBBBBB' }]}>
+                    {labelText}
+                  </Text>
+                  {isFlux && inputText.length > 10 && (
+                    <SoftHint label="SKIP AI" onPress={handleSkipRefinement} theme={theme} />
+                  )}
+                </View>
                 <View style={[styles.badgeLine, { backgroundColor: isFlux ? (isDark ? '#333' : '#EEEEEE') : ribbonColor }]} />
               </View>
             </View>
@@ -311,14 +383,29 @@ export default function CaptureScreen() {
                 textAlign="center"
                 selectionColor={isDark ? NightTheme.accent : "#8E44AD"}
                 autoFocus
+                editable={!showSmartAction}
               />
+              
+              <MemoryEcho note={resonantNote} theme={theme} />
             </View>
 
-            <Animated.View entering={FadeInDown.delay(400)} style={styles.footerHint}>
-               <Text style={[styles.hintText, { color: isDark ? '#A29BFE' : '#8E44AD' }]}>
-                 {isTypingSync ? 'DETECTING RESONANCE...' : (predictionStatus === 'anchored' && emotionHint ? `${emotionHint.toUpperCase()} ENERGY DETECTED` : 'ZENITH COORDINATE ENGINE ACTIVE')}
-               </Text>
-            </Animated.View>
+            {showSmartAction ? (
+              <Animated.View 
+                entering={FadeInDown.springify()} 
+                style={[styles.smartActionContainer, { backgroundColor: isDark ? NightTheme.accent : '#8E44AD' }]}
+              >
+                <TouchableOpacity onPress={handleSmartAction} style={styles.smartActionButton}>
+                   <Ionicons name="sparkles" size={16} color="#FFF" />
+                   <Text style={styles.smartActionText}>SYNTHESIZE THIS {lastActionNode?.category.toUpperCase()}</Text>
+                </TouchableOpacity>
+              </Animated.View>
+            ) : (
+              <Animated.View entering={FadeInDown.delay(400)} style={styles.footerHint}>
+                <Text style={[styles.hintText, { color: isDark ? '#A29BFE' : '#8E44AD' }]}>
+                  {isTypingSync ? 'DETECTING RESONANCE...' : (predictionStatus === 'anchored' && emotionHint ? `${emotionHint.toUpperCase()} ENERGY DETECTED` : 'ZENITH COORDINATE ENGINE ACTIVE')}
+                </Text>
+              </Animated.View>
+            )}
           </View>
         </KeyboardAvoidingView>
       </View>
@@ -366,7 +453,6 @@ const styles = StyleSheet.create({
     borderRadius: 190,
     position: 'absolute',
     opacity: 0.1,
-    filter: 'blur(80px)',
   },
   particle: {
     position: 'absolute',
@@ -374,5 +460,60 @@ const styles = StyleSheet.create({
     height: 2.5,
     borderRadius: 1.25,
     backgroundColor: '#8E44AD',
+  },
+  echoContainer: {
+    marginTop: 20,
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  echoLabel: {
+    fontSize: 8,
+    fontWeight: '800',
+    letterSpacing: 2.5,
+    marginBottom: 8,
+    opacity: 0.6,
+  },
+  echoContent: {
+    fontSize: 14,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    lineHeight: 20,
+    fontWeight: '300',
+  },
+  hintPill: {
+    marginTop: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  hintPillText: {
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  smartActionContainer: {
+    position: 'absolute',
+    bottom: 50,
+    left: 40,
+    right: 40,
+    borderRadius: 30,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 15,
+    elevation: 10,
+  },
+  smartActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 18,
+    gap: 10,
+  },
+  smartActionText: {
+    color: '#FFF',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.5,
   }
 });

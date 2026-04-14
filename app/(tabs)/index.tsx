@@ -27,7 +27,8 @@ import UserModeMap from '@/components/UserModeMap';
 import ScrollToTopButton from '@/components/ScrollToTopButton';
 import { generateFullGhostPool, processContextualConnections, calculateSearchMatch } from '@/utils/noteUtils';
 import { TapGestureHandler, State, GestureHandlerRootView, PanGestureHandler } from 'react-native-gesture-handler';
-import { SearchX, Moon, Sun, Search } from 'lucide-react-native';
+import { SearchX, Moon, Sun, Search, Sparkles } from 'lucide-react-native';
+import { seedSyntheticMemories } from '@/utils/seedingUtils';
 
 const { width, height } = Dimensions.get('window');
 
@@ -85,6 +86,12 @@ export default function HomeScreen() {
       return () => {};
     }, [])
   );
+
+  useEffect(() => {
+    if (notes.length === 0) {
+      seedSyntheticMemories(addNote, notes);
+    }
+  }, [notes.length]);
 
   const displayNotes = useMemo(() => {
     if (notes.length >= 5) return notes;
