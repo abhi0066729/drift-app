@@ -220,6 +220,14 @@ export function processContextualConnections(notes: Note[], width: number, searc
   for (let i = processedNotes.length - 1; i >= 0; i--) {
     const note = processedNotes[i];
     
+    // STRICT FLOW: Refining notes have NO threads and don't contribute to category paths yet
+    if (note.is_refining) {
+        note.connections = [];
+        note.connectedNodeId = null;
+        note.connectedNodeIndex = null;
+        continue;
+    }
+
     const connections: { targetId: string, category: string, weight: number }[] = [];
     
     // Connect back sequentially for every active resonance
@@ -371,15 +379,26 @@ export function generateMentalPattern(notes: any[]): string {
   if (notes.length === 0) return "your mind is quiet... waiting for the first spark";
   
   const now = Date.now();
-  const recentNotes = notes.filter(n => (now - n.created_at) < (48 * 60 * 60 * 1000));
+  const recentNotes = notes.filter(n => (now - n.created_at) < (48 * 60 * 60 * 1000) && !n.is_refining);
   
   if (recentNotes.length < 3) return "you're just beginning to drift into a new rhythm";
 
-  const categories = recentNotes.map(n => n.category);
+  const categories = recentNotes.map(n => {
+    if (!n.entities_json) return 'Journal';
+    try {
+      return JSON.parse(n.entities_json).category || 'Journal';
+    } catch(e) { return 'Journal'; }
+  });
+  
   const catCounts: Record<string, number> = {};
   categories.forEach(c => catCounts[c] = (catCounts[c] || 0) + 1);
   
-  const dominant = Object.entries(catCounts).sort((a,b) => b[1]-a[1])[0];
+  const entries = Object.entries(catCounts);
+  if (entries.length === 0) return "your thoughts are gathering momentum";
+
+  const dominant = entries.sort((a,b) => b[1]-a[1])[0];
+  if (!dominant) return "your thoughts are gathering momentum";
+  
   const totalFocus = dominant[1] / recentNotes.length;
 
   if (totalFocus > 0.6) return `you've been unusually focused on ${dominant[0].toLowerCase()} this week`;
@@ -481,7 +500,7 @@ export function findResonantNote(text: string, notes: Note[]): Note | null {
   let highestScore = 0;
 
   for (const note of notes) {
-    if (note.is_ghost) continue;
+    if (note.is_ghost || note.is_refining) continue;
     const score = calculateResonanceScore(text, note.content);
     if (score > highestScore && score > 0.6) { // 60% keyword overlap threshold
       highestScore = score;

@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import { SQLiteProvider } from 'expo-sqlite';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { Platform, UIManager } from 'react-native';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { initDatabase } from '../db/schema';
@@ -24,6 +25,9 @@ export default function RootLayout() {
   const theme = useNotesStore(state => state.theme);
 
   useEffect(() => {
+    if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+      UIManager.setLayoutAnimationEnabledExperimental(true);
+    }
     initializeSettings();
   }, []);
 

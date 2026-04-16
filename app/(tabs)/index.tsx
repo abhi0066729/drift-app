@@ -29,6 +29,7 @@ import { generateFullGhostPool, processContextualConnections, calculateSearchMat
 import { TapGestureHandler, State, GestureHandlerRootView, PanGestureHandler } from 'react-native-gesture-handler';
 import { SearchX, Moon, Sun, Search, Sparkles } from 'lucide-react-native';
 import { seedSyntheticMemories } from '@/utils/seedingUtils';
+import { BlurView } from 'expo-blur';
 
 const { width, height } = Dimensions.get('window');
 
@@ -300,7 +301,7 @@ export default function HomeScreen() {
             enabled={Platform.OS === 'ios'}
             onGestureEvent={onGestureEvent} 
             onHandlerStateChange={onHandlerStateChange}
-            activeOffsetY={[0, 20]} 
+            activeOffsetY={40} // Simple numeric threshold for downward pull
             failOffsetX={[-20, 20]}
           >
             <View style={{ flex: 1 }}>

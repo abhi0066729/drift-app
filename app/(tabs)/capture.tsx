@@ -19,6 +19,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { extractRealtime, extractDeep, NoteCategory } from '@/services/ai';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { NightTheme } from '@/constants/theme';
 import { CATEGORY_COLORS } from '@/constants/Categories';
 import { findResonantNote, Note } from '@/utils/noteUtils';
@@ -296,7 +297,6 @@ export default function CaptureScreen() {
     setShowSmartAction(true);
     setTimeout(() => {
       setShowSmartAction(false);
-      if (inputRef.current) inputRef.current.focus();
     }, 4000);
 
     setInputText('');
@@ -382,7 +382,6 @@ export default function CaptureScreen() {
                 onChangeText={setInputText}
                 textAlign="center"
                 selectionColor={isDark ? NightTheme.accent : "#8E44AD"}
-                autoFocus
                 editable={!showSmartAction}
               />
               
@@ -392,9 +391,10 @@ export default function CaptureScreen() {
             {showSmartAction ? (
               <Animated.View 
                 entering={FadeInDown.springify()} 
-                style={[styles.smartActionContainer, { backgroundColor: isDark ? NightTheme.accent : '#8E44AD' }]}
+                style={styles.smartActionContainer}
               >
-                <TouchableOpacity onPress={handleSmartAction} style={styles.smartActionButton}>
+                <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill} />
+                <TouchableOpacity onPress={handleSmartAction} style={[styles.smartActionButton, { backgroundColor: isDark ? NightTheme.accent : '#8E44AD' }]}>
                    <Ionicons name="sparkles" size={16} color="#FFF" />
                    <Text style={styles.smartActionText}>SYNTHESIZE THIS {lastActionNode?.category.toUpperCase()}</Text>
                 </TouchableOpacity>
@@ -502,6 +502,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 15,
     elevation: 10,
+    zIndex: 1000,
   },
   smartActionButton: {
     flexDirection: 'row',

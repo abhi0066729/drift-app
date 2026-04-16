@@ -6,6 +6,8 @@ import { Swipeable } from 'react-native-gesture-handler';
 import { CATEGORY_COLORS } from '@/constants/Categories';
 import { useNotesStore } from '@/store/useNotesStore';
 import { NightTheme } from '@/constants/theme';
+import { Sprout } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 
 const RefiningPulse = () => {
   const opacity = useSharedValue(0.4);
@@ -138,6 +140,13 @@ export default function ArchiveNode({
     );
   };
 
+  const isSeed = useNotesStore(state => state.studioSeeds?.includes(note.id));
+
+  const handleToggleSeed = () => {
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch(e){}
+    useNotesStore.getState().toggleStudioSeed(note.id);
+  };
+
   return (
     <Animated.View 
       entering={FadeInDown.delay(index * 60).duration(800).springify().damping(12).stiffness(100)}
@@ -181,9 +190,18 @@ export default function ArchiveNode({
           {/* Content area is colored to hide the delete button behind it */}
           <View style={[styles.contentContainer, { backgroundColor: theme === 'dark' ? NightTheme.background : '#FFFFFF' }, isMatch && (theme === 'dark' ? { backgroundColor: 'rgba(142, 68, 173, 0.15)' } : styles.matchContent)]}>
             <View style={styles.headerRow}>
-              <Text style={[styles.categoryText, { color: nodeColor }]}>
-                {isRefining ? 'REFINING...' : category.toUpperCase()}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={[styles.categoryText, { color: nodeColor }]}>
+                  {isRefining ? 'REFINING...' : category.toUpperCase()}
+                </Text>
+                <TouchableOpacity onPress={handleToggleSeed} style={styles.seedIcon}>
+                  <Sprout 
+                    size={12} 
+                    color={isSeed ? '#8E44AD' : (theme === 'dark' ? NightTheme.textMuted : '#CCCCCC')} 
+                    strokeWidth={isSeed ? 3 : 1.5}
+                  />
+                </TouchableOpacity>
+              </View>
               <Text style={[styles.dateText, { color: theme === 'dark' ? NightTheme.textMuted : '#CCCCCC' }]}>{dateStr}</Text>
             </View>
             
@@ -267,13 +285,17 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    justifyContent: 'space-between',
+    paddingRight: 10,
     marginBottom: 8,
   },
   categoryText: {
     fontSize: 9,
     fontWeight: '700',
     letterSpacing: 2,
+  },
+  seedIcon: {
+    padding: 4,
   },
   dateText: {
     fontSize: 10,

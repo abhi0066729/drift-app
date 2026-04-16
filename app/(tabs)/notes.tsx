@@ -179,9 +179,10 @@ export default function NotesScreen() {
   });
 
   const filteredNotes = useMemo(() => {
-    if (!searchQuery) return notes;
+    const stabilizedNotes = notes.filter(n => !n.is_refining);
+    if (!searchQuery) return stabilizedNotes;
     const lowerQuery = searchQuery.toLowerCase();
-    return notes.filter(note => 
+    return stabilizedNotes.filter(note => 
       note.content.toLowerCase().includes(lowerQuery) ||
       (note as any).category?.toLowerCase().includes(lowerQuery)
     );

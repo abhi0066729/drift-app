@@ -20,6 +20,7 @@ export type Note = {
 
 interface NotesState {
   notes: Note[];
+  studioSeeds: string[];
   pendingSync: string[];
   activeFilters: { person?: string; topic?: string; date?: string };
   theme: 'light' | 'dark';
@@ -29,6 +30,7 @@ interface NotesState {
   setFilters: (filters: Partial<NotesState['activeFilters']>) => void;
   clearNotes: () => void;
   deleteNote: (id: string) => void;
+  toggleStudioSeed: (id: string) => void;
   toggleTheme: () => void;
 }
 
@@ -36,6 +38,7 @@ export const useNotesStore = create<NotesState>()(
   persist(
     (set) => ({
       notes: [],
+      studioSeeds: [],
       pendingSync: [],
       activeFilters: {},
       theme: 'light',
@@ -50,7 +53,12 @@ export const useNotesStore = create<NotesState>()(
       setNotes: (notes) => set({ notes }),
       setFilters: (filters) =>
         set((state) => ({ activeFilters: { ...state.activeFilters, ...filters } })),
-      clearNotes: () => set({ notes: [] }),
+      clearNotes: () => set({ notes: [], studioSeeds: [] }),
+      toggleStudioSeed: (id) => set((state) => ({
+        studioSeeds: state.studioSeeds.includes(id)
+          ? state.studioSeeds.filter((seedId) => seedId !== id)
+          : [...state.studioSeeds, id]
+      })),
       toggleTheme: () => set((state) => ({ theme: state.theme === 'light' ? 'dark' : 'light' })),
     }),
     {
