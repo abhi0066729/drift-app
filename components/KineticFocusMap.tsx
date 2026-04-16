@@ -1,6 +1,6 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Dimensions, ScrollView, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { Dimensions, ScrollView, StyleSheet, Text, View, TouchableOpacity, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { useNotesStore, Note } from '@/store/useNotesStore';
 import { NightTheme } from '@/constants/theme';
@@ -207,6 +207,7 @@ function AnimatedNoteCard({ node, activeCluster, activeNodeOriginY, activeNodeOr
 }
 
 export default function KineticFocusMap({ rootNode, mappedNotes, onClose }: any) {
+  const insets = useSafeAreaInsets();
   const theme = useNotesStore(state => state.theme);
   const isDark = theme === 'dark';
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
@@ -267,22 +268,18 @@ export default function KineticFocusMap({ rootNode, mappedNotes, onClose }: any)
   const backTap = Gesture.Tap().onEnd(() => { 'worklet'; runOnJS(onClose)(); });
 
   return (
-    <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(200)} style={[StyleSheet.absoluteFill, { zIndex: 100, backgroundColor: isDark ? NightTheme.background : '#FFFFFF' }]}>
+    <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(200)} style={[StyleSheet.absoluteFill, { zIndex: 100, backgroundColor: isDark ? '#000000' : '#FFFFFF' }]}>
       <GestureDetector gesture={Gesture.Simultaneous(scrubberPan, backTap)}>
         <View style={{ flex: 1 }}>
           <Animated.ScrollView ref={scrollRef} onScroll={scrollHandler} scrollEventThrottle={16} contentContainerStyle={{ height: localTotalHeight, width: '100%' }} showsVerticalScrollIndicator={false} pointerEvents="box-none">
             <View style={{ flex: 1 }} pointerEvents="box-none">
               
-              {/* SPECTRUM MODE TITLE */}
-              <View style={{ paddingHorizontal: 30, height: paddingBefore, justifyContent: 'center' }}>
-                <Text style={{ fontSize: 9, letterSpacing: 3, color: rootColor, fontWeight: '700', textTransform: 'uppercase' }}>
-                  RESONANCE SPECTRUM
-                </Text>
-                <Text style={{ fontSize: 32, fontWeight: '300', color: isDark ? NightTheme.textPrimary : '#111', marginTop: 8 }}>
-                  {rootMainCat.toUpperCase()} FOCUS
-                </Text>
-                <View style={{ width: 40, height: 2, backgroundColor: rootColor, marginTop: 16 }} />
+              <View style={[styles.header, { marginTop: insets.top + 20 }]}>
+                <Text style={styles.headerSubtitle}>RESONANCE SPECTRUM</Text>
+                <Text style={[styles.headerTitle, { color: rootColor }]}>{rootMainCat.toUpperCase()}</Text>
               </View>
+
+              <View style={{ height: paddingBefore }} />
 
               <View style={[StyleSheet.absoluteFill, { zIndex: 1 }]} pointerEvents="none">
                 <Svg width="100%" height={localTotalHeight}>
@@ -338,6 +335,9 @@ export default function KineticFocusMap({ rootNode, mappedNotes, onClose }: any)
 }
 
 const styles = StyleSheet.create({
-  noteCategory: { fontSize: 9, fontWeight: '700', letterSpacing: 2, textTransform: 'uppercase' },
-  noteContent: { fontSize: 17, fontWeight: '300', lineHeight: 28, color: '#111111' },
+  header: { alignItems: 'center', marginBottom: 4 },
+  headerTitle: { fontSize: 21, fontWeight: '300', letterSpacing: 3, textTransform: 'uppercase' },
+  headerSubtitle: { fontSize: 9, fontWeight: '700', color: '#8E44AD', textTransform: 'uppercase', letterSpacing: 3, marginTop: 6 },
+  noteCategory: { fontSize: 8, fontWeight: '700', letterSpacing: 2, textTransform: 'uppercase' },
+  noteContent: { fontSize: 13, fontWeight: '300', lineHeight: 20 },
 });

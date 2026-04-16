@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Dimensions, Pressable, ScrollView, Modal } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNotesStore } from '@/store/useNotesStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -21,7 +22,6 @@ import Animated, {
   SharedValue
 } from 'react-native-reanimated';
 import { LayoutAnimation } from 'react-native';
-import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { TapGestureHandler, State, GestureHandlerRootView, PanGestureHandler, GestureDetector, Gesture } from 'react-native-gesture-handler';
 import { SearchX, Moon, Sun, Search, Sparkles } from 'lucide-react-native';
@@ -548,12 +548,12 @@ export default function StudioV9() {
   const textColor = isDark ? '#E8E6E0' : '#111111';
 
   return (
-    <View style={[styles.container, { backgroundColor: isDark ? '#000' : '#FFF' }]}>
-      <View style={[styles.header, { top: insets.top + 20 }]}>
+    <View style={[styles.container, { paddingTop: insets.top + 20, backgroundColor: isDark ? '#000' : '#FFF' }]}>
+      <View style={styles.header}>
         <View style={styles.headerRow}>
           <View>
-            <Text style={[styles.title, { color: textColor }]}>Drift Studio</Text>
-            <Text style={styles.subtitle}>STELLAR CHRONICLES</Text>
+            <Text style={[styles.title, { color: textColor }]}>DRIFT STUDIO</Text>
+            <Text style={styles.subtitle}>STELLAR CHRONICLE</Text>
           </View>
           <StellarToggle mode={viewMode} onToggle={toggleMode} />
         </View>
@@ -583,7 +583,7 @@ export default function StudioV9() {
             </View>
           ) : (
             <ScrollView 
-                contentContainerStyle={[styles.listContainer, { paddingTop: insets.top + 100 }]}
+                contentContainerStyle={[styles.listContainer, { paddingTop: 20 }]}
                 showsVerticalScrollIndicator={false}
             >
               {branches.map((branch) => (
@@ -619,11 +619,19 @@ const PageDot = ({ index, scrollX }: { index: number, scrollX: SharedValue<numbe
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { position: 'absolute', left: 24, right: 24, zIndex: 100 },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', paddingHorizontal: 22 },
-  title: { fontSize: 24, fontWeight: '300', letterSpacing: 1.5 },
-  subtitle: { fontSize: 10, marginTop: 4, color: '#8E44AD', textTransform: 'uppercase', letterSpacing: 2.5, fontWeight: '700' },
-  toggleBtn: { backgroundColor: 'rgba(124, 58, 237, 0.1)', padding: 6, borderRadius: 20 },
+  header: { alignItems: 'center', paddingBottom: 10, zIndex: 10 },
+  headerRow: {
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    marginBottom: 4, 
+    marginTop: 20, 
+    width: '100%',
+    paddingHorizontal: 24,
+  },
+  title: { fontSize: 21, fontWeight: '300', letterSpacing: 3, textTransform: 'uppercase' },
+  subtitle: { fontSize: 9, fontWeight: '700', color: '#8E44AD', textTransform: 'uppercase', letterSpacing: 3, marginTop: 6 },
+  toggleBtn: { padding: 8, borderRadius: 20, backgroundColor: 'rgba(124, 58, 237, 0.1)' },
   empty: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyText: { color: 'rgba(255,255,255,0.2)', fontSize: 12, letterSpacing: 4, fontWeight: '700' },
   listContainer: { paddingHorizontal: 24, paddingBottom: 150, paddingTop: 20 },

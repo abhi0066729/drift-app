@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react';
-import { Dimensions, StyleSheet, Text, View, Pressable, TextInput, Alert, KeyboardAvoidingView, Platform, Keyboard, TouchableOpacity } from 'react-native';
+import { Dimensions, StyleSheet, Text, View, Pressable, TextInput, Alert, KeyboardAvoidingView, Platform, Keyboard, TouchableOpacity, TouchableWithoutFeedback } from 'react-native';
+import { BlurView } from 'expo-blur';
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 
@@ -26,10 +27,10 @@ import ChronosNexusToggle from '@/components/ChronosNexusToggle';
 import UserModeMap from '@/components/UserModeMap';
 import ScrollToTopButton from '@/components/ScrollToTopButton';
 import { generateFullGhostPool, processContextualConnections, calculateSearchMatch } from '@/utils/noteUtils';
+
 import { TapGestureHandler, State, GestureHandlerRootView, PanGestureHandler } from 'react-native-gesture-handler';
 import { SearchX, Moon, Sun, Search, Sparkles } from 'lucide-react-native';
 import { seedSyntheticMemories } from '@/utils/seedingUtils';
-import { BlurView } from 'expo-blur';
 
 const { width, height } = Dimensions.get('window');
 
@@ -269,18 +270,14 @@ export default function HomeScreen() {
         <View style={[styles.container, { paddingTop: insets.top + 20, backgroundColor: theme === 'dark' ? NightTheme.background : '#FFFFFF' }]}>
           <View style={[styles.header, { backgroundColor: theme === 'dark' ? NightTheme.background : '#FFFFFF' }]}>
             <View style={styles.headerTextContainer}>
-              <TapGestureHandler onHandlerStateChange={handleDoubleTapResonance} numberOfTaps={2}>
-                <View>
-                  <Text style={[styles.title, { color: theme === 'dark' ? '#E8E6E0' : '#111111' }]}>Drift Map</Text>
-                  <Text style={styles.subtitle}>Kinetic Semantic Synthesis</Text>
-                </View>
-              </TapGestureHandler>
+              <View>
+                <Text style={[styles.title, { color: theme === 'dark' ? '#E8E6E0' : '#111111' }]}>DRIFT MAP</Text>
+                <Text style={styles.subtitle}>KINETIC SEMANTIC SYNTHESIS</Text>
+              </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                {Platform.OS === 'android' && (
-                  <TouchableOpacity onPress={toggleSearch} style={[styles.themeToggleBtn, { backgroundColor: isSearchLocked.value ? 'rgba(142, 68, 173, 0.1)' : 'transparent' }]}>
-                     <Search size={20} color={isSearchLocked.value ? "#8E44AD" : (theme === 'dark' ? '#E8E6E0' : '#111111')} strokeWidth={2} />
-                  </TouchableOpacity>
-                )}
+                <TouchableOpacity onPress={toggleSearch} style={[styles.themeToggleBtn, { backgroundColor: isSearchLocked.value ? 'rgba(142, 68, 173, 0.1)' : 'transparent' }]}>
+                   <Search size={20} color={isSearchLocked.value ? "#8E44AD" : (theme === 'dark' ? '#E8E6E0' : '#111111')} strokeWidth={2} />
+                </TouchableOpacity>
                 <Pressable onPress={toggleTheme} style={styles.themeToggleBtn}>
                   {theme === 'dark' ? (
                     <Sun size={20} color="#E8E6E0" strokeWidth={2} />
@@ -380,10 +377,10 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { alignItems: 'center', paddingBottom: 10, zIndex: 10 },
-  headerTextContainer: { width: '100%', paddingHorizontal: 22, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  headerTextContainer: { width: '100%', paddingHorizontal: 24, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4, marginTop: 20 },
   themeToggleBtn: { padding: 8, borderRadius: 20, backgroundColor: 'rgba(124, 58, 237, 0.1)' },
-  title: { fontSize: 24, fontWeight: '300', letterSpacing: 1.5 },
-  subtitle: { fontSize: 10, marginTop: 4, color: '#8E44AD', textTransform: 'uppercase', letterSpacing: 2.5, fontWeight: '700' },
+  title: { fontSize: 21, fontWeight: '300', letterSpacing: 3, textTransform: 'uppercase' },
+  subtitle: { fontSize: 9, fontWeight: '700', color: '#8E44AD', textTransform: 'uppercase', letterSpacing: 3, marginTop: 6 },
   toggleContainer: { width: '100%', alignItems: 'center', marginTop: 10 },
   emptyText: { fontSize: 18, color: '#999999', fontWeight: '300', lineHeight: 28, paddingHorizontal: 32, marginTop: 0, textAlign: 'center' },
   searchContainer: { position: 'absolute', top: 0, left: 0, right: 0, paddingHorizontal: 22, zIndex: 100, height: 60, justifyContent: 'center' },

@@ -212,7 +212,7 @@ export default function ArchiveNode({
               {/* Expansion Blur Effect */}
               {!isMatch && (
                 <LinearGradient
-                  colors={theme === 'dark' ? ['rgba(15,14,12,0)', 'rgba(15,14,12,0.9)'] : ['rgba(255,255,255,0)', 'rgba(255,255,255,0.9)']}
+                  colors={theme === 'dark' ? ['rgba(0,0,0,0)', 'rgba(0,0,0,0.9)'] : ['rgba(255,255,255,0)', 'rgba(255,255,255,0.9)']}
                   style={styles.textBlur}
                 />
               )}
@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     marginBottom: 80, 
-    paddingLeft: 20,
+    paddingLeft: 24, // Matches standard app gutter
     backgroundColor: 'transparent', 
   },
   matchContainer: {

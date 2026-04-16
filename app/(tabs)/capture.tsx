@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback, Dimensions } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNotesStore } from '@/store/useNotesStore';
 import * as Crypto from 'expo-crypto';
@@ -19,7 +20,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import { extractRealtime, extractDeep, NoteCategory } from '@/services/ai';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import { NightTheme } from '@/constants/theme';
 import { CATEGORY_COLORS } from '@/constants/Categories';
 import { findResonantNote, Note } from '@/utils/noteUtils';
@@ -334,11 +334,10 @@ export default function CaptureScreen() {
           </View>
 
           <View style={[styles.inner, { paddingTop: insets.top + 20 }]}>
-            
-            <Animated.View entering={FadeIn.duration(800)} style={styles.header}>
+            <Animated.View entering={FadeIn.duration(800)} style={styles.headerRow}>
               <View>
-                <Text style={[styles.headerTitle, { color: isDark ? NightTheme.textPrimary : '#111111' }]}>Drift Lens</Text>
-                <Text style={styles.headerSubtitle}>INPUT STREAM</Text>
+                <Text style={[styles.headerTitle, { color: isDark ? NightTheme.textPrimary : '#111111' }]}>DRIFT LENS</Text>
+                <Text style={styles.headerSubtitle}>NEURAL INTENT STREAM</Text>
               </View>
 
               <View style={styles.actionRow}>
@@ -415,15 +414,18 @@ export default function CaptureScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  inner: { flex: 1, paddingHorizontal: 24, zIndex: 10 },
-  header: {
+  inner: { flex: 1, zIndex: 10 },
+  headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 4, 
+    marginTop: 20,
+    width: '100%',
+    paddingHorizontal: 24,
   },
-  headerTitle: { fontSize: 24, fontWeight: '300', letterSpacing: 1.5 },
-  headerSubtitle: { fontSize: 10, marginTop: 4, color: '#8E44AD', textTransform: 'uppercase', letterSpacing: 2.5, fontWeight: '700' },
+  headerTitle: { fontSize: 21, fontWeight: '300', letterSpacing: 3, textTransform: 'uppercase' },
+  headerSubtitle: { fontSize: 9, fontWeight: '700', color: '#8E44AD', textTransform: 'uppercase', letterSpacing: 3, marginTop: 6 },
   actionRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   commitButton: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20 },
   commitButtonText: { fontWeight: '700', fontSize: 10, letterSpacing: 1.5 },

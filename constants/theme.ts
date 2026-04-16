@@ -9,9 +9,9 @@ const tintColorLight = '#0a7ea4';
 const tintColorDark = '#fff';
 
 export const NightTheme = {
-  background: '#0F0E0C',       // Deepest warm black
-  surface: '#161412',          // Cards, overlays
-  surfaceHighlight: '#1A1918', // Pressed states, subtle lifts
+  background: '#000000',       // Extreme Dark
+  surface: '#080808',          // Deepest Grey
+  surfaceHighlight: '#121212', // Subtle lift
   border: '#232220',           // Separators
   borderSubtle: '#1A1A18',
   textPrimary: '#E8E6E0',      // Off-white, soft on eyes

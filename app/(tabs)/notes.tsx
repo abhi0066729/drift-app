@@ -230,12 +230,9 @@ export default function NotesScreen() {
           <View style={[styles.container, { paddingTop: insets.top + 20, backgroundColor: theme === 'dark' ? NightTheme.background : '#FFFFFF' }]}>
             <Animated.View entering={FadeIn.duration(600)} style={styles.headerRow}>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.headerTitle, { color: theme === 'dark' ? NightTheme.textPrimary : '#111111' }]}>Drift Chronicle</Text>
+                <Text style={[styles.headerTitle, { color: theme === 'dark' ? NightTheme.textPrimary : '#111111' }]}>DRIFT CHRONICLE</Text>
                 <Text style={styles.headerSubtitle}>
-                   {generateMentalPattern(notes).toUpperCase()}
-                </Text>
-                <Text style={[styles.observationText, { color: NightTheme.accent }]}>
-                   {generateSmartInsight('General', notes).toUpperCase()}
+                   TEMPORAL THOUGHT ARCHIVE
                 </Text>
               </View>
               
@@ -340,40 +337,34 @@ export default function NotesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 24,
   },
   headerRow: {
     flexDirection: 'row', 
     justifyContent: 'space-between', 
     alignItems: 'center', 
-    marginBottom: 20, 
-    marginTop: 10, 
+    marginBottom: 4, 
+    marginTop: 20, 
     width: '100%',
+    paddingHorizontal: 24,
   },
   miniBtn: { 
     padding: 8, 
     borderRadius: 20 
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 21,
     fontWeight: '300',
     color: '#111111',
-    letterSpacing: 1.5,
+    letterSpacing: 3,
+    textTransform: 'uppercase'
   },
   headerSubtitle: {
     fontSize: 9,
-    marginTop: 4,
+    fontWeight: '700',
     color: '#8E44AD',
     textTransform: 'uppercase',
-    letterSpacing: 2.0,
-    fontWeight: '700',
-    opacity: 0.6,
-  },
-  observationText: {
-    fontSize: 7,
-    marginTop: 2,
-    fontWeight: '800',
-    letterSpacing: 1.5,
+    letterSpacing: 3,
+    marginTop: 6,
   },
   clearButton: {
     paddingVertical: 8,
@@ -389,7 +380,7 @@ const styles = StyleSheet.create({
   },
   timelineAxis: {
     position: 'absolute',
-    left: 40, 
+    left: 44, // (24 left margin + 20 column center)
     top: 0,
     bottom: 0,
     width: 1,
