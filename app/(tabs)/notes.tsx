@@ -75,6 +75,8 @@ const SearchEmptyState = ({ theme }: { theme: 'light' | 'dark' }) => {
   );
 };
 
+
+
 export default function NotesScreen() {
   const insets = useSafeAreaInsets();
   const theme = useNotesStore(state => state.theme);
@@ -129,7 +131,7 @@ export default function NotesScreen() {
           runOnJS(triggerHaptic)();
         }
       } 
-      else if (scroll > 50 && isSearchLocked.value && searchQuery.length === 0) {
+      else if (scroll > 120 && isSearchLocked.value && searchQuery.length === 0) {
         isSearchLocked.value = false;
         manualPullY.value = 0;
       }
@@ -167,8 +169,8 @@ export default function NotesScreen() {
   const searchWrapperStyle = useAnimatedStyle(() => {
     const isPinned = isSearchLocked.value || searchQuery.length > 0;
     return {
-      height: withTiming(isPinned ? 70 : 0, { duration: 250 }),
-      opacity: withTiming(isPinned ? 1 : 0, { duration: 250 }),
+      height: withSpring(isPinned ? 70 : 0, { damping: 24, stiffness: 250, overshootClamping: true }),
+      opacity: withTiming(isPinned ? 1 : 0, { duration: 150 }),
     };
   });
 
@@ -228,27 +230,29 @@ export default function NotesScreen() {
           failOffsetX={[-20, 20]}
         >
           <View style={[styles.container, { paddingTop: insets.top + 20, backgroundColor: theme === 'dark' ? NightTheme.background : '#FFFFFF' }]}>
-            <Animated.View entering={FadeIn.duration(600)} style={styles.headerRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.headerTitle, { color: theme === 'dark' ? NightTheme.textPrimary : '#111111' }]}>DRIFT CHRONICLE</Text>
-                <Text style={styles.headerSubtitle}>
-                   TEMPORAL THOUGHT ARCHIVE
-                </Text>
+            <View style={styles.header}>
+              <View style={styles.headerRow}>
+                <View>
+                  <Text style={[styles.headerTitle, { color: theme === 'dark' ? NightTheme.textPrimary : '#111111' }]}>DRIFT CHRONICLE</Text>
+                  <Text style={styles.headerSubtitle}>
+                     TEMPORAL THOUGHT ARCHIVE
+                  </Text>
+                </View>
+                
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  {Platform.OS === 'android' && (
+                    <TouchableOpacity onPress={toggleSearch} style={[styles.miniBtn, { backgroundColor: isSearchLocked.value ? 'rgba(142, 68, 173, 0.1)' : 'transparent' }]}>
+                      <Search size={22} color={isSearchLocked.value ? "#8E44AD" : (theme === 'dark' ? NightTheme.textSecondary : "#666")} />
+                    </TouchableOpacity>
+                  )}
+                  {notes.length > 0 && (
+                    <TouchableOpacity onPress={handleClear} style={[styles.clearButton, { backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.05)' : '#F9F9F9' }]}>
+                      <Text style={styles.clearButtonText}>CLEAR ALL</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
-              
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                {Platform.OS === 'android' && (
-                  <TouchableOpacity onPress={toggleSearch} style={[styles.miniBtn, { backgroundColor: isSearchLocked.value ? 'rgba(142, 68, 173, 0.1)' : 'transparent' }]}>
-                    <Search size={22} color={isSearchLocked.value ? "#8E44AD" : (theme === 'dark' ? NightTheme.textSecondary : "#666")} />
-                  </TouchableOpacity>
-                )}
-                {notes.length > 0 && (
-                  <TouchableOpacity onPress={handleClear} style={[styles.clearButton, { backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.05)' : '#F9F9F9' }]}>
-                    <Text style={styles.clearButtonText}>CLEAR ALL</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            </Animated.View>
+            </View>
 
             {/* Platform Specific Search Reveal */}
             <Animated.View 
@@ -290,12 +294,14 @@ export default function NotesScreen() {
                 <Text style={[styles.emptyTextTitle, { color: theme === 'dark' ? NightTheme.textPrimary : '#111111' }]}>Gathering Stardust</Text>
                 <Text style={[styles.emptyTextSub, { color: theme === 'dark' ? NightTheme.textMuted : '#8E44AD' }]}>Your captured thoughts will synthesize here soon.</Text>
               </Animated.View>
-            ) : filteredNotes.length === 0 ? (
-              <SearchEmptyState theme={theme} />
             ) : (
               <View style={styles.listWrapper}>
-                <View style={[styles.timelineAxis, { backgroundColor: theme === 'dark' ? NightTheme.border : '#EEEEEE' }]} />
-                
+                {/* The Timeline Axis Line */}
+                <View style={[
+                  styles.timelineAxis,
+                  { backgroundColor: theme === 'dark' ? 'rgba(142, 68, 173, 0.25)' : 'rgba(142, 68, 173, 0.12)' }
+                ]} />
+
                 <FlatList
                   ref={flatListRef}
                   data={filteredNotes}
@@ -310,7 +316,7 @@ export default function NotesScreen() {
                       searchQuery={searchQuery}
                     />
                   )}
-                  contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
+                  contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100, paddingTop: 20 }]}
                   showsVerticalScrollIndicator={false}
                   onScroll={handleScroll}
                   scrollEventThrottle={16}
@@ -337,6 +343,9 @@ export default function NotesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  header: {
+    zIndex: 10,
   },
   headerRow: {
     flexDirection: 'row', 
@@ -378,18 +387,18 @@ const styles = StyleSheet.create({
     color: '#E74C3C',
     letterSpacing: 1.5,
   },
-  timelineAxis: {
-    position: 'absolute',
-    left: 44, // (24 left margin + 20 column center)
-    top: 0,
-    bottom: 0,
-    width: 1,
-    backgroundColor: '#EEEEEE',
-    zIndex: 0,
-  },
   listWrapper: {
     flex: 1,
     zIndex: 1,
+  },
+  timelineAxis: {
+    position: 'absolute',
+    left: 31,
+    top: 0,
+    bottom: 0,
+    width: 2,
+    borderRadius: 1,
+    zIndex: 0,
   },
   emptyState: {
     flex: 1,
@@ -422,14 +431,14 @@ const styles = StyleSheet.create({
   },
   searchWrapper: {
     height: Platform.OS === 'android' ? 70 : 0,
-    zIndex: 100,
+    zIndex: 2,
     overflow: 'visible',
   },
   searchContainer: {
     position: 'relative',
     height: 60,
     justifyContent: 'center',
-    zIndex: 100,
+    zIndex: 3,
     paddingHorizontal: 0,
   },
   noteContent: {

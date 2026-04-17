@@ -1,70 +1,21 @@
-import React, { useRef } from 'react';
-import { StyleSheet, Text, View, Pressable, TouchableOpacity, Animated as RNAnimated } from 'react-native';
-import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withRepeat, withTiming, withSpring } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
+import React from 'react';
+import { StyleSheet, Text, View, Pressable, TouchableOpacity, Animated as RNAnimated, Platform } from 'react-native';
+import Animated, { 
+  FadeInDown, 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withRepeat, 
+  withTiming, 
+  withSequence,
+  withDelay,
+  Easing
+} from 'react-native-reanimated';
 import { Swipeable } from 'react-native-gesture-handler';
 import { CATEGORY_COLORS } from '@/constants/Categories';
 import { useNotesStore } from '@/store/useNotesStore';
 import { NightTheme } from '@/constants/theme';
 import { Sprout } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-
-const RefiningPulse = () => {
-  const opacity = useSharedValue(0.4);
-  const scale = useSharedValue(1);
-
-  React.useEffect(() => {
-    opacity.value = withRepeat(withTiming(1, { duration: 800 }), -1, true);
-    scale.value = withRepeat(withTiming(1.5, { duration: 800 }), -1, true);
-  }, []);
-
-  const style = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-    transform: [{ scale: scale.value }],
-  }));
-
-  return <Animated.View style={[styles.refiningPulse, style]} />;
-};
-
-const ResonancePulse = ({ color }: { color: string }) => {
-  const scale = useSharedValue(1);
-  const opacity = useSharedValue(0.3);
-
-  React.useEffect(() => {
-    scale.value = withRepeat(withTiming(2.2, { duration: 2500 }), -1, true);
-    opacity.value = withRepeat(withTiming(0, { duration: 2500 }), -1, false);
-  }, []);
-
-  const style = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-    opacity: opacity.value,
-  }));
-
-  return <Animated.View style={[styles.refiningPulse, { backgroundColor: color }, style]} />;
-};
-
-const SearchMatchPulse = ({ color }: { color: string }) => {
-  const scale = useSharedValue(1);
-  const opacity = useSharedValue(0.6);
-
-  React.useEffect(() => {
-    scale.value = withRepeat(withSpring(2.5, { damping: 10, stiffness: 80 }), -1, true);
-    opacity.value = withRepeat(withTiming(0, { duration: 1200 }), -1, false);
-  }, []);
-
-  const style = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-    opacity: opacity.value,
-  }));
-
-  return (
-    <Animated.View style={[
-      styles.matchPulse, 
-      { backgroundColor: color },
-      style
-    ]} />
-  );
-};
 
 interface ArchiveNodeProps {
   note: any;
@@ -73,7 +24,39 @@ interface ArchiveNodeProps {
   onDelete: (id: string) => void;
   onSwipeStart: (ref: Swipeable | null) => void;
   searchQuery?: string;
+  scrollOffset?: any;
 }
+
+// --- Pulsating Signal Dot ---
+const SignalDot = ({ color }: { color: string }) => {
+  const scale = useSharedValue(1);
+  const opacity = useSharedValue(0.6);
+
+  React.useEffect(() => {
+    scale.value = withRepeat(
+      withTiming(1.6, { duration: 1200, easing: Easing.inOut(Easing.quad) }),
+      -1,
+      true
+    );
+    opacity.value = withRepeat(
+      withTiming(0.2, { duration: 1200, easing: Easing.inOut(Easing.quad) }),
+      -1,
+      true
+    );
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    opacity: opacity.value,
+  }));
+
+  return (
+    <View style={styles.signalContainer}>
+      <Animated.View style={[styles.signalGlow, { backgroundColor: color }, animatedStyle]} />
+      <View style={[styles.signalCore, { backgroundColor: color }]} />
+    </View>
+  );
+};
 
 export default function ArchiveNode({ 
   note, 
@@ -84,7 +67,8 @@ export default function ArchiveNode({
   searchQuery
 }: ArchiveNodeProps) {
   const theme = useNotesStore(state => state.theme);
-  const swipeableRef = useRef<Swipeable>(null);
+  const swipeableRef = React.useRef<Swipeable>(null);
+  const isDark = theme === 'dark';
   
   let category = 'Journal';
   const isRefining = note.is_refining;
@@ -96,27 +80,30 @@ export default function ArchiveNode({
     } catch (e) {}
   }
 
-  // Search Match Check
   const lowerQuery = searchQuery?.toLowerCase();
   const isMatch = !!(lowerQuery && (
     note.content.toLowerCase().includes(lowerQuery) ||
     category.toLowerCase().includes(lowerQuery)
   ));
 
-  const nodeColor = isRefining ? '#4A90E2' : (CATEGORY_COLORS[category] || '#111111');
+  const nodeColor = isRefining ? '#4A90E2' : (CATEGORY_COLORS[category] || '#8E44AD');
   const dateStr = new Date(note.created_at).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric'
   });
 
-  const renderRightActions = (progress: any, dragX: any) => {
+  const accentR = parseInt(nodeColor.slice(1, 3), 16);
+  const accentG = parseInt(nodeColor.slice(3, 5), 16);
+  const accentB = parseInt(nodeColor.slice(5, 7), 16);
+  const accentRgba = (a: number) => `rgba(${accentR},${accentG},${accentB},${a})`;
+
+  const renderRightActions = (progress: any) => {
     const scale = progress.interpolate({
       inputRange: [0, 1],
       outputRange: [0.8, 1],
       extrapolate: 'clamp',
     });
-    
     const opacity = progress.interpolate({
       inputRange: [0, 0.5, 1],
       outputRange: [0, 0, 1],
@@ -131,7 +118,7 @@ export default function ArchiveNode({
               onDelete(note.id);
               swipeableRef.current?.close();
             }}
-            style={[styles.deleteButton, { backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.1)' : '#F9F9F9' }]}
+            style={[styles.deleteButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#FFF5F5' }]}
           >
             <Text style={styles.deleteButtonText}>Delete</Text>
           </TouchableOpacity>
@@ -147,9 +134,11 @@ export default function ArchiveNode({
     useNotesStore.getState().toggleStudioSeed(note.id);
   };
 
+  const isTruncated = note.content.length > 115 || note.content.split('\n').length > 3;
+
   return (
     <Animated.View 
-      entering={FadeInDown.delay(index * 60).duration(800).springify().damping(12).stiffness(100)}
+      entering={FadeInDown.delay(index * 50).duration(600).springify().damping(18).stiffness(140)}
       style={styles.wrapper}
     >
       <Swipeable
@@ -164,59 +153,77 @@ export default function ArchiveNode({
         <Pressable 
           style={({ pressed }) => [
             styles.container,
-            pressed && styles.pressed,
-            isMatch && styles.matchContainer
+            pressed && { opacity: 0.75 }
           ]} 
           onPress={() => onPress(note)}
         >
-          {/* The Node Dot - Column is transparent to show the timeline axis behind it */}
+          {/* Timeline Node Column */}
           <View style={styles.nodeColumn}>
-            {isRefining && <RefiningPulse />}
-            {isMatch && <SearchMatchPulse color={nodeColor} />}
-            {(!isRefining && !isMatch && (Date.now() - note.created_at < 12 * 3600000)) && <ResonancePulse color={nodeColor} />}
+            {/* The Node Dot */}
             <View style={[
-              styles.dot, 
-              { backgroundColor: nodeColor },
-              isMatch && { 
-                shadowColor: nodeColor, 
-                shadowOpacity: 1, 
-                shadowRadius: 15, 
-                elevation: 10,
-                transform: [{ scale: 1.2 }]
+              styles.nodeDot,
+              { 
+                backgroundColor: nodeColor,
+                shadowColor: nodeColor,
+                shadowOpacity: isDark ? 0.8 : 0.4,
+                shadowRadius: isDark ? 8 : 4,
+                shadowOffset: { width: 0, height: 0 },
+                elevation: 3,
               }
             ]} />
           </View>
-          
-          {/* Content area is colored to hide the delete button behind it */}
-          <View style={[styles.contentContainer, { backgroundColor: theme === 'dark' ? NightTheme.background : '#FFFFFF' }, isMatch && (theme === 'dark' ? { backgroundColor: 'rgba(142, 68, 173, 0.15)' } : styles.matchContent)]}>
+
+          {/* Floating Note Card */}
+          <View style={[
+            styles.card,
+            isDark ? {
+              backgroundColor: 'rgba(255,255,255,0.04)',
+              borderColor: 'rgba(255,255,255,0.08)',
+              borderWidth: 1,
+            } : {
+              backgroundColor: '#FFFFFF',
+              borderColor: accentRgba(0.08),
+              borderWidth: 1,
+              ...(Platform.OS === 'ios' ? {
+                shadowColor: 'rgba(0,0,0,0.08)',
+                shadowOffset: { width: 0, height: 6 },
+                shadowOpacity: 1,
+                shadowRadius: 20,
+              } : { elevation: 3 }),
+            }
+          ]}>
+            {/* Header */}
             <View style={styles.headerRow}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <View style={styles.categoryRow}>
                 <Text style={[styles.categoryText, { color: nodeColor }]}>
                   {isRefining ? 'REFINING...' : category.toUpperCase()}
                 </Text>
-                <TouchableOpacity onPress={handleToggleSeed} style={styles.seedIcon}>
+                <TouchableOpacity onPress={handleToggleSeed} hitSlop={8}>
                   <Sprout 
-                    size={12} 
-                    color={isSeed ? '#8E44AD' : (theme === 'dark' ? NightTheme.textMuted : '#CCCCCC')} 
+                    size={11} 
+                    color={isSeed ? '#8E44AD' : (isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)')} 
                     strokeWidth={isSeed ? 3 : 1.5}
                   />
                 </TouchableOpacity>
               </View>
-              <Text style={[styles.dateText, { color: theme === 'dark' ? NightTheme.textMuted : '#CCCCCC' }]}>{dateStr}</Text>
+              <Text style={[styles.dateText, { color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.35)' }]}>
+                {dateStr}
+              </Text>
             </View>
             
-            <View style={styles.textWrapper}>
-              <Text style={[styles.contentText, { color: theme === 'dark' ? NightTheme.textPrimary : '#111111' }]} numberOfLines={3}>
-                {note.content}
-              </Text>
-              {/* Expansion Blur Effect */}
-              {!isMatch && (
-                <LinearGradient
-                  colors={theme === 'dark' ? ['rgba(0,0,0,0)', 'rgba(0,0,0,0.9)'] : ['rgba(255,255,255,0)', 'rgba(255,255,255,0.9)']}
-                  style={styles.textBlur}
-                />
-              )}
-            </View>
+            {/* Body */}
+            <Text 
+              style={[
+                styles.contentText, 
+                { color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.7)' }
+              ]} 
+              numberOfLines={3}
+            >
+              {note.content}
+            </Text>
+
+            {/* Neural Signal Dot (Inside card) */}
+            {isTruncated && <SignalDot color="#8E44AD" />}
           </View>
         </Pressable>
       </Swipeable>
@@ -234,111 +241,96 @@ const styles = StyleSheet.create({
   },
   container: {
     flexDirection: 'row',
-    marginBottom: 80, 
-    paddingLeft: 24, // Matches standard app gutter
+    paddingRight: 20,
+    marginBottom: 24,
     backgroundColor: 'transparent', 
   },
-  matchContainer: {
-    // Subtle highlight for matches
-  },
-  pressed: {
-    opacity: 0.7,
-  },
+  // The timeline axis column
   nodeColumn: {
-    width: 40,
+    width: 64,
     alignItems: 'center',
-    paddingTop: 4, 
-    backgroundColor: 'transparent',
+    paddingTop: 22,
   },
-  dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    zIndex: 20, 
-  },
-  refiningPulse: {
-    position: 'absolute',
-    top: 4,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#4A90E2',
-    opacity: 0.5,
-  },
-  matchPulse: {
-    position: 'absolute',
-    top: 4,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+  nodeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     zIndex: 10,
   },
-  contentContainer: {
+  // The floating card
+  card: {
     flex: 1,
-    paddingLeft: 12,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  matchContent: {
-    backgroundColor: 'rgba(142, 68, 173, 0.05)', 
+    borderRadius: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    height: 130, // Locked height for consistency
+    overflow: 'hidden',
   },
   headerRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingRight: 10,
-    marginBottom: 8,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  categoryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   categoryText: {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '700',
-    letterSpacing: 2,
-  },
-  seedIcon: {
-    padding: 4,
+    letterSpacing: 1.5,
   },
   dateText: {
     fontSize: 10,
-    color: '#CCCCCC',
     fontWeight: '500',
-    letterSpacing: 0.5,
-  },
-  textWrapper: {
-    position: 'relative',
+    letterSpacing: 0.3,
   },
   contentText: {
-    fontSize: 17,
-    color: '#111111',
-    lineHeight: 25,
+    fontSize: 15,
     fontWeight: '300',
-    paddingRight: 60, 
+    lineHeight: 23,
+    letterSpacing: 0.15,
   },
-  textBlur: {
+  signalContainer: {
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 30,
+    bottom: 12,
+    right: 12,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 100,
+  },
+  signalCore: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    zIndex: 2,
+  },
+  signalGlow: {
+    position: 'absolute',
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    zIndex: 1,
   },
   deleteActionContainer: {
-    width: 100,
+    width: 90,
     height: '100%',
-    justifyContent: 'flex-start',
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingLeft: 10,
-    paddingBottom: 80, 
   },
   deleteButton: {
-    backgroundColor: '#F9F9F9',
     paddingVertical: 10,
     paddingHorizontal: 16,
-    borderRadius: 20,
-    marginTop: 28, // Correctly centered with text relative to headerRow elevation
+    borderRadius: 14,
   },
   deleteButtonText: {
     fontSize: 10,
     fontWeight: '700',
     color: '#E74C3C',
-    letterSpacing: 1.5,
+    letterSpacing: 1,
   },
 });

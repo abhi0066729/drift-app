@@ -431,7 +431,7 @@ const styles = StyleSheet.create({
   commitButtonText: { fontWeight: '700', fontSize: 10, letterSpacing: 1.5 },
   closeButton: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
   closeButtonText: { fontSize: 18, fontWeight: '300' },
-  hubWrapper: { alignItems: 'center', marginBottom: 20 },
+  hubWrapper: { alignItems: 'center', marginTop: 32, marginBottom: 8 },
   predictionBadge: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   badgeLine: { height: 1, width: 20 },
   categoryLabel: { fontSize: 9, letterSpacing: 2.0, textTransform: 'uppercase', fontWeight: '700' },
