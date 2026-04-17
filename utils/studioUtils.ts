@@ -56,7 +56,7 @@ export function growKnowledgeTree(allNotes: Note[], seedIds: string[]): BranchNo
     const connected = scoredNotes
       .filter(sn => sn.score > 0)
       .sort((a, b) => b.score - a.score || b.note.created_at - a.note.created_at)
-      .slice(0, 6) 
+      .slice(0, 20) // Uncapped to 20 for stress testing
       .map(sn => sn.note);
 
     return {
