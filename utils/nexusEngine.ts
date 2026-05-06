@@ -93,7 +93,7 @@ export function computeConstellations(notes: Note[]): NexusLayout {
   visible.forEach(n => noteMap.set(n.id, n));
 
   const center = { x: width / 2, y: height / 2 };
-  const galaxyRadius = Math.max(width, height) * 1.5;
+  const galaxyRadius = Math.max(width, height) * 0.75;
 
   // 1. Truly Uniform Scatter via seeded PRNG
   const nodes: NexusNode[] = [];

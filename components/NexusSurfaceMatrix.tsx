@@ -9,7 +9,7 @@
 
 import * as Haptics from 'expo-haptics';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Dimensions, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   Gesture,
   GestureDetector,
@@ -18,6 +18,7 @@ import {
 import Animated, {
   Easing,
   FadeIn,
+  FadeOut,
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
@@ -26,8 +27,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import Svg, { Line, Circle } from 'react-native-svg';
+import { BlurView } from 'expo-blur';
 
-import ReadingModal from '@/components/ReadingModal';
 import { useNotesStore } from '@/store/useNotesStore';
 import { computeConstellations, NexusNode } from '@/utils/nexusEngine';
 
@@ -39,11 +40,11 @@ const StellarDot = React.memo(({
   onTap,
 }: {
   node: NexusNode;
-  onTap: (n: NexusNode) => void;
+  onTap: (n: NexusNode, sx: number, sy: number) => void;
 }) => {
-  const tap = Gesture.Tap().onEnd(() => {
+  const tap = Gesture.Tap().onEnd((e) => {
     'worklet';
-    runOnJS(onTap)(node);
+    runOnJS(onTap)(node, e.absoluteX, e.absoluteY);
   });
   const hitSize = 36;
   return (
@@ -89,12 +90,51 @@ const GalacticDust = React.memo(({ node }: { node: NexusNode }) => (
   />
 ));
 
+// ─── Inline Node Expand Card (Chronos-style, no modal) ────────────────────────
+const NodeExpandCard = React.memo(({ node, screenX, screenY, onClose }: {
+  node: NexusNode;
+  screenX: number;
+  screenY: number;
+  onClose: () => void;
+}) => {
+  const cardH = 200;
+  const topPos = screenY - cardH - 24 > 80 ? screenY - cardH - 24 : screenY + 24;
+  const leftPos = Math.max(16, Math.min(width - 280, screenX - 130));
+  const date = node.created_at
+    ? new Date(node.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    : '';
+  return (
+    <Animated.View
+      entering={FadeIn.duration(180)}
+      exiting={FadeOut.duration(140)}
+      style={[styles.expandCard, { top: topPos, left: leftPos }]}
+    >
+      <BlurView intensity={60} tint="dark" style={StyleSheet.absoluteFill} />
+      <Pressable style={styles.expandDismiss} onPress={onClose}>
+        <View style={styles.expandInner}>
+          <View style={styles.expandHeader}>
+            <Text style={styles.expandCategory}>
+              {(node.category || node.clusterId || 'NOTE').toUpperCase()}
+            </Text>
+            {node.emotion ? <Text style={styles.expandEmotion}>{node.emotion}</Text> : null}
+            <Text style={styles.expandDate}>{date}</Text>
+          </View>
+          <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 130 }}>
+            <Text style={styles.expandContent}>{node.content}</Text>
+          </ScrollView>
+          <Text style={styles.expandHint}>TAP TO DISMISS</Text>
+        </View>
+      </Pressable>
+    </Animated.View>
+  );
+});
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function NexusSurfaceMatrix() {
   const notes = useNotesStore(state => state.notes);
   const addNote = useNotesStore(state => state.addNote);
-  const [readingNode, setReadingNode] = useState<NexusNode | null>(null);
+  const [expandState, setExpandState] = useState<{ node: NexusNode; sx: number; sy: number } | null>(null);
 
   const tx = useSharedValue(0);
   const ty = useSharedValue(0);
@@ -144,9 +184,9 @@ export default function NexusSurfaceMatrix() {
     savedSc.value = targetSc;
   }, [layout.bounds]);
 
-  const handleTap = useCallback((node: NexusNode) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => { });
-    setReadingNode(node);
+  const handleTap = useCallback((node: NexusNode, absoluteX: number, absoluteY: number) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    setExpandState({ node, sx: absoluteX, sy: absoluteY });
   }, []);
 
   const seed100Thoughts = useCallback(() => {
@@ -318,10 +358,12 @@ export default function NexusSurfaceMatrix() {
         </GestureDetector>
       </View>
 
-      {readingNode && (
-        <ReadingModal
-          node={readingNode}
-          onClose={() => setReadingNode(null)}
+      {expandState && (
+        <NodeExpandCard
+          node={expandState.node}
+          screenX={expandState.sx}
+          screenY={expandState.sy}
+          onClose={() => setExpandState(null)}
         />
       )}
     </GestureHandlerRootView>
@@ -330,11 +372,7 @@ export default function NexusSurfaceMatrix() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  svgLayer: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-  },
+  svgLayer: { position: 'absolute', left: 0, top: 0 },
   footer: {
     position: 'absolute',
     bottom: 45,
@@ -348,5 +386,56 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 2,
     textTransform: 'uppercase',
+  },
+  // Inline expand card
+  expandCard: {
+    position: 'absolute',
+    width: 264,
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 0.5,
+    borderColor: 'rgba(255,255,255,0.12)',
+    zIndex: 9999,
+  },
+  expandDismiss: { flex: 1 },
+  expandInner: { padding: 16 },
+  expandHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+    gap: 8,
+  },
+  expandCategory: {
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 2,
+    color: 'rgba(255,255,255,0.5)',
+    flex: 1,
+  },
+  expandEmotion: {
+    fontSize: 9,
+    color: 'rgba(255,200,100,0.7)',
+    letterSpacing: 1,
+    fontWeight: '600',
+    textTransform: 'capitalize',
+  },
+  expandDate: {
+    fontSize: 9,
+    color: 'rgba(255,255,255,0.3)',
+    letterSpacing: 1,
+  },
+  expandContent: {
+    fontSize: 15,
+    fontWeight: '300',
+    lineHeight: 23,
+    color: 'rgba(255,255,255,0.9)',
+  },
+  expandHint: {
+    marginTop: 12,
+    fontSize: 8,
+    color: 'rgba(255,255,255,0.2)',
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    textAlign: 'center',
   },
 });
