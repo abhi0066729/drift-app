@@ -25,7 +25,7 @@ import ScrollToTopButton from '@/components/ScrollToTopButton';
 import ReadingModal from '@/components/ReadingModal';
 import * as Haptics from 'expo-haptics';
 import { NightTheme } from '@/constants/theme';
-import { generateMentalPattern, generateSmartInsight } from '@/utils/noteUtils';
+
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 

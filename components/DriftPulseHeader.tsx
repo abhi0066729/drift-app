@@ -1,24 +1,14 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
-import { generateMentalPattern } from '@/utils/noteUtils';
+
 
 interface DriftPulseHeaderProps {
   notes: any[];
 }
 
 export default function DriftPulseHeader({ notes }: DriftPulseHeaderProps) {
-  const pulseMessage = useMemo(() => generateMentalPattern(notes), [notes]);
-
-  return (
-    <Animated.View 
-      entering={FadeInUp.delay(300).duration(800)}
-      style={styles.container}
-    >
-      <View style={styles.pulseIndicator} />
-      <Text style={styles.pulseText}>"{pulseMessage}"</Text>
-    </Animated.View>
-  );
+  return null;
 }
 
 const styles = StyleSheet.create({

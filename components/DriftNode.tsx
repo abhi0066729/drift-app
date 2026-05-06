@@ -19,11 +19,10 @@ interface DriftNodeProps {
   onDragUpdateSharedCategory?: SharedValue<string | undefined>;
   onDragEnd?: (x: number, y: number, category: string | undefined) => void;
   scrollY?: SharedValue<number>;
-  activeView: 'chronos' | 'nexus';
+  activeView?: 'chronos' | 'nexus';
   searchStatus?: 'match' | 'dim' | 'none';
   isFirst?: boolean;
   isInHull?: boolean;
-  nexusCoords?: { x: number, y: number };
 }
 
 const CATEGORIES = Object.keys(CATEGORY_COLORS);
@@ -34,7 +33,7 @@ const PADDING = 20;
 const PORTAL_CENTER_X = SCREEN_WIDTH / 2;
 const PORTAL_CENTER_Y = SCREEN_HEIGHT / 2.3;
 
-function DriftNode({ node, onPress, onDragStart, onDragUpdateSharedX, onDragUpdateSharedY, onDragUpdateSharedCategory, onDragEnd, scrollY, activeView, searchStatus = 'none', isFirst, isInHull, nexusCoords }: DriftNodeProps) {
+function DriftNode({ node, onPress, onDragStart, onDragUpdateSharedX, onDragUpdateSharedY, onDragUpdateSharedCategory, onDragEnd, scrollY, activeView, searchStatus = 'none', isFirst, isInHull }: DriftNodeProps) {
   const theme = useNotesStore(state => state.theme);
   const localYBase = node.unfocusedY - 60;
   const isRefining = node.is_refining;
@@ -126,61 +125,41 @@ function DriftNode({ node, onPress, onDragStart, onDragUpdateSharedX, onDragUpda
   const startViewportY = useSharedValue(0);
 
   const containerStyle = useAnimatedStyle(() => {
-    const isNexus = activeView === 'nexus';
-    // Spectral Culling: Dim notes that aren't in a cluster during Nexus mode
-    // Boosted slightly (0.08 -> 0.22) for better visibility of the "Whisper" state
-    let targetOpacity = isNexus ? (isInHull ? 0.35 + (importanceScore * 0.65) : 0.22) : 0.9;
+    let targetOpacity = 0.9;
     if (searchStatus === 'dim') targetOpacity = 0.05;
     else if (searchStatus === 'match') targetOpacity = 1.0;
 
-    // While dragging: ghost the origin node so the user focuses on the halo
-    const currentBaseX = isNexus ? (nexusCoords?.x || node.unfocusedX) : node.unfocusedX;
-    const currentBaseY = isNexus ? (nexusCoords?.y ?? node.unfocusedY) : node.unfocusedY;
+    const currentBaseX = node.unfocusedX;
+    const currentBaseY = node.unfocusedY;
     const dragOpacity = isDragging.value ? withTiming(0.12, { duration: 200 }) : withTiming(targetOpacity, { duration: 300 });
 
     return {
       top: isDragging.value ? localYBase + dragY.value : withSpring(currentBaseY - 60 + dragY.value, { damping: 25, stiffness: 60 }),
       left: withSpring(currentBaseX + dragX.value, { damping: 28, stiffness: 80 }),
-      zIndex: isDragging.value ? 5000 : (searchStatus === 'match' ? 100 : (activeView === 'nexus' && isInHull ? 20 : 2)),
+      zIndex: isDragging.value ? 5000 : (searchStatus === 'match' ? 100 : 2),
       transform: [{ scale: withSpring(isDragging.value ? 1.25 : 1.0) }],
       opacity: dragOpacity,
     };
-  }, [activeView, importanceScore, searchStatus, localYBase, mainColor, nexusCoords, node.unfocusedX, node.unfocusedY, isInHull]);
+  }, [importanceScore, searchStatus, localYBase, mainColor, node.unfocusedX, node.unfocusedY, isInHull]);
 
   const innerContentStyle = useAnimatedStyle(() => {
-    const isNexus = activeView === 'nexus';
-    const isChronos = activeView === 'chronos';
-    const isBlackNode = mainColor === '#111111';
-    const isPurpleNode = mainColor === '#8E44AD';
-    
-    let viewMultiplier = 1.0;
-    if (isChronos && isBlackNode) viewMultiplier = 1.05; 
-    if (isNexus && isPurpleNode) viewMultiplier = 1.1; 
-    
-    const isUrgentTodo = node.category === 'Todo' && node.urgency === 'high';
-    
-    let targetScale = (isNexus ? (isInHull ? 0.6 + (importanceScore * 0.5) : 0.45) : 0.85) * viewMultiplier;
+    let targetScale = 0.85;
     if (searchStatus === 'dim') targetScale = targetScale * 0.8;
     else if (searchStatus === 'match') targetScale = targetScale * 1.15;
 
-    // Nexus 9.0: The Vanishing Action (Leaning Forward)
-    if (isUrgentTodo && isNexus) {
-      targetScale = targetScale * 1.25;
-    }
-
-    let targetOpacity = isNexus ? (isInHull ? 0.6 + (importanceScore * 0.4) : 0.0) : 1.0;
+    let targetOpacity = 1.0;
     if (searchStatus === 'dim') targetOpacity = 0.4;
     else if (searchStatus === 'match') targetOpacity = 1.0;
 
     return {
       transform: [
         { scale: withSpring(targetScale, { damping: 20, stiffness: 90 }) },
-        { rotateX: isUrgentTodo && isNexus ? withRepeat(withTiming('-15deg', { duration: 2000 }), -1, true) : '0deg' },
+        { rotateX: '0deg' },
         { perspective: 1000 }
       ],
       opacity: withTiming(targetOpacity, { duration: 400 })
     };
-  }, [activeView, importanceScore, searchStatus, mainColor, isInHull]);
+  }, [importanceScore, searchStatus, mainColor, isInHull]);
 
   const longPressGesture = Gesture.Pan()
     .activateAfterLongPress(400)
@@ -316,10 +295,7 @@ export default memo(DriftNode, (prev, next) => {
     prev.node.id === next.node.id &&
     prev.node.unfocusedY === next.node.unfocusedY &&
     prev.node.unfocusedX === next.node.unfocusedX &&
-    prev.activeView === next.activeView &&
     prev.isInHull === next.isInHull &&
-    prev.nexusCoords?.x === next.nexusCoords?.x &&
-    prev.nexusCoords?.y === next.nexusCoords?.y &&
     prev.searchStatus === next.searchStatus &&
     prev.isFirst === next.isFirst
   );

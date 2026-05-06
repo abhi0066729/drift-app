@@ -1,36 +1,35 @@
-import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react';
-import { Dimensions, StyleSheet, Text, View, Pressable, TextInput, Alert, KeyboardAvoidingView, Platform, Keyboard, TouchableOpacity, TouchableWithoutFeedback } from 'react-native';
-import { BlurView } from 'expo-blur';
-import Animated, { 
-  useSharedValue, 
-  useAnimatedStyle, 
-  withSpring, 
-  withTiming, 
-  interpolate, 
-  Extrapolate, 
-  useAnimatedReaction, 
-  runOnJS, 
-  FadeIn, 
+import ChronosNexusToggle from '@/components/ChronosNexusToggle';
+import GhostOverlay from '@/components/GhostOverlay';
+import KineticFocusMap from '@/components/KineticFocusMap';
+import ReadingModal from '@/components/ReadingModal';
+import ScrollToTopButton from '@/components/ScrollToTopButton';
+import UserModeMap from '@/components/UserModeMap';
+import { NightTheme } from '@/constants/theme';
+import { useNotesStore } from '@/store/useNotesStore';
+import { calculateSearchMatch, generateFullGhostPool, processContextualConnections } from '@/utils/noteUtils';
+import * as Haptics from 'expo-haptics';
+import { useFocusEffect } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Dimensions, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import Animated, {
+  Extrapolate,
+  FadeIn,
   FadeOut,
-  useAnimatedProps
+  interpolate,
+  runOnJS,
+  useAnimatedProps,
+  useAnimatedReaction,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useFocusEffect } from 'expo-router';
-import * as Haptics from 'expo-haptics';
-import { useNotesStore } from '@/store/useNotesStore';
 import { useShallow } from 'zustand/react/shallow';
-import { NightTheme } from '@/constants/theme';
-import KineticFocusMap from '@/components/KineticFocusMap';
-import GhostOverlay from '@/components/GhostOverlay';
-import ReadingModal from '@/components/ReadingModal';
-import ChronosNexusToggle from '@/components/ChronosNexusToggle';
-import UserModeMap from '@/components/UserModeMap';
-import ScrollToTopButton from '@/components/ScrollToTopButton';
-import { generateFullGhostPool, processContextualConnections, calculateSearchMatch } from '@/utils/noteUtils';
 
-import { TapGestureHandler, State, GestureHandlerRootView, PanGestureHandler } from 'react-native-gesture-handler';
-import { SearchX, Moon, Sun, Search, Sparkles } from 'lucide-react-native';
 import { seedSyntheticMemories } from '@/utils/seedingUtils';
+import { Moon, Search, SearchX, Sun } from 'lucide-react-native';
+import { PanGestureHandler, State, TapGestureHandler } from 'react-native-gesture-handler';
 
 const { width, height } = Dimensions.get('window');
 
@@ -42,12 +41,12 @@ const MapSearchEmptyState = () => {
     "The coordinates of this keyword are missing.",
     "Ripples don't reach this far into the drift."
   ];
-  
+
   const randomLine = useMemo(() => poeticLines[Math.floor(Math.random() * poeticLines.length)], []);
 
   return (
-    <Animated.View 
-      entering={FadeIn.duration(800)} 
+    <Animated.View
+      entering={FadeIn.duration(800)}
       exiting={FadeOut.duration(400)}
       style={styles.mapEmptySearchContainer}
       pointerEvents="none"
@@ -71,21 +70,21 @@ export default function HomeScreen() {
   const [readingNode, setReadingNode] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showScrollTop, setShowScrollTop] = useState(false);
-  
+
   const mapRef = useRef<any>(null);
-  
+
   // Search Reveal State
   const scrollOffset = useSharedValue(0);
   const searchThresholdMet = useSharedValue(false);
   const isSearchLocked = useSharedValue(false);
   const manualPullY = useSharedValue(0);
-  
+
   useFocusEffect(
     useCallback(() => {
       setFocusRootNode(null);
       setExpandedGhostId(null);
       setReadingNode(null);
-      return () => {};
+      return () => { };
     }, [])
   );
 
@@ -105,7 +104,7 @@ export default function HomeScreen() {
     }));
     return [...notes, ...adjustedGhosts];
   }, [notes]);
-  
+
   const mappedNotes = useMemo(() => processContextualConnections(displayNotes, width, searchQuery), [displayNotes, searchQuery]);
   const totalHeight = mappedNotes.length > 0 ? mappedNotes[mappedNotes.length - 1].unfocusedY + 500 : height;
 
@@ -128,36 +127,16 @@ export default function HomeScreen() {
         { id: `p9-${Date.now()}`, content: "Another focused ideation point.", created_at: Date.now() - 900000, entities_json: JSON.stringify({ category: 'Idea', emotion: 'clear' }) },
         { id: `p10-${Date.now()}`, content: "Final baseline entry. Pure dimension.", created_at: Date.now() - 1000000, entities_json: JSON.stringify({ category: 'Journal', emotion: 'grounded' }) },
       ];
-      
+
       seedData.reverse().forEach(n => addNote(n as any));
-      try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch(e){}
+      try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch (e) { }
       Alert.alert("Pure Baseline Initialized", "10 single-dimension thoughts have been imported.");
     }
   };
 
-  const handleDoubleTapResonance = (event: any) => {
-    if (event.nativeEvent.state === State.ACTIVE) {
-      const resonanceData = [
-        { id: `r1-${Date.now()}`, content: "SYNTHESIS: The intersection of Creative flow and Study disciplines. A hybrid masterpiece.", created_at: Date.now() - 150000, entities_json: JSON.stringify({ category: 'Creative', emotion: 'euphoric', resonances: { 'Creative': 0.9, 'Study': 0.7 } }) },
-        { id: `r2-${Date.now()}`, content: "DREAM-IDEATION: Mapping subconscious metaphors onto real-world technical problems.", created_at: Date.now() - 250000, entities_json: JSON.stringify({ category: 'Dream', emotion: 'ethereal', resonances: { 'Dream': 0.8, 'Idea': 0.8 } }) },
-        { id: `r3-${Date.now()}`, content: "JOURNAL-ACTION: Turning emotional anxiety into productive Todo lists.", created_at: Date.now() - 350000, entities_json: JSON.stringify({ category: 'Journal', emotion: 'determined', resonances: { 'Journal': 0.7, 'Todo': 0.9 } }) },
-        { id: `r4-${Date.now()}`, content: "RESEARCH-REFLECTION: Critiquing theoretical models against personal history.", created_at: Date.now() - 450000, entities_json: JSON.stringify({ category: 'Research', emotion: 'analytical', resonances: { 'Research': 0.8, 'Reflection': 0.6 } }) },
-        { id: `r5-${Date.now()}`, content: "MEETING-CREATIVE: Synthesis between user feedback and aesthetic vision.", created_at: Date.now() - 550000, entities_json: JSON.stringify({ category: 'Meeting', emotion: 'inspired', resonances: { 'Meeting': 0.8, 'Creative': 0.8 } }) },
-        { id: `r6-${Date.now()}`, content: "STUDY-JOURNAL: Documenting the psychological state of deep learning.", created_at: Date.now() - 650000, entities_json: JSON.stringify({ category: 'Study', emotion: 'deep', resonances: { 'Study': 0.9, 'Journal': 0.5 } }) },
-        { id: `r7-${Date.now()}`, content: "IDEA-TODO: Bridging the gap between a vision and the next concrete step.", created_at: Date.now() - 750000, entities_json: JSON.stringify({ category: 'Idea', emotion: 'urgent', resonances: { 'Idea': 0.9, 'Todo': 0.7 } }) },
-        { id: `r8-${Date.now()}`, content: "REFLECTION-DREAM: Is this reality or just a really high-performance simulation?", created_at: Date.now() - 850000, entities_json: JSON.stringify({ category: 'Reflection', emotion: 'mystic', resonances: { 'Reflection': 0.8, 'Dream': 0.8 } }) },
-        { id: `r9-${Date.now()}`, content: "ACTION-CREATIVE: Pure kinetic expression in the codebase. Hard logic vs liquid design.", created_at: Date.now() - 950000, entities_json: JSON.stringify({ category: 'Action', emotion: 'kinetic', resonances: { 'Action': 0.9, 'Creative': 0.6 } }) },
-        { id: `r10-${Date.now()}`, content: "FINAL SYNTHESIS: The ultimate convergence of every dimensional wavelength.", created_at: Date.now() - 1050000, entities_json: JSON.stringify({ category: 'Synthesis', emotion: 'complete', resonances: { 'Synthesis': 1.0, 'Dream': 0.5, 'Idea': 0.5, 'Journal': 0.5 } }) },
-      ];
-      
-      resonanceData.reverse().forEach(n => addNote(n as any));
-      try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch(e){}
-      Alert.alert("Resonance Spectrum Localized", "10 high-dimensional synthesized thoughts have been added.");
-    }
-  };
 
   const triggerHaptic = () => {
-    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch(e){}
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch (e) { }
   };
 
   useAnimatedReaction(
@@ -173,12 +152,12 @@ export default function HomeScreen() {
           searchThresholdMet.value = true;
           runOnJS(triggerHaptic)();
         }
-      } 
+      }
       else if (scroll > 50 && isSearchLocked.value && searchQuery.length === 0) {
         isSearchLocked.value = false;
         manualPullY.value = 0;
       }
-      
+
       if (scroll >= 0 && Platform.OS === 'ios') {
         searchThresholdMet.value = false;
       }
@@ -215,7 +194,7 @@ export default function HomeScreen() {
     }
 
     const isPinned = isSearchLocked.value || searchQuery.length > 0;
-    
+
     return {
       transform: [{ translateY: withSpring(isPinned ? 0 : scrollRevealY, { damping: 20, stiffness: 120 }) }],
       opacity: withTiming(isPinned ? 1 : scrollRevealOpacity, { duration: 200 }),
@@ -250,7 +229,7 @@ export default function HomeScreen() {
   const toggleSearch = () => {
     isSearchLocked.value = !isSearchLocked.value;
     if (isSearchLocked.value) {
-      try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch(e){}
+      try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch (e) { }
     }
   };
 
@@ -262,58 +241,58 @@ export default function HomeScreen() {
   const expandedGhostNode = mappedNotes.find((n: any) => n.id === expandedGhostId);
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={{ flex: 1 }}
       keyboardVerticalOffset={-100} // Shift up more when keyboard is active
     >
-        <View style={[styles.container, { paddingTop: insets.top + 20, backgroundColor: theme === 'dark' ? NightTheme.background : '#FFFFFF' }]}>
-          <View style={[styles.header, { backgroundColor: theme === 'dark' ? NightTheme.background : '#FFFFFF' }]}>
-            <View style={styles.headerTextContainer}>
-              <View>
-                <Text style={[styles.title, { color: theme === 'dark' ? '#E8E6E0' : '#111111' }]}>DRIFT MAP</Text>
-                <Text style={styles.subtitle}>KINETIC SEMANTIC SYNTHESIS</Text>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                <TouchableOpacity onPress={toggleSearch} style={[styles.themeToggleBtn, { backgroundColor: isSearchLocked.value ? 'rgba(142, 68, 173, 0.1)' : 'transparent' }]}>
-                   <Search size={20} color={isSearchLocked.value ? "#8E44AD" : (theme === 'dark' ? '#E8E6E0' : '#111111')} strokeWidth={2} />
-                </TouchableOpacity>
-                <Pressable onPress={toggleTheme} style={styles.themeToggleBtn}>
-                  {theme === 'dark' ? (
-                    <Sun size={20} color="#E8E6E0" strokeWidth={2} />
-                  ) : (
-                    <Moon size={20} color="#111111" strokeWidth={2} />
-                  )}
-                </Pressable>
-              </View>
+      <View style={[styles.container, { paddingTop: insets.top + 20, backgroundColor: theme === 'dark' ? NightTheme.background : '#FFFFFF' }]}>
+        <View style={[styles.header, { backgroundColor: theme === 'dark' ? NightTheme.background : '#FFFFFF' }]}>
+          <View style={styles.headerTextContainer}>
+            <View>
+              <Text style={[styles.title, { color: theme === 'dark' ? '#E8E6E0' : '#111111' }]}>DRIFT MAP</Text>
+              <Text style={styles.subtitle}>KINETIC SEMANTIC SYNTHESIS</Text>
             </View>
-            <View style={styles.toggleContainer}>
-              <ChronosNexusToggle activeView={activeView} onToggle={setActiveView} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <TouchableOpacity onPress={toggleSearch} style={[styles.themeToggleBtn, { backgroundColor: isSearchLocked.value ? 'rgba(142, 68, 173, 0.1)' : 'transparent' }]}>
+                <Search size={20} color={isSearchLocked.value ? "#8E44AD" : (theme === 'dark' ? '#E8E6E0' : '#111111')} strokeWidth={2} />
+              </TouchableOpacity>
+              <Pressable onPress={toggleTheme} style={styles.themeToggleBtn}>
+                {theme === 'dark' ? (
+                  <Sun size={20} color="#E8E6E0" strokeWidth={2} />
+                ) : (
+                  <Moon size={20} color="#111111" strokeWidth={2} />
+                )}
+              </Pressable>
             </View>
           </View>
+          <View style={styles.toggleContainer}>
+            <ChronosNexusToggle activeView={activeView} onToggle={setActiveView} />
+          </View>
+        </View>
 
-          {!hasSearchMatches && <MapSearchEmptyState />}
+        {!hasSearchMatches && <MapSearchEmptyState />}
 
-          <PanGestureHandler 
-            enabled={Platform.OS === 'ios'}
-            onGestureEvent={onGestureEvent} 
-            onHandlerStateChange={onHandlerStateChange}
-            activeOffsetY={40} // Simple numeric threshold for downward pull
-            failOffsetX={[-20, 20]}
-          >
-            <View style={{ flex: 1 }}>
-              {displayNotes.length === 0 ? (
-                <TapGestureHandler onHandlerStateChange={handleDoubleTapSeed} numberOfTaps={2}>
-                  <View style={{ flex: 1, justifyContent: 'center' }}>
-                    <Text style={styles.emptyText}>The void is empty. Double tap to seed wavelengths.</Text>
-                  </View>
-                </TapGestureHandler>
-              ) : (
-                <View style={{ flex: 1 }}>
+        <PanGestureHandler
+          enabled={Platform.OS === 'ios'}
+          onGestureEvent={onGestureEvent}
+          onHandlerStateChange={onHandlerStateChange}
+          activeOffsetY={40} // Simple numeric threshold for downward pull
+          failOffsetX={[-20, 20]}
+        >
+          <View style={{ flex: 1 }}>
+            {displayNotes.length === 0 ? (
+              <TapGestureHandler onHandlerStateChange={handleDoubleTapSeed} numberOfTaps={2}>
+                <View style={{ flex: 1, justifyContent: 'center' }}>
+                  <Text style={styles.emptyText}>The void is empty. Double tap to seed wavelengths.</Text>
+                </View>
+              </TapGestureHandler>
+            ) : (
+              <View style={{ flex: 1 }}>
                 {activeView === 'chronos' && (
-                  <Animated.View 
+                  <Animated.View
                     style={[
-                      styles.searchContainer, 
+                      styles.searchContainer,
                       searchBarStyle,
                       { backgroundColor: theme === 'dark' ? NightTheme.background : 'rgba(255,255,255,0.95)' }
                     ]}
@@ -323,7 +302,7 @@ export default function HomeScreen() {
                       <TextInput
                         style={[
                           styles.searchInput,
-                          { 
+                          {
                             backgroundColor: theme === 'dark' ? NightTheme.surface : '#F2F2F7',
                             color: theme === 'dark' ? NightTheme.textPrimary : '#111',
                             borderColor: theme === 'dark' ? NightTheme.border : 'transparent',
@@ -342,34 +321,34 @@ export default function HomeScreen() {
                     </View>
                   </Animated.View>
                 )}
-    
-                  <TapGestureHandler onHandlerStateChange={handleDoubleTapSeed} numberOfTaps={2}>
-                    <View style={{ flex: 1 }}>
-                      <UserModeMap 
-                        ref={mapRef}
-                        mappedNotes={mappedNotes} 
-                        activeView={activeView} 
-                        theme={theme}
-                        searchQuery={searchQuery}
-                        onNodePress={handleNodePress} 
-                        scrollY={scrollOffset}
-                        onScroll={handleScroll}
-                        width={width}
-                        totalHeight={totalHeight} 
-                      />
-                    </View>
-                  </TapGestureHandler>
-                </View>
-              )}
-            </View>
-          </PanGestureHandler>
 
-          <ScrollToTopButton visible={showScrollTop} onPress={scrollToTop} />
-          
-          {expandedGhostNode && <GhostOverlay node={expandedGhostNode} onClose={() => setExpandedGhostId(null)} />}
-          {focusRootNode && <KineticFocusMap rootNode={focusRootNode} mappedNotes={mappedNotes} onClose={() => setFocusRootNode(null)} />}
-          {readingNode && <ReadingModal node={readingNode} onClose={() => setReadingNode(null)} />}
-        </View>
+                <TapGestureHandler onHandlerStateChange={handleDoubleTapSeed} numberOfTaps={2}>
+                  <View style={{ flex: 1 }}>
+                    <UserModeMap
+                      ref={mapRef}
+                      mappedNotes={mappedNotes}
+                      activeView={activeView}
+                      theme={theme}
+                      searchQuery={searchQuery}
+                      onNodePress={handleNodePress}
+                      scrollY={scrollOffset}
+                      onScroll={handleScroll}
+                      width={width}
+                      totalHeight={totalHeight}
+                    />
+                  </View>
+                </TapGestureHandler>
+              </View>
+            )}
+          </View>
+        </PanGestureHandler>
+
+        <ScrollToTopButton visible={showScrollTop} onPress={scrollToTop} />
+
+        {expandedGhostNode && <GhostOverlay node={expandedGhostNode} onClose={() => setExpandedGhostId(null)} />}
+        {focusRootNode && <KineticFocusMap rootNode={focusRootNode} mappedNotes={mappedNotes} onClose={() => setFocusRootNode(null)} />}
+        {readingNode && <ReadingModal node={readingNode} onClose={() => setReadingNode(null)} />}
+      </View>
     </KeyboardAvoidingView>
   );
 }

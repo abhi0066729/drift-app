@@ -1,20 +1,113 @@
-import React, { useMemo, useEffect } from 'react';
-import { StyleSheet, View, Text, ScrollView } from 'react-native';
+import React, { useMemo, useEffect, useState, useCallback } from 'react';
+import { StyleSheet, View, Text, Dimensions, Pressable } from 'react-native';
 import Animated, { 
-  FadeInUp, 
-  Layout, 
   useSharedValue, 
   useAnimatedStyle, 
   withRepeat, 
   withSequence, 
   withTiming,
   interpolateColor,
-  withSpring
+  withSpring,
+  useAnimatedProps,
+  FadeIn,
+  FadeOut
 } from 'react-native-reanimated';
-import { generateNexusMatrix, generateMentalPattern, generateFullGhostPool, getMentalMomentum, generateSmartInsight } from '@/utils/noteUtils';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import Svg, { Circle, Line, G } from 'react-native-svg';
+import { BlurView } from 'expo-blur';
+import { computeGalaxyLayout, GalaxyNode, Constellation } from '@/utils/nexusEngine';
+import { generateFullGhostPool } from '@/utils/noteUtils';
 import { NightTheme } from '@/constants/theme';
 import { CATEGORY_COLORS } from '@/constants/Categories';
 
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+// ─── NodeExpandCard Component ───────────────────────────────────────────────
+const NodeExpandCard = ({ 
+  node, 
+  screenPos, 
+  isDark, 
+  onClose 
+}: { 
+  node: GalaxyNode; 
+  screenPos: { x: number, y: number }; 
+  isDark: boolean;
+  onClose: () => void;
+}) => {
+  const color = CATEGORY_COLORS[JSON.parse(node.note.entities_json || '{}').category || 'Journal'] || '#A78BFA';
+
+  return (
+    <Animated.View 
+      entering={FadeIn.duration(200)}
+      exiting={FadeOut.duration(200)}
+      style={[StyleSheet.absoluteFill, { zIndex: 100 }]}
+    >
+      <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+      
+      <Animated.View 
+        entering={withSpring(FadeIn.duration(400))}
+        style={[
+          styles.expandCard,
+          { 
+            top: Math.min(SCREEN_HEIGHT - 300, Math.max(100, screenPos.y - 150)),
+            left: Math.min(SCREEN_WIDTH - 320, Math.max(20, screenPos.x - 150)),
+            backgroundColor: isDark ? 'rgba(20, 18, 24, 0.9)' : 'rgba(255, 255, 255, 0.9)'
+          }
+        ]}
+      >
+        <BlurView intensity={60} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
+        
+        <View style={styles.cardHeader}>
+          <View style={[styles.cardDot, { backgroundColor: color }]} />
+          <Text style={[styles.cardCategory, { color: isDark ? '#A78BFA' : '#7C3AED' }]}>
+            {(JSON.parse(node.note.entities_json || '{}').category || 'Journal').toUpperCase()}
+          </Text>
+        </View>
+
+        <Text style={[styles.cardContent, { color: isDark ? '#E2E8F0' : '#1E293B' }]}>
+          {node.note.content}
+        </Text>
+
+        <View style={styles.cardFooter}>
+          <Text style={styles.cardDate}>
+            {new Date(node.note.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+          </Text>
+        </View>
+      </Animated.View>
+    </Animated.View>
+  );
+};
+
+// ─── ConstellationLayer Component ──────────────────────────────────────────
+const ConstellationLayer = React.memo(({ 
+  constellations, pulse 
+}: { 
+  constellations: Constellation[], 
+  pulse: Animated.SharedValue<number> 
+}) => {
+  return (
+    <G>
+      {constellations.map(c => (
+        <G key={c.id}>
+          {c.edges.map((edge, i) => (
+            <Line
+              key={`${c.id}-edge-${i}`}
+              x1={edge[0].x}
+              y1={edge[0].y}
+              x2={edge[1].x}
+              y2={edge[1].y}
+              stroke={CATEGORY_COLORS[c.category] || '#7C3AED'}
+              strokeWidth={0.5}
+              opacity={0.3}
+            />
+          ))}
+        </G>
+      ))}
+    </G>
+  );
+});
+
+// ─── Main Galaxy Component ──────────────────────────────────────────────────
 interface NexusSurfaceMatrixProps {
   notes: any[];
   onPress: (node: any, type: 'dot' | 'text') => void;
@@ -23,348 +116,148 @@ interface NexusSurfaceMatrixProps {
 
 export default function NexusSurfaceMatrix({ notes, onPress, theme }: NexusSurfaceMatrixProps) {
   const isDark = theme === 'dark';
-  
-  // High-Fidelity Pulse Animation State
   const pulse = useSharedValue(0);
+  const scale = useSharedValue(1);
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
   
+  const [expandedNode, setExpandedNode] = useState<{ node: GalaxyNode, pos: { x: number, y: number } } | null>(null);
+
   useEffect(() => {
     pulse.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 1500 }),
-        withTiming(0, { duration: 2000 })
-      ),
+      withSequence(withTiming(1, { duration: 2000 }), withTiming(0, { duration: 2500 })),
       -1,
       true
     );
   }, []);
 
-  const animatedFlashStyle = useAnimatedStyle(() => {
-    return {
-      borderColor: interpolateColor(
-        pulse.value,
-        [0, 1],
-        [isDark ? '#2D1F5A' : '#E5E7EB', isDark ? '#7C3AED' : '#A78BFA']
-      ),
-      shadowOpacity: withTiming(pulse.value * 0.4),
-      transform: [{ scale: withSpring(1 + (pulse.value * 0.02)) }]
-    };
-  });
+  const displayNotes = useMemo(() => (notes && notes.length > 0) ? notes : generateFullGhostPool(), [notes]);
+  const layout = useMemo(() => computeGalaxyLayout(displayNotes, SCREEN_WIDTH, SCREEN_HEIGHT), [displayNotes]);
 
-  const getClusterPulseStyle = (cat: string, momentumMap: Record<string, number>) => {
-    const rawPower = momentumMap[cat] || 0;
-    const power = Math.min(rawPower / 10, 1); // Scale power based on 10 notes density
-    
-    return useAnimatedStyle(() => ({
-      transform: [{ scale: withSpring(1 + (pulse.value * 0.03 * power)) }],
-      shadowOpacity: withTiming(pulse.value * 0.5 * power),
-      shadowColor: CATEGORY_COLORS[cat] || NightTheme.accent,
-      borderColor: interpolateColor(
-        pulse.value * power,
-        [0, 1],
-        [isDark ? tokens.clusterBorder : '#E5E7EB', CATEGORY_COLORS[cat] || NightTheme.accent]
-      ),
-      borderWidth: 0.5 + (pulse.value * power * 0.5)
-    }));
+  // Gestures
+  const panGesture = Gesture.Pan()
+    .onUpdate((e) => {
+      translateX.value = e.translationX;
+      translateY.value = e.translationY;
+    })
+    .onEnd(() => {
+      translateX.value = withSpring(0);
+      translateY.value = withSpring(0);
+    });
+
+  const pinchGesture = Gesture.Pinch()
+    .onUpdate((e) => {
+      scale.value = e.scale;
+    })
+    .onEnd(() => {
+      scale.value = withSpring(1);
+    });
+
+  const animatedContainerStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: translateX.value },
+      { translateY: translateY.value },
+      { scale: scale.value }
+    ]
+  }));
+
+  const handleNodeTap = (node: GalaxyNode) => {
+    // Approximate screen position for the expansion card
+    const screenX = node.x;
+    const screenY = node.y;
+    setExpandedNode({ node, pos: { x: screenX, y: screenY } });
   };
-
-  // Dynamic Theme Tokens
-  const tokens = {
-    background: isDark ? NightTheme.background : '#FFFFFF',
-    surface: isDark ? NightTheme.surface : '#FFFFFF',
-    textPrimary: isDark ? NightTheme.textPrimary : '#11181C',
-    textSecondary: isDark ? NightTheme.textSecondary : '#4B5563',
-    textDeepMuted: isDark ? NightTheme.textDeepMuted : '#9CA3AF',
-    clusterCard: isDark ? '#161412' : '#FFFFFF',
-    clusterBorder: isDark ? '#242220' : '#E5E7EB',
-    flashCard: isDark ? '#1A1230' : '#FFFFFF',
-    flashBorder: isDark ? '#2D1F5A' : '#E5E7EB',
-    flashPill: isDark ? NightTheme.accentMuted : 'rgba(124, 58, 237, 0.08)',
-  };
-
-  const displayNotes = (notes && notes.length > 0) ? notes : generateFullGhostPool();
-  const data = useMemo(() => generateNexusMatrix(displayNotes), [displayNotes]);
-  const mentalMomentum = useMemo(() => getMentalMomentum(notes), [notes]);
 
   return (
-    <ScrollView 
-        style={[styles.container, { backgroundColor: tokens.background }]} 
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.topPulseContainer}>
-        <Text style={[styles.topPulseText, { color: NightTheme.accent }]}>
-          "{generateMentalPattern(notes)}"
-        </Text>
-      </View>
+    <GestureHandlerRootView style={styles.container}>
+      <GestureDetector gesture={Gesture.Simultaneous(panGesture, pinchGesture)}>
+        <Animated.View style={[styles.galaxyContainer, animatedContainerStyle]}>
+          <Svg width={SCREEN_WIDTH} height={SCREEN_HEIGHT}>
+            <ConstellationLayer constellations={layout.constellations} pulse={pulse} />
+            
+            {layout.nodes.map(node => (
+              <G key={node.id} onPress={() => handleNodeTap(node)}>
+                <Circle
+                  cx={node.x}
+                  cy={node.y}
+                  r={node.radius}
+                  fill={CATEGORY_COLORS[JSON.parse(node.note.entities_json || '{}').category || 'Journal'] || '#A78BFA'}
+                  opacity={0.8}
+                />
+              </G>
+            ))}
+          </Svg>
+        </Animated.View>
+      </GestureDetector>
 
-      {/* 1. CLUSTER SECTION */}
-      <View style={styles.section}>
-        <Text style={[styles.sectionHint, { color: tokens.textDeepMuted }]}>
-          what your mind keeps returning to
-        </Text>
-        {data.clusters.map((cluster, idx) => {
-          const clusterPulseStyle = getClusterPulseStyle(cluster.topic, mentalMomentum);
-          const insight = generateSmartInsight(cluster.topic, notes);
-          
-          return (
-            <Animated.View 
-              key={cluster.id} 
-              entering={FadeInUp.delay(100 * idx).duration(600)}
-              layout={Layout.springify()}
-              style={[
-                styles.clusterCard, 
-                { backgroundColor: tokens.clusterCard, borderColor: tokens.clusterBorder },
-                clusterPulseStyle
-              ]}
-            >
-              <View style={styles.clusterHeader}>
-                <View style={[styles.clusterDot, { backgroundColor: cluster.color }]} />
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.clusterTopic, { color: tokens.textPrimary }]}>
-                    {cluster.topic.toUpperCase()}
-                  </Text>
-                  <Text style={[styles.subconsciousInsight, { color: NightTheme.accent }]}>
-                    {insight.toUpperCase()}
-                  </Text>
-                </View>
-                <Text style={[styles.clusterCount, { color: tokens.textDeepMuted }]}>
-                  {cluster.count} THOUGHTS
-                </Text>
-              </View>
-              {cluster.notes.map((note: any, nIdx: number) => (
-                <Text 
-                  key={note.id} 
-                  style={[
-                    styles.clusterNote, 
-                    { 
-                      color: tokens.textSecondary,
-                      borderTopColor: isDark ? '#1E1E1C' : '#F3F4F6'
-                    },
-                    nIdx === 0 && { color: tokens.textPrimary, borderTopWidth: 0, paddingTop: 0 }
-                  ]}
-                  onPress={() => onPress(note, 'text')}
-                >
-                  {note.content}
-                </Text>
-              ))}
-            </Animated.View>
-          );
-        })}
-      </View>
-
-      {/* 2. ZENITH SYNTHESIS: Synthesized Insights */}
-      {data.flashes.length > 0 && (
-        <View style={styles.section}>
-          <Text style={[styles.sectionHint, { color: tokens.textDeepMuted }]}>
-            zenith synthesis
-          </Text>
-          {data.flashes.map((flash, idx) => (
-            <Animated.View 
-              key={flash.id} 
-              entering={FadeInUp.delay(400 + (100 * idx)).duration(600)}
-              style={[
-                styles.flashCard, 
-                { 
-                  backgroundColor: tokens.flashCard, 
-                  borderColor: tokens.flashBorder,
-                  shadowColor: NightTheme.accent 
-                },
-                animatedFlashStyle
-              ]}
-            >
-              <View style={styles.flashTag}>
-                <View style={[styles.flashDot, { backgroundColor: NightTheme.accent }]} />
-                <Text style={[styles.flashTagText, { color: NightTheme.accent }]}>
-                  SYNTHESIS · {flash.topic.toUpperCase()}
-                </Text>
-              </View>
-              <Text style={[styles.flashTitle, { color: tokens.textPrimary }]}>
-                {flash.title}
-              </Text>
-              <Text style={[styles.flashBody, { color: tokens.textSecondary }]}>
-                {flash.body}
-              </Text>
-              <View style={styles.flashMeta}>
-                <View style={[styles.flashPill, { backgroundColor: tokens.flashPill }]}>
-                  <Text style={[styles.flashPillText, { color: NightTheme.accent }]}>
-                    {flash.count} THOUGHTS · {flash.days} DAYS
-                  </Text>
-                </View>
-                <Text style={[styles.flashTime, { color: tokens.textDeepMuted }]}>
-                  EVOLVED JUST NOW
-                </Text>
-              </View>
-            </Animated.View>
-          ))}
-        </View>
+      {expandedNode && (
+        <NodeExpandCard 
+          node={expandedNode.node}
+          screenPos={expandedNode.pos}
+          isDark={isDark}
+          onClose={() => setExpandedNode(null)}
+        />
       )}
-
-      {/* 3. MOOD THREAD */}
-      <View style={styles.section}>
-        <Text style={[styles.sectionHint, { color: tokens.textDeepMuted }]}>
-          today's emotional thread
-        </Text>
-        <View style={styles.moodRow}>
-          {data.moodTimeline.map((item, i) => (
-            <View 
-                key={i} 
-                style={[styles.moodSeg, { backgroundColor: item.color, opacity: 0.5 + (i * 0.05) }]} 
-            />
-          ))}
-        </View>
-        <View style={styles.moodTicks}>
-          <Text style={[styles.moodTick, { color: tokens.textDeepMuted }]}>anxious</Text>
-          <Text style={[styles.moodTick, { color: tokens.textDeepMuted }]}>calm</Text>
-          <Text style={[styles.moodTick, { color: tokens.textDeepMuted }]}>focused</Text>
-          <Text style={[styles.moodTick, { color: tokens.textDeepMuted }]}>now</Text>
-        </View>
-      </View>
-    </ScrollView>
+    </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: NightTheme.background,
   },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 45, 
-    paddingBottom: 80,
-  },
-  topPulseContainer: {
-    paddingVertical: 20,
-    alignItems: 'center',
-  },
-  topPulseText: {
-    fontSize: 13,
-    fontWeight: '300',
-    textAlign: 'center',
-    fontStyle: 'italic',
-    lineHeight: 18,
-    opacity: 0.85,
-    letterSpacing: 0.3,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionHint: {
-    fontSize: 8,
-    letterSpacing: 0.2,
-    textTransform: 'uppercase',
-    marginBottom: 12,
-  },
-  clusterCard: {
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 0.5,
-  },
-  clusterHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  clusterDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginRight: 8,
-  },
-  clusterTopic: {
-    fontSize: 9,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-  },
-  subconsciousInsight: {
-    fontSize: 7,
-    fontWeight: '700',
-    letterSpacing: 1.2,
-    marginTop: 2,
-    opacity: 0.8,
-  },
-  clusterCount: {
-    fontSize: 8,
-    alignSelf: 'flex-start',
-    marginTop: 1,
-  },
-  clusterNote: {
-    fontSize: 11,
-    lineHeight: 18,
-    paddingVertical: 8,
-    borderTopWidth: 0.5,
-  },
-  flashCard: {
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 0.5,
-    // iOS Shadows for the spectral aura
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  flashTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  flashDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    marginRight: 6,
-  },
-  flashTagText: {
-    fontSize: 8,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
-  flashTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 6,
-    letterSpacing: -0.2,
-  },
-  flashBody: {
-    fontSize: 11,
-    lineHeight: 18,
-  },
-  flashMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  flashPill: {
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  flashPillText: {
-    fontSize: 8,
-    fontWeight: '600',
-  },
-  flashTime: {
-    fontSize: 8,
-    marginLeft: 'auto',
-  },
-  moodRow: {
-    flexDirection: 'row',
-    height: 4,
-    gap: 3,
-    marginBottom: 6,
-  },
-  moodSeg: {
+  galaxyContainer: {
     flex: 1,
-    height: '100%',
-    borderRadius: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  moodTicks: {
+  expandCard: {
+    position: 'absolute',
+    width: 300,
+    minHeight: 180,
+    borderRadius: 24,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(167, 139, 250, 0.2)',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  cardHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
   },
-  moodTick: {
-    fontSize: 7,
-    textTransform: 'uppercase',
+  cardDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 10,
   },
+  cardCategory: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+  },
+  cardContent: {
+    fontSize: 15,
+    lineHeight: 22,
+    fontWeight: '300',
+    marginBottom: 16,
+  },
+  cardFooter: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(167, 139, 250, 0.1)',
+    paddingTop: 10,
+  },
+  cardDate: {
+    fontSize: 9,
+    color: '#64748B',
+    fontWeight: '600',
+    textAlign: 'right',
+  }
 });

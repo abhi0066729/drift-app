@@ -23,26 +23,7 @@ export interface ThoughtChainEntry {
   fullNote: any;
 }
 
-export interface NexusMatrixData {
-  clusters: Array<{
-    id: string;
-    topic: string;
-    count: number;
-    color: string;
-    notes: any[];
-  }>;
-  flashes: Array<{
-    id: string;
-    topic: string;
-    title: string;
-    body: string;
-    count: number;
-    days: number;
-    color: string;
-    isSignal?: boolean;
-  }>;
-  moodTimeline: Array<{ emotion: string, color: string }>;
-}
+
 
 export function generateFullGhostPool(limit: number = 5): Note[] {
   // Ordered by narrative priority: Welcome -> Core UI -> Navigation -> AI/Advanced
@@ -176,26 +157,10 @@ export function processContextualConnections(notes: Note[], width: number, searc
     const isGlowing = note.is_ghost || importance >= 0.8;
     const displayLines = note.is_ghost ? 3 : Math.floor(randX * 4) + 2;
 
-    // --- NEXUS: SEMANTIC DRIFT (X-Axis) ---
-    // Instead of random X, we project toward category-specific semantic lanes
-    const categoryLanes: Record<string, number> = {
-        'Journal': 0.15,
-        'Idea': 0.85,
-        'Todo': 0.35,
-        'Study': 0.65,
-        'Research': 0.55,
-        'Creative': 0.75,
-        'Reflection': 0.25,
-        'Dream': 0.45
-    };
-    const targetNexusPct = categoryLanes[category] || 0.5;
-    const nexusX = 60 + (targetNexusPct * (width - 120)) + (randX * 40 - 20);
-
     return {
       ...note,
       isRight,
       unfocusedX,
-      nexusX, // The "Meaning" X coordinate
       unfocusedY: resY,
       unfocusedTextLeft,
       dynamicWidth,
@@ -233,7 +198,7 @@ export function processContextualConnections(notes: Note[], width: number, searc
     // Connect back sequentially for every active resonance
     Object.entries(note.resonances).forEach(([cat, weight]) => {
       const targetIdx = lastSeenByCategory.get(cat);
-      if (targetIdx !== undefined) {
+      if (targetIdx !== undefined && processedNotes[targetIdx]) {
          connections.push({ targetId: processedNotes[targetIdx].id, category: cat, weight: weight as number });
       }
       lastSeenByCategory.set(cat, i);
@@ -248,94 +213,11 @@ export function processContextualConnections(notes: Note[], width: number, searc
   return processedNotes;
 }
 
-/**
- * Nexus 6.0: Celestial Hub Engine
- * Calculatively selects "Major Topics" based on discussion density 
- * and generates spatial portals for topic-centric clustering.
- */
-export function calculateCelestialHubs(processedNotes: any[], width: number) {
-    const counts: Record<string, number> = {};
-    const nodesByCategory: Record<string, any[]> = {};
-    
-    // 1. Density Scan
-    processedNotes.forEach(node => {
-        const cat = node.category || 'Reflections';
-        counts[cat] = (counts[cat] || 0) + 1;
-        if (!nodesByCategory[cat]) nodesByCategory[cat] = [];
-        nodesByCategory[cat].push(node);
-    });
-
-    // 2. Rank Topics: Lowered threshold to 1 so the screen is never blank!
-    const rankedCategories = Object.entries(counts)
-        .sort((a, b) => (b[1] as number) - (a[1] as number))
-        .slice(0, 4)
-        .map(entry => entry[0]);
-
-    if (rankedCategories.length === 0) return { hubs: [], hubIds: new Set<string>(), coordMap: {} };
-
-    const hubs: any[] = [];
-    const hubIds = new Set<string>();
-    const coordMap: Record<string, { x: number, y: number }> = {};
-
-    rankedCategories.forEach((cat, index) => {
-        const nodes = nodesByCategory[cat];
-        const count = nodes.length;
-        
-        const laneWidth = width / (rankedCategories.length + 1);
-        const centerX = (index + 1) * laneWidth;
-        
-        const sortedY = [...nodes].sort((a, b) => a.unfocusedY - b.unfocusedY);
-        const centerY = sortedY[Math.floor(count / 2)].unfocusedY;
-
-        nodes.forEach((n, idx) => {
-            hubIds.add(n.id);
-            const stackOffset = (idx - Math.floor(count / 2)) * 90;
-            coordMap[n.id] = {
-                x: centerX + (Math.sin(idx * 0.5) * 20),
-                y: centerY + stackOffset
-            };
-        });
-
-        hubs.push({
-            id: `hub-${cat}`,
-            category: cat,
-            title: cat.toUpperCase(),
-            count,
-            center: { x: centerX, y: centerY },
-            color: CATEGORY_COLORS[cat] || '#8E44AD',
-            nodes: nodes.map(n => ({ id: n.id })),
-            bounds: {
-                minX: centerX - 60,
-                maxX: centerX + 60,
-                minY: centerY - (count * 45),
-                maxY: centerY + (count * 45)
-            }
-        });
-    });
-
-    return { hubs, hubIds, coordMap };
-}
-
-function createHullDescriptor(category: string, nodes: any[]) {
-    const minX = Math.min(...nodes.map(n => n.nexusX));
-    const maxX = Math.max(...nodes.map(n => n.nexusX));
-    const minY = Math.min(...nodes.map(n => n.unfocusedY));
-    const maxY = Math.max(...nodes.map(n => n.unfocusedY));
-
-    return {
-        id: `hull-${category}-${minY}`,
-        category,
-        nodes: nodes.map(n => ({ x: n.nexusX, y: n.unfocusedY, r: n.nodeRadius })),
-        center: { x: (minX + maxX) / 2, y: (minY + maxY) / 2 },
-        bounds: { minX, maxX, minY, maxY }
-    };
-}
-
 export function calculateSearchMatch(query: string, note: any): 'match' | 'dim' | 'none' {
-  if (!query || query.trim() === '') return 'none';
+  if (!query || query.trim() === '' || !note) return 'none';
   
   const q = query.toLowerCase().trim();
-  const content = note.content.toLowerCase();
+  const content = (note.content || '').toLowerCase();
   const category = (note.category || '').toLowerCase();
 
   // 1. Literal Match (Highest priority)
@@ -376,29 +258,27 @@ export function calculateSearchMatch(query: string, note: any): 'match' | 'dim' 
  * Analyzes note patterns from the last 48 hours to create a soulful mental observation.
  */
 export function generateMentalPattern(notes: any[]): string {
-  if (notes.length === 0) return "your mind is quiet... waiting for the first spark";
+  if (!notes || notes.length === 0) return "your mind is quiet... waiting for the first spark";
   
   const now = Date.now();
-  const recentNotes = notes.filter(n => (now - n.created_at) < (48 * 60 * 60 * 1000) && !n.is_refining);
+  const recentNotes = notes.filter(n => (now - n.created_at) < (48 * 60 * 60 * 1000));
   
   if (recentNotes.length < 3) return "you're just beginning to drift into a new rhythm";
 
   const categories = recentNotes.map(n => {
-    if (!n.entities_json) return 'Journal';
+    let cat = 'Journal';
     try {
-      return JSON.parse(n.entities_json).category || 'Journal';
-    } catch(e) { return 'Journal'; }
+      cat = n.category || (n.entities_json ? JSON.parse(n.entities_json).category : 'Journal');
+    } catch(e) {}
+    return cat;
   });
-  
+
   const catCounts: Record<string, number> = {};
   categories.forEach(c => catCounts[c] = (catCounts[c] || 0) + 1);
   
-  const entries = Object.entries(catCounts);
-  if (entries.length === 0) return "your thoughts are gathering momentum";
+  const dominant = Object.entries(catCounts).sort((a,b) => b[1]-a[1])[0];
+  if (!dominant) return "something is unresolved — you keep circling it";
 
-  const dominant = entries.sort((a,b) => b[1]-a[1])[0];
-  if (!dominant) return "your thoughts are gathering momentum";
-  
   const totalFocus = dominant[1] / recentNotes.length;
 
   if (totalFocus > 0.6) return `you've been unusually focused on ${dominant[0].toLowerCase()} this week`;
@@ -409,15 +289,19 @@ export function generateMentalPattern(notes: any[]): string {
 }
 
 /**
- * Nexus 9.0: The Echo Chain
- * Finds the actual chain of thoughts that created or relate to a specific insight.
+ * THE ECHO CHAIN: The Thought Mirror
+ * Traces the history of a thought through temporal and semantic resonance.
  */
-export function findThoughtChain(activeNote: any, allNotes: any[]): ThoughtChainEntry[] {
-  // Find notes in the same category or explicitly linked
+export function findThoughtChain(note: any, allNotes: any[]): ThoughtChainEntry[] {
+  if (!note || !allNotes) return [];
+  
   const chain = allNotes
-    .filter(n => n.id !== activeNote.id && n.category === activeNote.category)
-    .sort((a,b) => a.created_at - b.created_at)
-    .slice(-4) // Show the last 4 leading up to this
+    .filter(n => n.id !== note.id && (
+      n.category === note.category || 
+      (n.entities_json && note.entities_json && JSON.parse(n.entities_json).category === JSON.parse(note.entities_json).category)
+    ))
+    .sort((a, b) => b.created_at - a.created_at)
+    .slice(0, 4)
     .map(n => ({
       id: n.id,
       date: new Date(n.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
@@ -433,7 +317,7 @@ export function findThoughtChain(activeNote: any, allNotes: any[]): ThoughtChain
  * Nexus 10.0: The Mirror Matrix Data Engine
  * Compiles all notes into Surface Cards, Cluster Cards, and Mood Threads.
  */
-export function generateNexusMatrix(allNotes: any[]): NexusMatrixData {
+export function generateNexusMatrix(allNotes: any[]): any {
   const clusters: any[] = [];
   const flashes: any[] = [];
   const moodTimeline: any[] = [];
@@ -441,10 +325,15 @@ export function generateNexusMatrix(allNotes: any[]): NexusMatrixData {
   // 1. Group by Topic (Mocked for now using Category)
   const grouped: Record<string, any[]> = {};
   allNotes.forEach(n => {
-    const cat = n.category || 'Journal';
+    let cat = 'Journal';
+    try {
+      cat = n.category || (n.entities_json ? JSON.parse(n.entities_json).category : 'Journal');
+    } catch(e) {}
     if (!grouped[cat]) grouped[cat] = [];
     grouped[cat].push(n);
   });
+
+  const mentalMomentum = getMentalMomentum(allNotes);
 
   Object.entries(grouped).slice(0, 4).forEach(([cat, notes]) => {
     clusters.push({
@@ -452,7 +341,8 @@ export function generateNexusMatrix(allNotes: any[]): NexusMatrixData {
       topic: cat,
       count: notes.length,
       color: CATEGORY_COLORS[cat] || '#8E44AD',
-      notes: notes.slice(0, 3) // Show top 3 snippets
+      notes: notes.slice(0, 3), // Show top 3 snippets
+      momentum: mentalMomentum[cat] || 0
     });
 
     if (notes.length >= 3) {
@@ -470,90 +360,75 @@ export function generateNexusMatrix(allNotes: any[]): NexusMatrixData {
 
   // 2. Generate Mood Timeline (Last 8 notes today)
   allNotes.slice(0, 8).forEach(n => {
-    const emotion = n.emotion || 'neutral';
+    let cat = 'Journal';
+    try {
+      cat = n.category || (n.entities_json ? JSON.parse(n.entities_json).category : 'Journal');
+    } catch(e) {}
     moodTimeline.push({
-      emotion,
-      color: CATEGORY_COLORS[n.category] || '#2e2e2e'
+      emotion: n.emotion || 'neutral',
+      color: CATEGORY_COLORS[cat] || '#2e2e2e'
     });
   });
 
   return { clusters, flashes, moodTimeline };
 }
 
-/**
- * Nexus 12.0: The Resonance Engine
- * Lightweight keyword-overlap utility for Zero-Latency 'Memory Echoes'.
- */
-export function calculateResonanceScore(text: string, reference: string): number {
-  if (!text || !reference) return 0;
-  const t = text.toLowerCase().split(/\s+/).filter(w => w.length > 3);
-  const r = reference.toLowerCase().split(/\s+/).filter(w => w.length > 3);
-  if (t.length === 0) return 0;
+export function calculateResonanceScore(note1: any, note2: any): number {
+  if (!note1 || !note2) return 0;
   
-  const matches = t.filter(word => r.includes(word));
-  return matches.length / Math.max(t.length, 1);
+  // 1. Category Match (Strongest)
+  const catMatch = note1.category === note2.category ? 1.0 : 0;
+  
+  // 2. Content Overlap (Jaccard similarity approximation)
+  const s1 = new Set(note1.content.toLowerCase().split(' '));
+  const s2 = new Set(note2.content.toLowerCase().split(' '));
+  const intersect = new Set([...s1].filter(x => s2.has(x)));
+  const contentScore = intersect.size / Math.max(1, s1.size + s2.size - intersect.size);
+  
+  return (catMatch * 0.7) + (contentScore * 0.3);
 }
 
-export function findResonantNote(text: string, notes: Note[]): Note | null {
-  if (text.length < 15) return null; // Wait for a short sentence fragment
-  let bestMatch: Note | null = null;
-  let highestScore = 0;
-
-  for (const note of notes) {
-    if (note.is_ghost || note.is_refining) continue;
-    const score = calculateResonanceScore(text, note.content);
-    if (score > highestScore && score > 0.6) { // 60% keyword overlap threshold
-      highestScore = score;
-      bestMatch = note;
+export function findResonantNote(note: any, allNotes: any[]) {
+  if (!note || !allNotes) return null;
+  const otherNotes = allNotes.filter(n => n.id !== note.id);
+  if (otherNotes.length === 0) return null;
+  
+  let bestNote = null;
+  let bestScore = -1;
+  
+  otherNotes.forEach(other => {
+    const score = calculateResonanceScore(note, other);
+    if (score > bestScore) {
+      bestScore = score;
+      bestNote = other;
     }
-  }
-
-  return bestMatch;
-}
-
-/**
- * Nexus 12.0: The Habit Insight Engine
- * Generates soulful-clinical hybrid observations based on note patterns.
- */
-export function generateSmartInsight(category: string, notes: Note[]): string {
-  const catNotes = notes.filter(n => {
-    try {
-      const parsed = JSON.parse(n.entities_json || '{}');
-      return parsed.category === category;
-    } catch(e) { return false; }
   });
-
-  if (catNotes.length < 3) return "this thread is just beginning to find its voice";
-
-  const hours = catNotes.map(n => new Date(n.created_at).getHours());
-  const lateNight = hours.filter(h => h > 21 || h < 5).length;
-  const morning = hours.filter(h => h >= 5 && h < 12).length;
-
-  const total = catNotes.length;
-  if (lateNight / total > 0.6) return `your subconscious reaches for ${category.toLowerCase()} mostly in the deep night (${lateNight}x)`;
-  if (morning / total > 0.6) return `you frame your ${category.toLowerCase()} thoughts mostly in the early light (${morning}x)`;
   
-  return `you've returned to ${category.toLowerCase()} ${total} times this cycle — it's seeking a synthesis`;
+  return bestScore > 0.3 ? bestNote : null;
 }
 
-/**
- * Nexus 12.0: The Mental Momentum Engine
- */
-export function getMentalMomentum(notes: Note[]): Record<string, number> {
-  const momentum: Record<string, number> = {};
-  const now = Date.now();
-  const past24h = now - (24 * 60 * 60 * 1000);
+export function generateSmartInsight(topic: string, allNotes: any[]): string {
+  const count = allNotes.filter(n => {
+    try {
+      const cat = n.category || (n.entities_json ? JSON.parse(n.entities_json).category : 'Journal');
+      return cat === topic;
+    } catch(e) { return false; }
+  }).length;
 
-  notes.forEach(note => {
+  if (count > 10) return "A major gravity well in your mind.";
+  if (count > 5) return "Significant mental momentum here.";
+  if (count > 2) return "A recurring whisper in the void.";
+  return "A new signal is emerging.";
+}
+
+export function getMentalMomentum(notes: any[]): Record<string, number> {
+  const momentum: Record<string, number> = {};
+  notes.forEach(n => {
     let cat = 'Journal';
     try {
-      const parsed = JSON.parse(note.entities_json || '{}');
-      cat = parsed.category || 'Journal';
-    } catch(e){}
-
-    const weight = (note.created_at > past24h) ? 2 : 1;
-    momentum[cat] = (momentum[cat] || 0) + weight;
+      cat = n.category || (n.entities_json ? JSON.parse(n.entities_json).category : 'Journal');
+    } catch(e) {}
+    momentum[cat] = (momentum[cat] || 0) + 1;
   });
-
   return momentum;
 }

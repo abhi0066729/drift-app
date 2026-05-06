@@ -22,7 +22,7 @@ import { extractRealtime, extractDeep, NoteCategory } from '@/services/ai';
 import { LinearGradient } from 'expo-linear-gradient';
 import { NightTheme } from '@/constants/theme';
 import { CATEGORY_COLORS } from '@/constants/Categories';
-import { findResonantNote, Note } from '@/utils/noteUtils';
+import { Note } from '@/utils/noteUtils';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Alert } from 'react-native';
@@ -252,7 +252,7 @@ export default function CaptureScreen() {
     }
 
     // --- MEMORY RESONANCE ---
-    const resonance = findResonantNote(inputText, notes);
+    const resonance = null;
     setResonantNote(resonance);
 
     // --- PAUSE TRIGGER ---
