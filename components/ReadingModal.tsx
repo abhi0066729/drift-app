@@ -6,12 +6,13 @@ import { BlurView } from 'expo-blur';
 import { CATEGORY_COLORS } from '@/constants/Categories';
 import { NightTheme } from '@/constants/theme';
 import { useNotesStore } from '@/store/useNotesStore';
-import { findThoughtChain, generateSmartInsight } from '@/utils/noteUtils';
+
+import { NexusNode } from '@/utils/nexusEngine';
 
 const { width } = Dimensions.get('window');
 
 interface ReadingModalProps {
-  node: any;
+  node: NexusNode;
   onClose: () => void;
   translucent?: boolean;
   searchQuery?: string;
@@ -39,7 +40,6 @@ export default function ReadingModal({ node, onClose, translucent, searchQuery }
     ? `${finalCategory.toUpperCase()} · ${finalEmotion.toUpperCase()}`
     : finalCategory.toUpperCase();
 
-  const subconsciousInsight = generateSmartInsight(finalCategory, useNotesStore.getState().notes);
 
   const color = CATEGORY_COLORS[finalCategory] || '#8E44AD';
   
@@ -79,99 +79,71 @@ export default function ReadingModal({ node, onClose, translucent, searchQuery }
         <Animated.View 
           entering={DropAndBounce}
           exiting={FadeOut.duration(200)}
-          style={[styles.contentContainer, { backgroundColor: isDark ? 'rgba(15, 14, 12, 0.85)' : 'rgba(255, 255, 255, 0.75)' }]}
+          style={[styles.contentContainer, { backgroundColor: 'transparent' }]}
         >
-          {/* Header section matching ThoughtCloud avatar+name layout */}
-          <View style={styles.header}>
-            <View style={[styles.avatarPlaceholder, { backgroundColor: `${color}20` }]}>
-              <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: color, opacity: 0.15 }} />
-            </View>
-            <View style={styles.headerText}>
-              <Text style={[styles.title, { color: isDark ? NightTheme.textPrimary : '#111' }]} numberOfLines={1}>{headerTitle}</Text>
-              <Text style={[styles.subconsciousHeader, { color }]}>
-                {subconsciousInsight.toUpperCase()}
-              </Text>
-            </View>
-          </View>
-
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-            {/* Main Note Card matching ThoughtCloud list items */}
-            <View style={[styles.noteCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]}>
-              {node.images && node.images.length > 0 && (
-                <Image 
-                  source={{ uri: node.images[0] }} 
-                  style={styles.noteImage} 
-                  transition={200} 
-                  contentFit="cover" 
-                />
-              )}
-              <Text style={[styles.noteContent, { color: isDark ? NightTheme.textPrimary : '#333' }]}>{node.content}</Text>
-              
-              <View style={[styles.cardFooter, { borderTopColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]}>
-                <Text style={[styles.footerDate, { color: isDark ? NightTheme.textMuted : '#999' }]}>
-                  {new Date(node.created_at || Date.now()).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                </Text>
+          <BlurView 
+            intensity={isDark ? 50 : 80} 
+            tint={isDark ? 'dark' : 'light'} 
+            style={StyleSheet.absoluteFill} 
+          />
+          
+          <View style={{ flex: 1, paddingVertical: 24 }}>
+            {/* Header section matching ThoughtCloud avatar+name layout */}
+            <View style={styles.header}>
+              <View style={[styles.avatarPlaceholder, { backgroundColor: `${color}20` }]}>
+                <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: color, opacity: 0.25 }} />
               </View>
+              <View style={styles.headerText}>
+                <Text style={[styles.title, { color: isDark ? NightTheme.textPrimary : '#111' }]} numberOfLines={1}>{headerTitle}</Text>
+              </View>
+            </View>
 
-              {hasSearch && (
-                <View style={[styles.contextFooter, { borderTopColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]}>
-                  <Text style={[styles.contextHeader, { color }]}>SEMANTIC ECHO</Text>
-                  <Text style={[styles.contextText, { color: isDark ? NightTheme.textMuted : '#666' }]}>
-                    {isMatch 
-                      ? `This thought resonates directly with your whisper for "${searchQuery}".`
-                      : "This context remains visible to guide your semantic drift."}
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+              {/* Main Note Card matching ThoughtCloud list items */}
+              <View style={[styles.noteCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }]}>
+                {node.images && node.images.length > 0 && (
+                  <Image 
+                    source={{ uri: node.images[0] }} 
+                    style={styles.noteImage} 
+                    transition={200} 
+                    contentFit="cover" 
+                  />
+                )}
+                <Text style={[styles.noteContent, { color: isDark ? NightTheme.textPrimary : '#333' }]}>{node.content}</Text>
+                
+                <View style={[styles.cardFooter, { borderTopColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }]}>
+                  <Text style={[styles.footerDate, { color: isDark ? NightTheme.textMuted : '#999' }]}>
+                    {new Date(node.created_at || Date.now()).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                   </Text>
                 </View>
-              )}
 
-              {/* THE ECHO CHAIN: The Thought Mirror */}
-              <View style={styles.echoChainContainer}>
-                <View style={styles.echoHeader}>
-                  <Text style={[styles.contextHeader, { color: '#7C3AED' }]}>THE ECHO CHAIN</Text>
-                  <Text style={[styles.echoSubtitle, { color: isDark ? NightTheme.textMuted : '#999' }]}>
-                    Tracing the evolution of this thought
-                  </Text>
-                </View>
+                {hasSearch && (
+                  <View style={[styles.contextFooter, { borderTopColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }]}>
+                    <Text style={[styles.contextHeader, { color }]}>SEMANTIC ECHO</Text>
+                    <Text style={[styles.contextText, { color: isDark ? NightTheme.textMuted : '#666' }]}>
+                      {isMatch 
+                        ? `This thought resonates directly with your whisper for "${searchQuery}".`
+                        : "This context remains visible to guide your semantic drift."}
+                    </Text>
+                  </View>
+                )}
 
-                {findThoughtChain(node, useNotesStore.getState().notes).length > 0 ? (
-                  findThoughtChain(node, useNotesStore.getState().notes).map((echo, i) => (
-                    <View key={echo.id} style={styles.echoItem}>
-                      <View style={styles.echoTimeline}>
-                        <View style={[styles.echoDot, { backgroundColor: CATEGORY_COLORS[echo.category] }]} />
-                        {i < 3 && <View style={styles.echoLine} />}
-                      </View>
-                      <View style={styles.echoContent}>
-                        <Text style={[styles.echoDate, { color: CATEGORY_COLORS[echo.category] }]}>
-                          {echo.date}
-                        </Text>
-                        <Text style={[styles.echoSnippet, { color: isDark ? NightTheme.textSecondary : '#666' }]}>
-                          {echo.snippet}
-                        </Text>
-                      </View>
+                {/* RESONANCE INSIGHT: The 'Purple Context' section */}
+                {Object.keys(node.resonances || {}).length > 1 && (
+                  <View style={[styles.resonanceInsight, { backgroundColor: isDark ? 'rgba(142, 68, 173, 0.12)' : 'rgba(142, 68, 173, 0.08)' }]}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#8E44AD', marginRight: 8 }} />
+                      <Text style={[styles.contextHeader, { color: '#8E44AD', marginBottom: 0 }]}>RESONANCE INSIGHT</Text>
                     </View>
-                  ))
-                ) : (
-                  <Text style={[styles.contextText, { color: isDark ? NightTheme.textMuted : '#999', fontStyle: 'italic', paddingLeft: 4 }]}>
-                    This is a lone spark — let it drift and find its ensemble.
-                  </Text>
+                    <Text style={[styles.contextText, { color: isDark ? NightTheme.textPrimary : '#444' }]}>
+                      This thought is primarily categorized as <Text style={{ fontWeight: '700' }}>{Object.keys(node.resonances || {}).sort((a,b) => node.resonances[b]-node.resonances[a])[0]}</Text>, 
+                      but it also shows a strong resonance with <Text style={{ fontWeight: '700' }}>{Object.keys(node.resonances || {}).sort((a,b) => node.resonances[b]-node.resonances[a])[1]}</Text>.
+                    </Text>
+                  </View>
                 )}
               </View>
-
-              {/* RESONANCE INSIGHT: The 'Purple Context' section */}
-              {Object.keys(node.resonances || {}).length > 1 && (
-                <View style={[styles.resonanceInsight, { backgroundColor: isDark ? 'rgba(128, 0, 128, 0.08)' : 'rgba(128, 0, 128, 0.05)' }]}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#8E44AD', marginRight: 8 }} />
-                    <Text style={[styles.contextHeader, { color: '#8E44AD', marginBottom: 0 }]}>RESONANCE INSIGHT</Text>
-                  </View>
-                  <Text style={[styles.contextText, { color: isDark ? NightTheme.textPrimary : '#444' }]}>
-                    This thought is primarily categorized as <Text style={{ fontWeight: '700' }}>{Object.keys(node.resonances || {}).sort((a,b) => node.resonances[b]-node.resonances[a])[0]}</Text>, 
-                    but it also shows a strong resonance with <Text style={{ fontWeight: '700' }}>{Object.keys(node.resonances || {}).sort((a,b) => node.resonances[b]-node.resonances[a])[1]}</Text>.
-                  </Text>
-                </View>
-              )}
-            </View>
-          </ScrollView>
+            </ScrollView>
+          </View>
         </Animated.View>
       </View>
     </Animated.View>
@@ -185,19 +157,6 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     overflow: 'hidden',
     paddingTop: 24,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.15,
-        shadowRadius: 20,
-      },
-      android: {
-        elevation: 20,
-      }
-    }),
-    borderWidth: 1,
-    borderColor: 'rgba(142, 68, 173, 0.1)',
   },
   header: {
     flexDirection: 'row',

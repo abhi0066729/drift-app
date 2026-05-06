@@ -1,130 +1,289 @@
-import { Note } from '@/store/useNotesStore';
+/**
+ * nexusEngine.ts
+ *
+ * THE VOID ENGINE (v8) — True Constellation Architecture:
+ * - Seeded PRNG (mulberry32) for truly uniform, unbiased 360° scatter.
+ * - Constellation Personality: ~20% of stars are anchors that branch outward.
+ * - Category-strict bonds: Journal→Journal, Idea→Idea, etc.
+ * - Single massive unified galaxy — no isolated islands.
+ */
 
-export interface GalaxyNode {
+import { Note } from '@/store/useNotesStore';
+import { Dimensions } from 'react-native';
+
+const { width, height } = Dimensions.get('window');
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export type NexusNode = {
   id: string;
+  content: string;
   x: number;
   y: number;
-  note: Note;
+  energy: number;
   radius: number;
-  color: string;
-  energy: number;
-}
+  opacity: number;
+  clusterId: string;
+  isDust?: boolean;
+  entities_json?: string;
+  isAnchor?: boolean;
+  created_at?: number;
+  category?: string;
+  categories?: string[];
+  emotion?: string;
+  resonances?: Record<string, number>;
+};
 
-export interface Constellation {
+export type NexusBond = {
   id: string;
-  nodes: GalaxyNode[];
-  edges: [GalaxyNode, GalaxyNode][];
-  category: string;
-  energy: number;
-  vibration: number;
+  sourceId: string;
+  targetId: string;
+  opacity: number;
+  isAnchorBond?: boolean;
+  constellationEnergy?: number; // Total energy of the constellation this bond belongs to
+  isVibrating?: boolean;        // True when constellation energy exceeds VIBRATE_THRESHOLD
+};
+
+export type NexusLayout = {
+  nodes: NexusNode[];
+  dust: NexusNode[];
+  bonds: NexusBond[];
+  bounds: { minX: number; maxX: number; minY: number; maxY: number };
+};
+
+// ─── Seeded PRNG (mulberry32) — uniform, deterministic ───────────────────────
+function makePRNG(seed: number) {
+  let s = seed >>> 0;
+  return (): number => {
+    s += 0x6d2b79f5;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }
 
-/**
- * Void Engine PRNG
- * Ensures the galaxy layout is stable and uniform across renders.
- */
-class GalaxyPRNG {
-  private seed: number;
-  constructor(seed: number) { this.seed = seed; }
-  next() {
-    this.seed = (this.seed * 9301 + 49297) % 233280;
-    return this.seed / 233280;
-  }
+function hash(str: string): number {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
+  return Math.abs(h);
 }
 
-/**
- * Nexus Galaxy Engine
- * Computes spatial distribution and energy-governed constellations.
- */
-export function computeGalaxyLayout(notes: Note[], width: number, height: number) {
-  if (!notes || notes.length === 0) return { nodes: [], constellations: [] };
+function computeSimilarity(a: Note, b: Note): number {
+  const tok = (s: string) => new Set(s.toLowerCase().split(/\W+/).filter(w => w.length > 3));
+  const tokA = tok(a.content);
+  const tokB = tok(b.content);
+  if (tokA.size === 0 || tokB.size === 0) return 0;
+  
+  const tokAArray = Array.from(tokA);
+  const intersection = tokAArray.filter(w => tokB.has(w)).length;
+  const union = new Set([...tokAArray, ...Array.from(tokB)]).size;
+  return union === 0 ? 0 : intersection / union;
+}
 
-  const prng = new GalaxyPRNG(42);
-  const galaxyRadius = Math.min(width, height) * 0.75; // Tighter galaxy as requested
-  const centerX = width / 2;
-  const centerY = height / 2;
+// ─── Main Engine ──────────────────────────────────────────────────────────────
 
-  // 1. Map notes to GalaxyNodes
-  const nodes: GalaxyNode[] = notes.map(note => {
-    // Standard galaxy distribution: Higher density toward the core
-    const angle = prng.next() * Math.PI * 2;
-    const distance = Math.pow(prng.next(), 0.8) * galaxyRadius;
-    
+export function computeConstellations(notes: Note[]): NexusLayout {
+  const { width, height } = Dimensions.get('window');
+  const visible = notes.filter(n => !n.is_deleted && !n.is_ghost && n.content?.length > 0);
+  if (visible.length === 0) return { nodes: [], dust: [], bonds: [], bounds: { minX: 0, maxX: 0, minY: 0, maxY: 0 } };
+
+  const noteMap = new Map<string, Note>();
+  visible.forEach(n => noteMap.set(n.id, n));
+
+  const center = { x: width / 2, y: height / 2 };
+  const galaxyRadius = Math.max(width, height) * 0.75;
+
+  // 1. Truly Uniform Scatter via seeded PRNG
+  const nodes: NexusNode[] = [];
+  const sortedNotes = [...visible].sort((a, b) => a.id.localeCompare(b.id));
+  const scatterRng = makePRNG(hash("galaxy-seed-v8.1"));
+
+  sortedNotes.forEach((note) => {
+    const angle = scatterRng() * Math.PI * 2;           
+    const dist = Math.sqrt(scatterRng()) * galaxyRadius; 
+
+    const energy = 0.2 + 0.8 * Math.exp(
+      -(Date.now() - note.created_at) / (1000 * 60 * 60 * 24 * 7)
+    );
+
     let category = 'Journal';
-    try {
-      const parsed = JSON.parse(note.entities_json || '{}');
-      category = parsed.category || 'Journal';
-    } catch(e) {}
-
-    return {
-      id: note.id,
-      x: centerX + Math.cos(angle) * distance,
-      y: centerY + Math.sin(angle) * distance,
-      note,
-      radius: 4 + (prng.next() * 4),
-      color: '#A78BFA', // Default theme color
-      energy: 1.0
-    };
-  });
-
-  // 2. Compute Constellations (Energy-governed spanning trees)
-  const categoryGroups: Record<string, GalaxyNode[]> = {};
-  nodes.forEach(node => {
-    let cat = 'Journal';
-    try {
-      cat = JSON.parse(node.note.entities_json || '{}').category || 'Journal';
-    } catch(e) {}
-    if (!categoryGroups[cat]) categoryGroups[cat] = [];
-    categoryGroups[cat].push(node);
-  });
-
-  const constellations: Constellation[] = [];
-  Object.entries(categoryGroups).forEach(([cat, group]) => {
-    if (group.length < 2) return;
-
-    const edges: [GalaxyNode, GalaxyNode][] = [];
-    const connected = new Set([group[0].id]);
-    const remaining = group.slice(1);
-
-    // Simple Prim-like algorithm for a skeletal spanning tree
-    while (remaining.length > 0) {
-      let bestDist = Infinity;
-      let bestPair: [GalaxyNode, GalaxyNode] | null = null;
-      let bestIdx = -1;
-
-      for (const cNodeId of connected) {
-        const cNode = group.find(n => n.id === cNodeId)!;
-        remaining.forEach((rNode, idx) => {
-          const d = Math.sqrt(Math.pow(cNode.x - rNode.x, 2) + Math.pow(cNode.y - rNode.y, 2));
-          if (d < bestDist) {
-            bestDist = d;
-            bestPair = [cNode, rNode];
-            bestIdx = idx;
-          }
-        });
-      }
-
-      if (bestPair) {
-        edges.push(bestPair);
-        connected.add(bestPair[1].id);
-        remaining.splice(bestIdx, 1);
-      } else break;
+    if (note.entities_json) {
+      try {
+        const parsed = JSON.parse(note.entities_json);
+        category = parsed.category || parsed.categories?.[0] || 'Journal';
+      } catch (_) {}
     }
 
-    // Energy Dynamics
-    const baseEnergy = group.length * 0.15;
-    const energyLimit = 1.2;
-    const vibration = baseEnergy > energyLimit ? (baseEnergy - energyLimit) * 5 : 0;
+    const personalityRng = makePRNG(hash(note.id));
+    const isAnchor = personalityRng() < 0.2;
 
-    constellations.push({
-      id: `const-${cat}`,
-      nodes: group,
-      edges,
-      category: cat,
-      energy: baseEnergy,
-      vibration
+    let emotion = '';
+    if (note.entities_json) {
+      try {
+        const parsed = JSON.parse(note.entities_json);
+        emotion = parsed.emotion || '';
+      } catch (_) {}
+    }
+
+    nodes.push({
+      id: note.id,
+      content: note.content,
+      x: center.x + Math.cos(angle) * dist,
+      y: center.y + Math.sin(angle) * dist,
+      energy,
+      radius: isAnchor ? 3.5 : (energy > 0.8 ? 2.4 : 1.4),
+      opacity: Math.max(0.35, energy),
+      clusterId: category,
+      entities_json: note.entities_json,
+      isAnchor,
+      created_at: note.created_at,
+      category,
+      emotion,
+      resonances: note.resonances,
     });
   });
 
-  return { nodes, constellations };
+  // 2. Force-Directed Relaxation
+  for (let iter = 0; iter < 15; iter++) {
+    nodes.forEach((n1, i) => {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const n2 = nodes[j];
+        const dx = n2.x - n1.x, dy = n2.y - n1.y;
+        const distSq = dx * dx + dy * dy || 1;
+        const minSpacing = 85; 
+        if (distSq < minSpacing * minSpacing) {
+          const d = Math.sqrt(distSq);
+          const force = (minSpacing - d) * 0.4;
+          const nx = dx / d, ny = dy / d;
+          n1.x -= nx * force; n1.y -= ny * force;
+          n2.x += nx * force; n2.y += ny * force;
+        }
+      }
+    });
+  }
+
+  // 3. Galactic Dust
+  const dust: NexusNode[] = [];
+  const dustRng = makePRNG(hash("dust-seed-v8.1"));
+  for (let i = 0; i < 250; i++) {
+    const angle = dustRng() * Math.PI * 2;
+    const dist = Math.sqrt(dustRng()) * galaxyRadius * 1.2;
+    dust.push({
+      id: `dust-${i}`,
+      content: '',
+      x: center.x + Math.cos(angle) * dist,
+      y: center.y + Math.sin(angle) * dist,
+      energy: 0,
+      radius: 0.2 + dustRng() * 0.6,
+      opacity: 0.02 + dustRng() * 0.05,
+      clusterId: 'void',
+      isDust: true,
+    });
+  }
+
+  // 4. Natural Constellation Bonds
+  const bonds: NexusBond[] = [];
+  const SPATIAL_LIMIT = 280;
+  const SIM_THRESHOLD = 0.12;
+  const connectionCounts = new Map<string, number>();
+  nodes.forEach(n => connectionCounts.set(n.id, 0));
+
+  nodes.forEach((n1) => {
+    if (n1.isDust) return;
+
+    const targets = nodes
+      .filter(n2 =>
+        n2.id !== n1.id &&
+        !n2.isDust &&
+        n2.clusterId === n1.clusterId
+      )
+      .map(n2 => {
+        const dx = n2.x - n1.x, dy = n2.y - n1.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const note1 = noteMap.get(n1.id);
+        const note2 = noteMap.get(n2.id);
+        const sim = (note1 && note2) ? computeSimilarity(note1, note2) : 0;
+        return { node: n2, dist, sim, weight: dist / (sim + 0.1) };
+      })
+      .filter(t => t.dist < SPATIAL_LIMIT && (t.sim > SIM_THRESHOLD || t.dist < 120))
+      .sort((a, b) => a.weight - b.weight)
+      .slice(0, 8);
+
+    targets.forEach(t => {
+      const tId = t.node.id;
+      const bid = [n1.id, tId].sort().join('~');
+      if (!bonds.some(b => b.id === bid)) {
+        bonds.push({
+          id: bid,
+          sourceId: n1.id,
+          targetId: tId,
+          opacity: Math.min(n1.opacity, t.node.opacity) * 0.4,
+          isAnchorBond: n1.isAnchor || t.node.isAnchor,
+        });
+        connectionCounts.set(n1.id, (connectionCounts.get(n1.id) || 0) + 1);
+        connectionCounts.set(tId, (connectionCounts.get(tId) || 0) + 1);
+      }
+    });
+  });
+
+  // 5. Energy System
+  const VIBRATE_THRESHOLD = 4.5;
+  const BREAK_THRESHOLD   = 7.0;
+
+  const parent = new Map<string, string>();
+  nodes.forEach(n => parent.set(n.id, n.id));
+  function find(x: string): string {
+    if (parent.get(x) !== x) parent.set(x, find(parent.get(x)!));
+    return parent.get(x)!;
+  }
+  bonds.forEach(b => {
+    const ra = find(b.sourceId), rb = find(b.targetId);
+    if (ra !== rb) parent.set(ra, rb);
+  });
+
+  const componentEnergy = new Map<string, number>();
+  const componentBonds  = new Map<string, NexusBond[]>();
+  bonds.forEach(b => {
+    const root = find(b.sourceId);
+    const srcNode = nodes.find(n => n.id === b.sourceId);
+    const tgtNode = nodes.find(n => n.id === b.targetId);
+    const bondEnergy = ((srcNode?.energy ?? 0) + (tgtNode?.energy ?? 0)) / 2;
+    componentEnergy.set(root, (componentEnergy.get(root) ?? 0) + bondEnergy);
+    if (!componentBonds.has(root)) componentBonds.set(root, []);
+    componentBonds.get(root)!.push(b);
+  });
+
+  const brokenBondIds = new Set<string>();
+  componentEnergy.forEach((energy, root) => {
+    const cBonds = componentBonds.get(root) ?? [];
+    if (energy > VIBRATE_THRESHOLD) {
+      cBonds.forEach(b => { b.isVibrating = true; b.constellationEnergy = energy; });
+    }
+    if (energy > BREAK_THRESHOLD) {
+      const sorted = [...cBonds].sort((a, b) => a.opacity - b.opacity);
+      let remainingEnergy = energy;
+      for (const bond of sorted) {
+        if (remainingEnergy <= BREAK_THRESHOLD) break;
+        const srcNode = nodes.find(n => n.id === bond.sourceId);
+        const tgtNode = nodes.find(n => n.id === bond.targetId);
+        const bondEnergy = ((srcNode?.energy ?? 0) + (tgtNode?.energy ?? 0)) / 2;
+        brokenBondIds.add(bond.id);
+        remainingEnergy -= bondEnergy;
+      }
+    }
+  });
+
+  const finalBonds = bonds.filter(b => !brokenBondIds.has(b.id));
+
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  nodes.forEach(n => {
+    minX = Math.min(minX, n.x); maxX = Math.max(maxX, n.x);
+    minY = Math.min(minY, n.y); maxY = Math.max(maxY, n.y);
+  });
+  dust.forEach(n => {
+    minX = Math.min(minX, n.x); maxX = Math.max(maxX, n.x);
+    minY = Math.min(minY, n.y); maxY = Math.max(maxY, n.y);
+  });
+
+  return { nodes, dust, bonds: finalBonds, bounds: { minX, maxX, minY, maxY } };
 }
