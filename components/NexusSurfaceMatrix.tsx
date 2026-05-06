@@ -1,370 +1,352 @@
-import React, { useMemo, useEffect } from 'react';
-import { StyleSheet, View, Text, ScrollView } from 'react-native';
-import Animated, { 
-  FadeInUp, 
-  Layout, 
-  useSharedValue, 
-  useAnimatedStyle, 
-  withRepeat, 
-  withSequence, 
+/**
+ * NexusSurfaceMatrix.tsx
+ *
+ * THE GALACTIC SYNTHESIS FIELD:
+ * - Immersive obsidian void.
+ * - Nebula Dust layer: Faint background star clouds for every galaxy.
+ * - Luminous Constellation bonds weaving through the galaxies.
+ */
+
+import * as Haptics from 'expo-haptics';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Dimensions, StyleSheet, Text, View } from 'react-native';
+import {
+  Gesture,
+  GestureDetector,
+  GestureHandlerRootView,
+} from 'react-native-gesture-handler';
+import Animated, {
+  Easing,
+  FadeIn,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSpring,
   withTiming,
-  interpolateColor,
-  withSpring
 } from 'react-native-reanimated';
-import { generateNexusMatrix, generateMentalPattern, generateFullGhostPool, getMentalMomentum, generateSmartInsight } from '@/utils/noteUtils';
-import { NightTheme } from '@/constants/theme';
-import { CATEGORY_COLORS } from '@/constants/Categories';
+import Svg, { Line, Circle } from 'react-native-svg';
 
-interface NexusSurfaceMatrixProps {
-  notes: any[];
-  onPress: (node: any, type: 'dot' | 'text') => void;
-  theme: 'light' | 'dark';
-}
+import ReadingModal from '@/components/ReadingModal';
+import { useNotesStore } from '@/store/useNotesStore';
+import { computeConstellations, NexusNode } from '@/utils/nexusEngine';
 
-export default function NexusSurfaceMatrix({ notes, onPress, theme }: NexusSurfaceMatrixProps) {
-  const isDark = theme === 'dark';
-  
-  // High-Fidelity Pulse Animation State
-  const pulse = useSharedValue(0);
-  
+const { width, height } = Dimensions.get('window');
+
+// ─── Major Stellar Node ──────────────────────────────────────────────────────
+const StellarDot = React.memo(({
+  node,
+  onTap,
+}: {
+  node: NexusNode;
+  onTap: (n: NexusNode) => void;
+}) => {
+  const tap = Gesture.Tap().onEnd(() => {
+    'worklet';
+    runOnJS(onTap)(node);
+  });
+  const hitSize = 36;
+  return (
+    <GestureDetector gesture={tap}>
+      <View
+        style={{
+          position: 'absolute',
+          left: node.x - hitSize / 2,
+          top: node.y - hitSize / 2,
+          width: hitSize,
+          height: hitSize,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <View
+          style={{
+            width: node.radius * 2,
+            height: node.radius * 2,
+            borderRadius: node.radius,
+            backgroundColor: '#ffffff',
+            opacity: node.opacity,
+          }}
+        />
+      </View>
+    </GestureDetector>
+  );
+});
+
+// ─── Galactic Dust (Background Stars) ─────────────────────────────────────────
+const GalacticDust = React.memo(({ node }: { node: NexusNode }) => (
+  <View
+    style={{
+      position: 'absolute',
+      left: node.x - node.radius,
+      top: node.y - node.radius,
+      width: node.radius * 2,
+      height: node.radius * 2,
+      borderRadius: node.radius,
+      backgroundColor: '#ffffff',
+      opacity: node.opacity,
+    }}
+  />
+));
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
+export default function NexusSurfaceMatrix() {
+  const notes = useNotesStore(state => state.notes);
+  const addNote = useNotesStore(state => state.addNote);
+  const [readingNode, setReadingNode] = useState<NexusNode | null>(null);
+
+  const tx = useSharedValue(0);
+  const ty = useSharedValue(0);
+  const savedTx = useSharedValue(0);
+  const savedTy = useSharedValue(0);
+  const sc = useSharedValue(0.4);
+  const savedSc = useSharedValue(0.4);
+
+  // Vibration pulse for over-energized constellations (0 → 1 → 0 loop)
+  const vibrationPulse = useSharedValue(0);
   useEffect(() => {
-    pulse.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 1500 }),
-        withTiming(0, { duration: 2000 })
-      ),
+    vibrationPulse.value = withRepeat(
+      withTiming(1, { duration: 900, easing: Easing.inOut(Easing.sin) }),
       -1,
       true
     );
   }, []);
 
-  const animatedFlashStyle = useAnimatedStyle(() => {
-    return {
-      borderColor: interpolateColor(
-        pulse.value,
-        [0, 1],
-        [isDark ? '#2D1F5A' : '#E5E7EB', isDark ? '#7C3AED' : '#A78BFA']
-      ),
-      shadowOpacity: withTiming(pulse.value * 0.4),
-      transform: [{ scale: withSpring(1 + (pulse.value * 0.02)) }]
-    };
+  const layout = useMemo(() => computeConstellations(notes), [notes]);
+
+  useEffect(() => {
+    if (layout.nodes.length === 0) return;
+
+    const { minX, maxX, minY, maxY } = layout.bounds;
+    const structW = Math.max(width, maxX - minX);
+    const structH = Math.max(height, maxY - minY);
+
+    const targetSc = Math.max(0.2, Math.min(
+      (width * 0.9) / structW,
+      (height * 0.9) / structH,
+      1.1
+    ));
+
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+
+    const targetTx = -(centerX - width / 2) * targetSc;
+    const targetTy = -(centerY - height / 2) * targetSc;
+
+    const config = { damping: 25, stiffness: 100 };
+    tx.value = withSpring(targetTx, config);
+    ty.value = withSpring(targetTy, config);
+    sc.value = withSpring(targetSc, config);
+
+    savedTx.value = targetTx;
+    savedTy.value = targetTy;
+    savedSc.value = targetSc;
+  }, [layout.bounds]);
+
+  const handleTap = useCallback((node: NexusNode) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => { });
+    setReadingNode(node);
+  }, []);
+
+  const seed100Thoughts = useCallback(() => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    const coreDomains = [
+      { topic: "Reflecting on the subtle shift in my morning energy and focus today.", category: "Journal" },
+      { topic: "What if we could visualize semantic relationships as a liquid gravitational field?", category: "Idea" },
+      { topic: "Deeply considering the implications of digital minimalism on long-term creativity.", category: "Reflection" },
+      { topic: "Analysing the historical transition from linear to non-linear narrative structures.", category: "Study" },
+      { topic: "I dreamt of a giant mechanical clock floating in a void of silver dust.", category: "Dream" },
+      { topic: "A sudden spark of inspiration for a new spatial interface for thought archival.", category: "Idea" },
+      { topic: "Tracing the emotional resonance of forgotten childhood memories in a quiet room.", category: "Journal" },
+      { topic: "Synthesis of multiple research papers regarding the evolution of neural networks.", category: "Study" },
+      { topic: "Questioning the boundaries between human intuition and algorithmic synthesis.", category: "Reflection" },
+    ];
+
+    for (let i = 0; i < 100; i++) {
+      const domain = coreDomains[i % coreDomains.length];
+      const uniqueSuffix = Math.random().toString(36).substring(7);
+      addNote({
+        id: `seed-${Date.now()}-${i}-${uniqueSuffix}`,
+        content: `${domain.topic} [Ref: ${uniqueSuffix}]`,
+        created_at: Date.now() - (Math.random() * 1000 * 60 * 60 * 24 * 30),
+        source_type: 'text',
+        entities_json: JSON.stringify({ category: domain.category }),
+      });
+    }
+  }, [addNote]);
+
+  const clearAllNotes = useCallback(() => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    // This is a temporary test helper to clear the Nexus field
+    useNotesStore.setState({ notes: [] });
+  }, []);
+
+  const pan = Gesture.Pan()
+    .onStart(() => {
+      savedTx.value = tx.value;
+      savedTy.value = ty.value;
+    })
+    .onUpdate(e => {
+      tx.value = savedTx.value + e.translationX;
+      ty.value = savedTy.value + e.translationY;
+    });
+
+  const pinch = Gesture.Pinch()
+    .onStart(() => { savedSc.value = sc.value; })
+    .onUpdate(e => {
+      sc.value = Math.max(0.1, Math.min(5.0, savedSc.value * e.scale));
+    });
+
+  const doubleTap = Gesture.Tap().numberOfTaps(2).onEnd(() => {
+    'worklet';
+    runOnJS(seed100Thoughts)();
   });
 
-  const getClusterPulseStyle = (cat: string, momentumMap: Record<string, number>) => {
-    const rawPower = momentumMap[cat] || 0;
-    const power = Math.min(rawPower / 10, 1); // Scale power based on 10 notes density
-    
-    return useAnimatedStyle(() => ({
-      transform: [{ scale: withSpring(1 + (pulse.value * 0.03 * power)) }],
-      shadowOpacity: withTiming(pulse.value * 0.5 * power),
-      shadowColor: CATEGORY_COLORS[cat] || NightTheme.accent,
-      borderColor: interpolateColor(
-        pulse.value * power,
-        [0, 1],
-        [isDark ? tokens.clusterBorder : '#E5E7EB', CATEGORY_COLORS[cat] || NightTheme.accent]
-      ),
-      borderWidth: 0.5 + (pulse.value * power * 0.5)
-    }));
-  };
+  const tripleTap = Gesture.Tap().numberOfTaps(3).onEnd(() => {
+    'worklet';
+    runOnJS(clearAllNotes)();
+  });
 
-  // Dynamic Theme Tokens
-  const tokens = {
-    background: isDark ? NightTheme.background : '#FFFFFF',
-    surface: isDark ? NightTheme.surface : '#FFFFFF',
-    textPrimary: isDark ? NightTheme.textPrimary : '#11181C',
-    textSecondary: isDark ? NightTheme.textSecondary : '#4B5563',
-    textDeepMuted: isDark ? NightTheme.textDeepMuted : '#9CA3AF',
-    clusterCard: isDark ? '#161412' : '#FFFFFF',
-    clusterBorder: isDark ? '#242220' : '#E5E7EB',
-    flashCard: isDark ? '#1A1230' : '#FFFFFF',
-    flashBorder: isDark ? '#2D1F5A' : '#E5E7EB',
-    flashPill: isDark ? NightTheme.accentMuted : 'rgba(124, 58, 237, 0.08)',
-  };
+  const gesture = Gesture.Exclusive(tripleTap, doubleTap, Gesture.Simultaneous(pan, pinch));
 
-  const displayNotes = (notes && notes.length > 0) ? notes : generateFullGhostPool();
-  const data = useMemo(() => generateNexusMatrix(displayNotes), [displayNotes]);
-  const mentalMomentum = useMemo(() => getMentalMomentum(notes), [notes]);
+  const nodeContainerStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: tx.value },
+      { translateY: ty.value },
+      { scale: sc.value },
+    ],
+  }));
+
+  const nodeMap = useMemo(() => {
+    const m = new Map<string, NexusNode>();
+    layout.nodes.forEach(n => m.set(n.id, n));
+    return m;
+  }, [layout.nodes]);
 
   return (
-    <ScrollView 
-        style={[styles.container, { backgroundColor: tokens.background }]} 
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.topPulseContainer}>
-        <Text style={[styles.topPulseText, { color: NightTheme.accent }]}>
-          "{generateMentalPattern(notes)}"
-        </Text>
-      </View>
+    <GestureHandlerRootView style={styles.root}>
+      <View style={[styles.root, { backgroundColor: '#000000' }]}>
+        <GestureDetector gesture={gesture}>
+          <View style={styles.root}>
+            <Animated.View style={[styles.root, nodeContainerStyle]} entering={FadeIn.duration(800)}>
 
-      {/* 1. CLUSTER SECTION */}
-      <View style={styles.section}>
-        <Text style={[styles.sectionHint, { color: tokens.textDeepMuted }]}>
-          what your mind keeps returning to
-        </Text>
-        {data.clusters.map((cluster, idx) => {
-          const clusterPulseStyle = getClusterPulseStyle(cluster.topic, mentalMomentum);
-          const insight = generateSmartInsight(cluster.topic, notes);
-          
-          return (
-            <Animated.View 
-              key={cluster.id} 
-              entering={FadeInUp.delay(100 * idx).duration(600)}
-              layout={Layout.springify()}
-              style={[
-                styles.clusterCard, 
-                { backgroundColor: tokens.clusterCard, borderColor: tokens.clusterBorder },
-                clusterPulseStyle
-              ]}
-            >
-              <View style={styles.clusterHeader}>
-                <View style={[styles.clusterDot, { backgroundColor: cluster.color }]} />
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.clusterTopic, { color: tokens.textPrimary }]}>
-                    {cluster.topic.toUpperCase()}
-                  </Text>
-                  <Text style={[styles.subconsciousInsight, { color: NightTheme.accent }]}>
-                    {insight.toUpperCase()}
-                  </Text>
-                </View>
-                <Text style={[styles.clusterCount, { color: tokens.textDeepMuted }]}>
-                  {cluster.count} THOUGHTS
-                </Text>
-              </View>
-              {cluster.notes.map((note: any, nIdx: number) => (
-                <Text 
-                  key={note.id} 
-                  style={[
-                    styles.clusterNote, 
-                    { 
-                      color: tokens.textSecondary,
-                      borderTopColor: isDark ? '#1E1E1C' : '#F3F4F6'
-                    },
-                    nIdx === 0 && { color: tokens.textPrimary, borderTopWidth: 0, paddingTop: 0 }
-                  ]}
-                  onPress={() => onPress(note, 'text')}
-                >
-                  {note.content}
-                </Text>
+              {/* Layer 1: Galactic Dust (Nebula background) */}
+              {layout.dust.map(d => (
+                <GalacticDust key={d.id} node={d} />
+              ))}
+
+              {/* Layer 2: Constellation Bonds */}
+              {layout.nodes.length > 0 && (() => {
+                const pad = 50;
+                const svgLeft = layout.bounds.minX - pad;
+                const svgTop = layout.bounds.minY - pad;
+                const svgW = layout.bounds.maxX - layout.bounds.minX + pad * 2;
+                const svgH = layout.bounds.maxY - layout.bounds.minY + pad * 2;
+                return (
+                  <Svg 
+                    width={svgW}
+                    height={svgH}
+                    style={{ position: 'absolute', left: svgLeft, top: svgTop }}
+                    pointerEvents="none"
+                  >
+                    {layout.bonds.map(bond => {
+                      const src = nodeMap.get(bond.sourceId);
+                      const tgt = nodeMap.get(bond.targetId);
+                      if (!src || !tgt) return null;
+
+                      const x1 = src.x - svgLeft;
+                      const y1 = src.y - svgTop;
+                      const x2 = tgt.x - svgLeft;
+                      const y2 = tgt.y - svgTop;
+                      const mx = (x1 + x2) / 2;
+                      const my = (y1 + y2) / 2;
+                      const isAnchor = bond.isAnchorBond;
+                      const strokeW = isAnchor ? 1.0 : 0.6;
+
+                      // Vibrating bonds pulse their opacity
+                      const baseOpacity = isAnchor
+                        ? Math.min(0.8, bond.opacity * 1.6)
+                        : Math.min(0.5, bond.opacity * 1.2);
+                      // isVibrating: modulate between 30% and 100% of base opacity
+                      const strokeOpacity = bond.isVibrating
+                        ? baseOpacity * (0.3 + 0.7 * vibrationPulse.value)
+                        : baseOpacity;
+                      // Vibrating bonds are slightly thicker to suggest tension
+                      const finalStrokeW = bond.isVibrating ? strokeW * 1.5 : strokeW;
+
+                      return (
+                        <React.Fragment key={bond.id}>
+                          <Line
+                            x1={x1} y1={y1}
+                            x2={x2} y2={y2}
+                            stroke={bond.isVibrating ? '#ffcc44' : '#ffffff'}
+                            strokeWidth={finalStrokeW}
+                            opacity={strokeOpacity}
+                            strokeLinecap="round"
+                          />
+                          <Circle
+                            cx={mx} cy={my}
+                            r={isAnchor ? 1.5 : 0.9}
+                            fill={bond.isVibrating ? '#ffcc44' : '#ffffff'}
+                            opacity={strokeOpacity * 0.8}
+                          />
+                        </React.Fragment>
+                      );
+                    })}
+                  </Svg>
+                );
+              })()}
+
+              {/* Layer 3: Major Stellar Nodes (Notes) */}
+              {layout.nodes.map(node => (
+                <StellarDot
+                  key={node.id}
+                  node={node}
+                  onTap={handleTap}
+                />
               ))}
             </Animated.View>
-          );
-        })}
+
+            {/* Statistics Footer */}
+            <View style={styles.footer} pointerEvents="none">
+              <Text style={styles.footerText}>
+                {layout.nodes.length} STELLAR NODES • {layout.bonds.length} CONSTELLATION BINDINGS
+              </Text>
+            </View>
+          </View>
+        </GestureDetector>
       </View>
 
-      {/* 2. ZENITH SYNTHESIS: Synthesized Insights */}
-      {data.flashes.length > 0 && (
-        <View style={styles.section}>
-          <Text style={[styles.sectionHint, { color: tokens.textDeepMuted }]}>
-            zenith synthesis
-          </Text>
-          {data.flashes.map((flash, idx) => (
-            <Animated.View 
-              key={flash.id} 
-              entering={FadeInUp.delay(400 + (100 * idx)).duration(600)}
-              style={[
-                styles.flashCard, 
-                { 
-                  backgroundColor: tokens.flashCard, 
-                  borderColor: tokens.flashBorder,
-                  shadowColor: NightTheme.accent 
-                },
-                animatedFlashStyle
-              ]}
-            >
-              <View style={styles.flashTag}>
-                <View style={[styles.flashDot, { backgroundColor: NightTheme.accent }]} />
-                <Text style={[styles.flashTagText, { color: NightTheme.accent }]}>
-                  SYNTHESIS · {flash.topic.toUpperCase()}
-                </Text>
-              </View>
-              <Text style={[styles.flashTitle, { color: tokens.textPrimary }]}>
-                {flash.title}
-              </Text>
-              <Text style={[styles.flashBody, { color: tokens.textSecondary }]}>
-                {flash.body}
-              </Text>
-              <View style={styles.flashMeta}>
-                <View style={[styles.flashPill, { backgroundColor: tokens.flashPill }]}>
-                  <Text style={[styles.flashPillText, { color: NightTheme.accent }]}>
-                    {flash.count} THOUGHTS · {flash.days} DAYS
-                  </Text>
-                </View>
-                <Text style={[styles.flashTime, { color: tokens.textDeepMuted }]}>
-                  EVOLVED JUST NOW
-                </Text>
-              </View>
-            </Animated.View>
-          ))}
-        </View>
+      {readingNode && (
+        <ReadingModal
+          node={readingNode}
+          onClose={() => setReadingNode(null)}
+        />
       )}
-
-      {/* 3. MOOD THREAD */}
-      <View style={styles.section}>
-        <Text style={[styles.sectionHint, { color: tokens.textDeepMuted }]}>
-          today's emotional thread
-        </Text>
-        <View style={styles.moodRow}>
-          {data.moodTimeline.map((item, i) => (
-            <View 
-                key={i} 
-                style={[styles.moodSeg, { backgroundColor: item.color, opacity: 0.5 + (i * 0.05) }]} 
-            />
-          ))}
-        </View>
-        <View style={styles.moodTicks}>
-          <Text style={[styles.moodTick, { color: tokens.textDeepMuted }]}>anxious</Text>
-          <Text style={[styles.moodTick, { color: tokens.textDeepMuted }]}>calm</Text>
-          <Text style={[styles.moodTick, { color: tokens.textDeepMuted }]}>focused</Text>
-          <Text style={[styles.moodTick, { color: tokens.textDeepMuted }]}>now</Text>
-        </View>
-      </View>
-    </ScrollView>
+    </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  root: { flex: 1 },
+  svgLayer: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
   },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 45, 
-    paddingBottom: 80,
-  },
-  topPulseContainer: {
-    paddingVertical: 20,
+  footer: {
+    position: 'absolute',
+    bottom: 45,
+    left: 0,
+    right: 0,
     alignItems: 'center',
   },
-  topPulseText: {
-    fontSize: 13,
-    fontWeight: '300',
-    textAlign: 'center',
-    fontStyle: 'italic',
-    lineHeight: 18,
-    opacity: 0.85,
-    letterSpacing: 0.3,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionHint: {
-    fontSize: 8,
-    letterSpacing: 0.2,
-    textTransform: 'uppercase',
-    marginBottom: 12,
-  },
-  clusterCard: {
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 0.5,
-  },
-  clusterHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  clusterDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginRight: 8,
-  },
-  clusterTopic: {
+  footerText: {
+    color: 'rgba(255, 255, 255, 0.4)',
     fontSize: 9,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-  },
-  subconsciousInsight: {
-    fontSize: 7,
     fontWeight: '700',
-    letterSpacing: 1.2,
-    marginTop: 2,
-    opacity: 0.8,
-  },
-  clusterCount: {
-    fontSize: 8,
-    alignSelf: 'flex-start',
-    marginTop: 1,
-  },
-  clusterNote: {
-    fontSize: 11,
-    lineHeight: 18,
-    paddingVertical: 8,
-    borderTopWidth: 0.5,
-  },
-  flashCard: {
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 0.5,
-    // iOS Shadows for the spectral aura
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  flashTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  flashDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    marginRight: 6,
-  },
-  flashTagText: {
-    fontSize: 8,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
-  flashTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 6,
-    letterSpacing: -0.2,
-  },
-  flashBody: {
-    fontSize: 11,
-    lineHeight: 18,
-  },
-  flashMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  flashPill: {
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  flashPillText: {
-    fontSize: 8,
-    fontWeight: '600',
-  },
-  flashTime: {
-    fontSize: 8,
-    marginLeft: 'auto',
-  },
-  moodRow: {
-    flexDirection: 'row',
-    height: 4,
-    gap: 3,
-    marginBottom: 6,
-  },
-  moodSeg: {
-    flex: 1,
-    height: '100%',
-    borderRadius: 2,
-  },
-  moodTicks: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  moodTick: {
-    fontSize: 7,
+    letterSpacing: 2,
     textTransform: 'uppercase',
   },
 });
