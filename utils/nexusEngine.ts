@@ -131,8 +131,8 @@ export function computeConstellations(notes: Note[]): NexusLayout {
       x: center.x + Math.cos(angle) * dist,
       y: center.y + Math.sin(angle) * dist,
       energy,
-      radius: isAnchor ? 3.5 : (energy > 0.8 ? 2.4 : 1.4),
-      opacity: Math.max(0.35, energy),
+      radius: isAnchor ? 5.5 : (energy > 0.8 ? 4.0 : 2.5),
+      opacity: Math.max(0.7, energy),
       clusterId: category,
       entities_json: note.entities_json,
       isAnchor,
@@ -217,7 +217,7 @@ export function computeConstellations(notes: Note[]): NexusLayout {
           id: bid,
           sourceId: n1.id,
           targetId: tId,
-          opacity: Math.min(n1.opacity, t.node.opacity) * 0.4,
+          opacity: Math.min(n1.opacity, t.node.opacity) * 0.85,
           isAnchorBond: n1.isAnchor || t.node.isAnchor,
         });
         connectionCounts.set(n1.id, (connectionCounts.get(n1.id) || 0) + 1);

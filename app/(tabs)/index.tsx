@@ -88,11 +88,7 @@ export default function HomeScreen() {
     }, [])
   );
 
-  useEffect(() => {
-    if (notes.length === 0) {
-      seedSyntheticMemories(addNote, notes);
-    }
-  }, [notes.length]);
+
 
   const displayNotes = useMemo(() => {
     if (notes.length >= 5) return notes;

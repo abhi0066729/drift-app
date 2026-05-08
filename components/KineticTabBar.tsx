@@ -22,6 +22,7 @@ const getLabel = (routeName: string) => {
     case 'index': return 'TODAY';
     case 'capture': return 'CAPTURE';
     case 'notes': return 'NOTES';
+    case 'pulse': return 'STUDIO';
     case 'people': return 'PEOPLE';
     default: return 'HOME';
   }

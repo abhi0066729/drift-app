@@ -11,6 +11,7 @@ import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-g
 import Animated, {
   Easing,
   Extrapolate,
+  FadeIn,
   interpolate,
   SharedValue,
   useAnimatedProps,
@@ -23,11 +24,38 @@ import Animated, {
   withTiming
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Star } from 'lucide-react-native';
 import Svg, { Defs, Path, Stop, Circle as SvgCircle, LinearGradient as SvgLinearGradient } from 'react-native-svg';
 import { useShallow } from 'zustand/react/shallow';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 const AnimatedCircle = Animated.createAnimatedComponent(SvgCircle);
+
+const BlinkingStar = () => {
+  const opacity = useSharedValue(0.2);
+
+  useEffect(() => {
+    opacity.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 1200 }),
+        withTiming(0.2, { duration: 1200 })
+      ),
+      -1,
+      true
+    );
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ scale: withRepeat(withTiming(1.1, { duration: 1200 }), -1, true) }]
+  }));
+
+  return (
+    <Animated.View style={[{ marginBottom: 24 }, animatedStyle]}>
+      <Star size={24} color="#8E44AD" fill="#8E44AD" />
+    </Animated.View>
+  );
+};
 
 const { width: W, height: H } = Dimensions.get('window');
 
@@ -785,9 +813,11 @@ export default function StudioV9() {
       </View>
 
       {processedBranches.length === 0 ? (
-        <View style={styles.empty}>
-          <Text style={styles.emptyText}>STUDIO IS DARK</Text>
-        </View>
+        <Animated.View entering={FadeIn.delay(300)} style={styles.emptyState}>
+          <BlinkingStar />
+          <Text style={[styles.emptyTextTitle, { color: textColor }]}>Igniting the Stellar Forge</Text>
+          <Text style={styles.emptyTextSub}>Long-press any note in the map to seed your studio.</Text>
+        </Animated.View>
       ) : (
         <View style={{ flex: 1, justifyContent: 'center' }}>
           {viewMode === 'orbit' ? (
@@ -857,8 +887,31 @@ const styles = StyleSheet.create({
   title: { fontSize: 21, fontWeight: '300', letterSpacing: 3, textTransform: 'uppercase' },
   subtitle: { fontSize: 9, fontWeight: '700', color: '#8E44AD', textTransform: 'uppercase', letterSpacing: 3, marginTop: 6 },
   toggleBtn: { padding: 8, borderRadius: 20, backgroundColor: 'rgba(124, 58, 237, 0.1)' },
-  empty: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyText: { color: 'rgba(255,255,255,0.2)', fontSize: 12, letterSpacing: 4, fontWeight: '700' },
+  emptyState: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 0,
+  },
+  emptyTextTitle: {
+    fontSize: 16,
+    fontWeight: '300',
+    letterSpacing: 1.5,
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  emptyTextSub: {
+    fontSize: 8,
+    color: '#8E44AD',
+    textTransform: 'uppercase',
+    letterSpacing: 2.0,
+    fontWeight: '700',
+    textAlign: 'center',
+    paddingHorizontal: 40,
+  },
+  emptyText: { color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: '700', letterSpacing: 3 },
   listContainer: { paddingHorizontal: 24, paddingBottom: 150, paddingTop: 20 },
   listCard: { borderRadius: 24, marginBottom: 16, overflow: 'hidden' },
   cardSkeletonContainer: { position: 'absolute', right: 0, top: 0, bottom: 0, width: 110, justifyContent: 'center', alignItems: 'center' },

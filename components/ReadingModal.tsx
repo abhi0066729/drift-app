@@ -36,17 +36,17 @@ export default function ReadingModal({ node, onClose, translucent, searchQuery }
   
   if (!finalCategory) finalCategory = 'Journal';
 
-  const headerTitle = finalEmotion 
+  const headerTitle = (finalEmotion 
     ? `${finalCategory.toUpperCase()} · ${finalEmotion.toUpperCase()}`
-    : finalCategory.toUpperCase();
-
+    : finalCategory.toUpperCase()) || 'NOTE';
 
   const color = CATEGORY_COLORS[finalCategory] || '#8E44AD';
   
+  const content = node.content || '';
   const hasSearch = searchQuery && searchQuery.length > 0;
   const isMatch = hasSearch && (
-    node.content.toLowerCase().includes(searchQuery!.toLowerCase()) ||
-    node.category?.toLowerCase().includes(searchQuery!.toLowerCase())
+    content.toLowerCase().includes(searchQuery!.toLowerCase()) ||
+    finalCategory.toLowerCase().includes(searchQuery!.toLowerCase())
   );
 
   const DropAndBounce = () => {
@@ -72,7 +72,7 @@ export default function ReadingModal({ node, onClose, translucent, searchQuery }
       style={[StyleSheet.absoluteFill, { zIndex: 1000 }]}
     >
       <Pressable style={StyleSheet.absoluteFill} onPress={onClose}>
-        <BlurView intensity={isDark ? 40 : 65} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
+        <BlurView intensity={60} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
       </Pressable>
       
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }} pointerEvents="box-none">
@@ -82,19 +82,19 @@ export default function ReadingModal({ node, onClose, translucent, searchQuery }
           style={[styles.contentContainer, { backgroundColor: 'transparent' }]}
         >
           <BlurView 
-            intensity={isDark ? 50 : 80} 
-            tint={isDark ? 'dark' : 'light'} 
+            intensity={80} 
+            tint={isDark ? "dark" : "light"} 
             style={StyleSheet.absoluteFill} 
           />
           
-          <View style={{ flex: 1, paddingVertical: 24 }}>
+          <View style={{ flexShrink: 1, paddingVertical: 24 }}>
             {/* Header section matching ThoughtCloud avatar+name layout */}
             <View style={styles.header}>
               <View style={[styles.avatarPlaceholder, { backgroundColor: `${color}20` }]}>
                 <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: color, opacity: 0.25 }} />
               </View>
               <View style={styles.headerText}>
-                <Text style={[styles.title, { color: isDark ? NightTheme.textPrimary : '#111' }]} numberOfLines={1}>{headerTitle}</Text>
+                <Text style={[styles.title, { color: isDark ? 'rgba(255,255,255,0.95)' : '#111111' }]} numberOfLines={1}>{headerTitle}</Text>
               </View>
             </View>
 
@@ -109,10 +109,12 @@ export default function ReadingModal({ node, onClose, translucent, searchQuery }
                     contentFit="cover" 
                   />
                 )}
-                <Text style={[styles.noteContent, { color: isDark ? NightTheme.textPrimary : '#333' }]}>{node.content}</Text>
+                <Text style={[styles.noteContent, { color: isDark ? 'rgba(255,255,255,0.9)' : '#111111' }]}>
+                  {content || 'No content available for this note.'}
+                </Text>
                 
                 <View style={[styles.cardFooter, { borderTopColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }]}>
-                  <Text style={[styles.footerDate, { color: isDark ? NightTheme.textMuted : '#999' }]}>
+                  <Text style={[styles.footerDate, { color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)' }]}>
                     {new Date(node.created_at || Date.now()).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                   </Text>
                 </View>

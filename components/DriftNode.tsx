@@ -47,6 +47,8 @@ function DriftNode({ node, onPress, onDragStart, onDragUpdateSharedX, onDragUpda
   const mainColor = color1;
   const isDual = sortedResonances.length > 1 && primaryCat !== secondaryCat;
   
+  const isPinned = useNotesStore(state => state.studioSeeds?.includes(node.id));
+  
   const pulseScale = useSharedValue(1);
   const pulseOpacity = useSharedValue(0.6);
   const outerPulseScale = useSharedValue(1);
@@ -271,6 +273,11 @@ function DriftNode({ node, onPress, onDragStart, onDragUpdateSharedX, onDragUpda
             try { Haptics.selectionAsync(); } catch (e) {}
             onPress(node, 'text');
           }}
+          onLongPress={() => {
+            try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch (e) {}
+            useNotesStore.getState().toggleStudioSeed(node.id);
+          }}
+          delayLongPress={400}
           style={({ pressed }) => ({ 
             width: '100%', 
             height: '100%', 
@@ -280,6 +287,7 @@ function DriftNode({ node, onPress, onDragStart, onDragUpdateSharedX, onDragUpda
         >
           <Text style={[styles.noteCategory, { color: mainColor, marginBottom: 6, opacity: Math.min(1, node.ageFade + 0.4) }]}>
             {node.is_refining ? 'REFINING...' : node.category?.toUpperCase()}
+            {isPinned && ' ✦ IN STUDIO'}
           </Text>
           <View style={{ maxHeight: 60, overflow: 'hidden' }}>
             <Text numberOfLines={3} style={[styles.noteContent, { color: theme === 'dark' ? NightTheme.textPrimary : '#111111' }, node.is_refining && { color: theme === 'dark' ? NightTheme.textMuted : '#BBBBBB' }]}>{node.content}</Text>

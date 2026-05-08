@@ -292,7 +292,7 @@ export default function NotesScreen() {
               <Animated.View entering={FadeIn.delay(300)} style={styles.emptyState}>
                 <BlinkingStar />
                 <Text style={[styles.emptyTextTitle, { color: theme === 'dark' ? NightTheme.textPrimary : '#111111' }]}>Gathering Stardust</Text>
-                <Text style={[styles.emptyTextSub, { color: theme === 'dark' ? NightTheme.textMuted : '#8E44AD' }]}>Your captured thoughts will synthesize here soon.</Text>
+                <Text style={styles.emptyTextSub}>Your captured thoughts will synthesize here soon.</Text>
               </Animated.View>
             ) : (
               <View style={styles.listWrapper}>
@@ -401,16 +401,18 @@ const styles = StyleSheet.create({
     zIndex: 0,
   },
   emptyState: {
-    flex: 1,
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingBottom: 220,
+    zIndex: 0,
   },
   starWrapper: {
     marginBottom: 24,
   },
   emptyTextTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '300',
     color: '#111111',
     letterSpacing: 1.5,

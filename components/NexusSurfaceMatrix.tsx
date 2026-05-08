@@ -23,25 +23,56 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
+  withSequence,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import Svg, { Line, Circle } from 'react-native-svg';
 import { BlurView } from 'expo-blur';
+import { Star } from 'lucide-react-native';
 
 import { useNotesStore } from '@/store/useNotesStore';
 import { computeConstellations, NexusNode } from '@/utils/nexusEngine';
 import { NightTheme } from '@/constants/theme';
+import { CATEGORY_COLORS } from '@/constants/Categories';
+
 
 const { width, height } = Dimensions.get('window');
 
-// ─── Major Stellar Node ──────────────────────────────────────────────────────
+const BlinkingStar = () => {
+  const opacity = useSharedValue(0.2);
+
+  useEffect(() => {
+    opacity.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 1200 }),
+        withTiming(0.2, { duration: 1200 })
+      ),
+      -1,
+      true
+    );
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ scale: withRepeat(withTiming(1.1, { duration: 1200 }), -1, true) }]
+  }));
+
+  return (
+    <Animated.View style={[{ marginBottom: 24 }, animatedStyle]}>
+      <Star size={24} color="#8E44AD" fill="#8E44AD" />
+    </Animated.View>
+  );
+};
+
 const StellarDot = React.memo(({
   node,
   onTap,
+  theme,
 }: {
   node: NexusNode;
   onTap: (n: NexusNode, sx: number, sy: number) => void;
+  theme: string;
 }) => {
   const tap = Gesture.Tap().onEnd((e) => {
     'worklet';
@@ -66,7 +97,7 @@ const StellarDot = React.memo(({
             width: node.radius * 2,
             height: node.radius * 2,
             borderRadius: node.radius,
-            backgroundColor: '#ffffff',
+            backgroundColor: theme === 'dark' ? '#ffffff' : '#111111',
             opacity: node.opacity,
           }}
         />
@@ -76,7 +107,7 @@ const StellarDot = React.memo(({
 });
 
 // ─── Galactic Dust (Background Stars) ─────────────────────────────────────────
-const GalacticDust = React.memo(({ node }: { node: NexusNode }) => (
+const GalacticDust = React.memo(({ node, theme }: { node: NexusNode; theme: string }) => (
   <View
     style={{
       position: 'absolute',
@@ -85,55 +116,86 @@ const GalacticDust = React.memo(({ node }: { node: NexusNode }) => (
       width: node.radius * 2,
       height: node.radius * 2,
       borderRadius: node.radius,
-      backgroundColor: '#ffffff',
+      backgroundColor: theme === 'dark' ? '#ffffff' : '#111111',
       opacity: node.opacity,
     }}
   />
 ));
 
-// ─── Inline Node Expand Card (Chronos-style, no modal) ────────────────────────
-const NodeExpandCard = React.memo(({ node, screenX, screenY, onClose }: {
+// ─── Inline Node Expand Card (Refined Aesthetic) ─────────────────────────────
+const NodeExpandCard = React.memo(({ node, screenX, screenY, onClose, theme }: {
   node: NexusNode;
   screenX: number;
   screenY: number;
   onClose: () => void;
+  theme: string;
 }) => {
-  const cardH = 200;
+  const cardH = 220;
   const topPos = screenY - cardH - 24 > 80 ? screenY - cardH - 24 : screenY + 24;
-  const leftPos = Math.max(16, Math.min(width - 280, screenX - 130));
+  const leftPos = Math.max(16, Math.min(width - 296, screenX - 148));
   const date = node.created_at
     ? new Date(node.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     : '';
+
+  // Use a consistent Nexus accent color instead of looking up category colors
+  const accentColor = '#8E44AD'; 
+
+
+  const DropAndBounce = () => {
+    'worklet';
+    return {
+      initialValues: { transform: [{ translateY: -20 }, { scale: 0.95 }], opacity: 0 },
+      animations: {
+        transform: [
+          { translateY: withSpring(0, { damping: 12, stiffness: 100 }) },
+          { scale: withSpring(1) }
+        ],
+        opacity: withSpring(1),
+      },
+    };
+  };
+
   return (
     <Animated.View
-      entering={FadeIn.duration(180)}
-      exiting={FadeOut.duration(140)}
-      style={[styles.expandCard, { top: topPos, left: leftPos }]}
+      entering={DropAndBounce}
+      exiting={FadeOut.duration(150)}
+      style={[styles.expandCard, { top: topPos, left: leftPos, borderColor: theme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }]}
     >
-      <BlurView intensity={60} tint="dark" style={StyleSheet.absoluteFill} />
+      <BlurView intensity={80} tint={theme === 'dark' ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
       <Pressable style={styles.expandDismiss} onPress={onClose}>
         <View style={styles.expandInner}>
           <View style={styles.expandHeader}>
-            <Text style={styles.expandCategory}>
-              {(node.category || node.clusterId || 'NOTE').toUpperCase()}
+            <View style={[styles.cardIndicator, { backgroundColor: accentColor }]} />
+
+            <Text style={[styles.expandCategory, { color: theme === 'dark' ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)' }]}>
+              {(node.category || 'NOTE').toUpperCase()}
             </Text>
-            {node.emotion ? <Text style={styles.expandEmotion}>{node.emotion}</Text> : null}
-            <Text style={styles.expandDate}>{date}</Text>
+            <Text style={[styles.expandDate, { color: theme === 'dark' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)' }]}>{date}</Text>
           </View>
-          <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 130 }}>
-            <Text style={styles.expandContent}>{node.content}</Text>
+          
+          <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 140 }}>
+            <Text style={[styles.expandContent, { color: theme === 'dark' ? 'rgba(255,255,255,0.9)' : '#111111' }]}>{node.content}</Text>
           </ScrollView>
-          <Text style={styles.expandHint}>TAP TO DISMISS</Text>
+
+          {node.emotion && (
+            <View style={styles.emotionTag}>
+              <Text style={styles.expandEmotion}>{node.emotion.toUpperCase()}</Text>
+            </View>
+          )}
+          
+          <Text style={[styles.expandHint, { color: theme === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.3)' }]}>TAP OUTSIDE TO DISMISS</Text>
         </View>
       </Pressable>
     </Animated.View>
   );
 });
 
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function NexusSurfaceMatrix() {
   const notes = useNotesStore(state => state.notes);
+  const theme = useNotesStore(state => state.theme);
   const addNote = useNotesStore(state => state.addNote);
   const [expandState, setExpandState] = useState<{ node: NexusNode; sx: number; sy: number } | null>(null);
 
@@ -265,15 +327,24 @@ export default function NexusSurfaceMatrix() {
   }, [layout.nodes]);
 
   return (
-    <GestureHandlerRootView style={styles.root}>
-      <View style={[styles.root, { backgroundColor: '#000000' }]}>
+    <View style={styles.root}>
+      <View style={[styles.root, { backgroundColor: theme === 'dark' ? '#000000' : '#FFFFFF' }]}>
         <GestureDetector gesture={gesture}>
           <View style={styles.root}>
+
+            {layout.nodes.length === 0 && (
+              <Animated.View entering={FadeIn.delay(300)} style={[styles.emptyState, { marginTop: -80 }]}>
+                <BlinkingStar />
+                <Text style={[styles.emptyTextTitle, { color: theme === 'dark' ? '#E8E6E0' : '#111111' }]}>The Void is Empty</Text>
+                <Text style={styles.emptyTextSub}>Synthesize new thoughts to form constellations.</Text>
+              </Animated.View>
+            )}
+
             <Animated.View style={[styles.root, nodeContainerStyle]} entering={FadeIn.duration(800)}>
 
               {/* Layer 1: Galactic Dust (Nebula background) */}
               {layout.dust.map(d => (
-                <GalacticDust key={d.id} node={d} />
+                <GalacticDust key={d.id} node={d} theme={theme} />
               ))}
 
               {/* Layer 2: Constellation Bonds */}
@@ -302,11 +373,11 @@ export default function NexusSurfaceMatrix() {
                       const mx = (x1 + x2) / 2;
                       const my = (y1 + y2) / 2;
                       const isAnchor = bond.isAnchorBond;
-                      const strokeW = isAnchor ? 1.0 : 0.6;
+                      const strokeW = isAnchor ? 1.8 : 1.0;
 
                       const baseOpacity = isAnchor
-                        ? Math.min(0.8, bond.opacity * 1.6)
-                        : Math.min(0.5, bond.opacity * 1.2);
+                        ? Math.min(1.0, bond.opacity * 2.0)
+                        : Math.min(0.8, bond.opacity * 1.5);
                       
                       const strokeOpacity = bond.isVibrating
                         ? baseOpacity * (0.3 + 0.7 * vibrationPulse.value)
@@ -319,7 +390,7 @@ export default function NexusSurfaceMatrix() {
                           <Line
                             x1={x1} y1={y1}
                             x2={x2} y2={y2}
-                            stroke={bond.isVibrating ? '#ffcc44' : '#ffffff'}
+                            stroke={bond.isVibrating ? '#ffcc44' : (theme === 'dark' ? '#ffffff' : '#111111')}
                             strokeWidth={finalStrokeW}
                             opacity={strokeOpacity}
                             strokeLinecap="round"
@@ -327,7 +398,7 @@ export default function NexusSurfaceMatrix() {
                           <Circle
                             cx={mx} cy={my}
                             r={isAnchor ? 1.5 : 0.9}
-                            fill={bond.isVibrating ? '#ffcc44' : '#ffffff'}
+                            fill={bond.isVibrating ? '#ffcc44' : (theme === 'dark' ? '#ffffff' : '#111111')}
                             opacity={strokeOpacity * 0.8}
                           />
                         </React.Fragment>
@@ -343,13 +414,14 @@ export default function NexusSurfaceMatrix() {
                   key={node.id}
                   node={node}
                   onTap={handleTap}
+                  theme={theme}
                 />
               ))}
             </Animated.View>
 
             {/* Statistics Footer */}
             <View style={styles.footer} pointerEvents="none">
-              <Text style={styles.footerText}>
+              <Text style={[styles.footerText, { color: theme === 'dark' ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.4)' }]}>
                 {layout.nodes.length} STELLAR NODES • {layout.bonds.length} CONSTELLATION BINDINGS
               </Text>
             </View>
@@ -363,9 +435,10 @@ export default function NexusSurfaceMatrix() {
           screenX={expandState.sx}
           screenY={expandState.sy}
           onClose={() => setExpandState(null)}
+          theme={theme}
         />
       )}
-    </GestureHandlerRootView>
+    </View>
   );
 }
 
@@ -385,23 +458,61 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     textTransform: 'uppercase',
   },
+  emptyState: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  emptyTextTitle: {
+    fontSize: 16,
+    fontWeight: '300',
+    color: '#E8E6E0',
+    letterSpacing: 1.5,
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  emptyTextSub: {
+    fontSize: 8,
+    color: '#8E44AD',
+    textTransform: 'uppercase',
+    letterSpacing: 2.0,
+    fontWeight: '700',
+    textAlign: 'center',
+    paddingHorizontal: 40,
+  },
   expandCard: {
     position: 'absolute',
-    width: 264,
-    borderRadius: 16,
+    width: 296,
+    borderRadius: 24,
+
     overflow: 'hidden',
     borderWidth: 0.5,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(255,255,255,0.08)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.4,
+    shadowRadius: 40,
+    elevation: 25,
     zIndex: 9999,
   },
+
   expandDismiss: { flex: 1 },
   expandInner: { padding: 16 },
   expandHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 10,
-    gap: 8,
+    gap: 12,
   },
+  cardIndicator: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+
   expandCategory: {
     fontSize: 9,
     fontWeight: '700',
@@ -410,12 +521,20 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   expandEmotion: {
-    fontSize: 9,
-    color: 'rgba(255,200,100,0.7)',
-    letterSpacing: 1,
-    fontWeight: '600',
-    textTransform: 'capitalize',
+    fontSize: 7,
+    color: '#8E44AD',
+    letterSpacing: 1.5,
+    fontWeight: '800',
   },
+  emotionTag: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(142, 68, 173, 0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginTop: 12,
+  },
+
   expandDate: {
     fontSize: 9,
     color: 'rgba(255,255,255,0.3)',
