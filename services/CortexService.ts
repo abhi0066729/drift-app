@@ -1,8 +1,8 @@
-import { LocalLlamaService } from './LocalLlamaService';
-import { EmbeddingEngine } from './EmbeddingEngine';
-import { VectorSearchService } from './VectorSearchService';
-
 export type AppMode = 'nexus' | 'capture' | 'search' | 'background';
+
+const getLlama = () => require('./LocalLlamaService').LocalLlamaService.getInstance();
+const getEmbed = () => require('./EmbeddingEngine').EmbeddingEngine.getInstance();
+const getVector = () => require('./VectorSearchService').VectorSearchService.getInstance();
 
 export class CortexService {
   private static instance: CortexService;
@@ -38,28 +38,28 @@ export class CortexService {
 
     switch (mode) {
       case 'capture':
-        await EmbeddingEngine.getInstance().init();
-        await LocalLlamaService.getInstance().init();
+        await getEmbed().init();
+        await getLlama().init();
         break;
 
       case 'nexus':
         // Start a "Warm State" timer instead of instant unload
         this.unloadTimeout = setTimeout(async () => {
           console.log('[Cortex] Warm state expired. Purging Llama from RAM.');
-          await LocalLlamaService.getInstance().unload();
+          await getLlama().unload();
         }, this.WARM_STATE_DURATION);
 
-        await VectorSearchService.getInstance().init();
+        await getVector().init();
         break;
 
       case 'search':
-        await EmbeddingEngine.getInstance().init();
-        await VectorSearchService.getInstance().init();
+        await getEmbed().init();
+        await getVector().init();
         break;
 
       case 'background':
-        await LocalLlamaService.getInstance().unload();
-        await EmbeddingEngine.getInstance().unload();
+        await getLlama().unload();
+        await getEmbed().unload();
         break;
     }
   }
@@ -73,14 +73,14 @@ export class CortexService {
     
     // 1. Semantic Search (E5 + HNSW)
     // Find the neighborhood where this thought belongs
-    const neighborhood = await VectorSearchService.getInstance().search(
-      await EmbeddingEngine.getInstance().embed(noteContent, true),
+    const neighborhood = await getVector().search(
+      await getEmbed().embed(noteContent, true),
       8
     );
 
     // 2. Local Synthesis (Llama)
     // Weave the narrative connection
-    const synthesis = await LocalLlamaService.getInstance().synthesise(noteContent);
+    const synthesis = await getLlama().synthesise(noteContent);
 
     // 3. Recursive Re-indexing
     // In Phase 5, we would embed the synthesis itself to create "High-Order Notes"

@@ -1,11 +1,12 @@
 import { EmbeddingManager } from './EmbeddingManager';
 import { NoteService } from './NoteService';
 import { DatabaseService } from './DatabaseService';
-import { EmbeddingEngine } from './EmbeddingEngine';
+import { ClusteringService } from './ClusteringService';
 import { VectorSearchService } from './VectorSearchService';
 import { ModelDownloadService } from './ModelDownloadService';
-import { LocalLlamaService } from './LocalLlamaService';
-import { ClusteringService } from './ClusteringService';
+
+const getLlama = () => require('./LocalLlamaService').LocalLlamaService.getInstance();
+const getEmbed = () => require('./EmbeddingEngine').EmbeddingEngine.getInstance();
 
 
 export type SyncProgress = {
@@ -58,9 +59,9 @@ export class SyncService {
 
       // 2. Engine Activation
       this.notify('scanning', 0.7, 'Igniting Semantic Engines...');
-      await EmbeddingEngine.getInstance().init();
+      await getEmbed().init();
       await VectorSearchService.getInstance().init();
-      await LocalLlamaService.getInstance().init();
+      await getLlama().init();
 
       // 3. Thought Synchronization
       this.notify('embedding', 0.8, 'Mapping thought clusters...');

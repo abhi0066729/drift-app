@@ -1,7 +1,8 @@
-import { LocalLlamaService } from './LocalLlamaService';
 import { NoteService } from './NoteService';
 import { Note } from '../store/useNotesStore';
 import * as Crypto from 'expo-crypto';
+
+const getLlama = () => require('./LocalLlamaService').LocalLlamaService.getInstance();
 
 export class SynthesisService {
   private static instance: SynthesisService;
@@ -24,7 +25,7 @@ export class SynthesisService {
 
     try {
       // 1. Generate the poetic synthesis via Llama
-      const result = await LocalLlamaService.getInstance().synthesise(sourceNote.content);
+      const result = await getLlama().synthesise(sourceNote.content);
       
       if (!result.summary || result.summary.length < 5) return null;
 
