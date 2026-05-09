@@ -2,35 +2,24 @@ name: Build iOS IPA (Unsigned)
 on:
   workflow_dispatch:
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true # Ensures all actions use Node 24
-
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: macos-14 # Specifically target Sonoma to avoid general runner outages
     steps:
-      - name: 🏗 Checkout Repository
+      - name: 🏗 Checkout
         uses: actions/checkout@v4
 
-      - name: ⚙️ Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24 # The latest engine
+      - name: 🛠 Pure Bash Setup
+        run: |
+          export PATH="/usr/local/bin:$PATH"
+          brew install node@20
+          npm install -g expo-cli
+          npm install
 
-      - name: 📦 Install Dependencies
-        run: npm install
-
-      - name: 🚀 Setup Expo
-        uses: expo/expo-github-action@v8
-        with:
-          expo-version: latest
-          # NO CACHE HERE - Bypasses GitHub's 400 error
-
-      - name: 🛠 Prebuild Native Modules
-        run: npx expo prebuild --platform ios --no-install
-
-      - name: 🍎 Install CocoaPods
-        run: cd ios && pod install
+      - name: 🛠 Prebuild & Pods
+        run: |
+          npx expo prebuild --platform ios --no-install
+          cd ios && pod install
 
       - name: 🏗 Build IPA (Unsigned)
         run: |
@@ -47,11 +36,3 @@ jobs:
           mkdir -p Payload
           mv build/Build/Products/Release-iphoneos/drift-app.app Payload/
           zip -r drift-palace-unsigned.ipa Payload
-          rm -rf Payload
-
-
-      - name: 📤 Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: drift-palace-ios-ipa
-          path: drift-palace-unsigned.ipa
