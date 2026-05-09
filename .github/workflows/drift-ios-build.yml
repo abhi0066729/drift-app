@@ -2,11 +2,7 @@ name: Build iOS IPA (Unsigned)
 on:
   workflow_dispatch:
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
-
   build:
     runs-on: macos-latest
     steps:
@@ -16,8 +12,7 @@ jobs:
       - name: ⚙️ Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 24
-          cache: 'npm'
+          node-version: 20 # Switching back to stable
 
       - name: 📦 Install Dependencies
         run: npm install
@@ -26,7 +21,6 @@ jobs:
         uses: expo/expo-github-action@v8
         with:
           expo-version: latest
-          eas-cache: true
 
       - name: 🛠 Prebuild Native Modules
         run: npx expo prebuild --platform ios --no-install
@@ -41,7 +35,6 @@ jobs:
           mv build/Build/Products/Release-iphoneos/drift-app.app Payload/
           zip -r drift-palace-unsigned.ipa Payload
           rm -rf Payload
-
 
       - name: 📤 Upload Artifact
         uses: actions/upload-artifact@v4
