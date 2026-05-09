@@ -1,6 +1,5 @@
 import { AutoTokenizer, env } from '@xenova/transformers';
-import * as ort from 'onnxruntime-react-native';
-
+import { Platform } from 'react-native';
 
 // Configure environment for local usage
 env.allowLocalModels = true;
@@ -8,9 +7,10 @@ env.allowRemoteModels = false;
 
 export class EmbeddingEngine {
   private static instance: EmbeddingEngine;
-  private session: ort.InferenceSession | null = null;
+  private session: any = null;
   private tokenizer: any = null;
   private initialized: boolean = false;
+  private ort: any = null;
 
   private constructor() { }
 
@@ -22,13 +22,15 @@ export class EmbeddingEngine {
   }
 
   public async init() {
-    if (this.initialized) return;
+    if (this.initialized || Platform.OS === 'web') return;
 
     try {
       console.log('[EmbeddingEngine] Initializing...');
-
-      console.log('[EmbeddingEngine] Initializing from downloaded assets...');
-      const { documentDirectory } = require('expo-file-system/legacy');
+      
+      // Dynamic imports to prevent export-time crashes
+      const { documentDirectory } = require('expo-file-system');
+      this.ort = require('onnxruntime-react-native');
+      
       const modelsDir = `${documentDirectory}models/`;
 
       // 1. Load Tokenizer
@@ -39,12 +41,12 @@ export class EmbeddingEngine {
 
       // 2. Load ONNX Model
       const modelPath = `${modelsDir}multilingual-e5-small-int8.onnx`;
-      this.session = await ort.InferenceSession.create(modelPath, {
+      this.session = await this.ort.InferenceSession.create(modelPath, {
         executionProviders: ['cpu'],
       });
 
       this.initialized = true;
-      console.log('[EmbeddingEngine] Ready with cloud-synced models.');
+      console.log('[EmbeddingEngine] Ready.');
 
     } catch (error) {
       console.error('[EmbeddingEngine] Initialization failed:', error);
@@ -59,40 +61,32 @@ export class EmbeddingEngine {
     const prefix = isQuery ? 'query: ' : 'passage: ';
     const fullText = `${prefix}${text}`;
 
-    // 1. Tokenize
     const { input_ids, attention_mask } = await this.tokenizer(fullText, {
       padding: true,
       truncation: true,
       maxLength: 512,
     });
 
-    // 2. Prepare Tensors
-    const inputTensor = new ort.Tensor('int64', BigInt64Array.from(input_ids.data), input_ids.dims);
-    const maskTensor = new ort.Tensor('int64', BigInt64Array.from(attention_mask.data), attention_mask.dims);
+    const inputTensor = new this.ort.Tensor('int64', BigInt64Array.from(input_ids.data), input_ids.dims);
+    const maskTensor = new this.ort.Tensor('int64', BigInt64Array.from(attention_mask.data), attention_mask.dims);
 
-    // 3. Run Inference
     const results = await this.session.run({
       input_ids: inputTensor,
       attention_mask: maskTensor,
     });
 
-    // 4. Post-process (Mean Pooling)
-    const lastHiddenState = results.last_hidden_state;
-    const pooled = this.meanPool(lastHiddenState, attention_mask);
-
-    // 5. Normalize
+    const pooled = this.meanPool(results.last_hidden_state, attention_mask);
     return this.normalize(pooled);
   }
 
   public async unload(): Promise<void> {
     if (this.session) {
       this.session = null;
-      console.log('[EmbeddingEngine] Session disposed.');
     }
     this.initialized = false;
   }
 
-  private meanPool(lastHiddenState: ort.Tensor, attentionMask: any): Float32Array {
+  private meanPool(lastHiddenState: any, attentionMask: any): Float32Array {
     const [batchSize, seqLen, dim] = lastHiddenState.dims;
     const data = lastHiddenState.data as Float32Array;
     const maskData = attentionMask.data as Int32Array | BigInt64Array;
