@@ -46,16 +46,84 @@ export const BrandedSplashScreen = ({ status, progress = 0 }: SplashProps) => {
     nebulaScale.value = withDelay(2500, withTiming(1, { duration: 3000 }));
   }, []);
 
-  // ... (rest of the path logic remains the same)
+  // Waveform Path Logic (passing through logo nodes)
+  const path = useMemo(() => {
+    const skPath = Skia.Path.Make();
+    skPath.moveTo(LOGO_NODES[0].x, LOGO_NODES[0].y);
+    
+    for (let i = 1; i < LOGO_NODES.length; i++) {
+      const prev = LOGO_NODES[i-1];
+      const curr = LOGO_NODES[i];
+      const cp1x = prev.x + (curr.x - prev.x) / 2;
+      const cp2x = prev.x + (curr.x - prev.x) / 2;
+      skPath.cubicTo(cp1x, prev.y, cp2x, curr.y, curr.x, curr.y);
+    }
+    return skPath;
+  }, []);
+
+  const glassStyle = useAnimatedStyle(() => ({
+    opacity: glassOpacity.value,
+  }));
+
+  const nebulaStyle = useAnimatedStyle(() => ({
+    opacity: glassOpacity.value * 0.4,
+    transform: [{ scale: nebulaScale.value }],
+  }));
 
   return (
     <View style={styles.container}>
-      {/* ... (Nebula and Glass layers remain the same) */}
-      
+      {/* 1. THE CONSTELLATIONS (Behind the Glass) */}
+      <Animated.View style={[styles.nebulaContainer, nebulaStyle]}>
+        {[...Array(12)].map((_, i) => (
+          <View 
+            key={i} 
+            style={[
+              styles.constellationNode, 
+              { 
+                left: Math.random() * width, 
+                top: Math.random() * height,
+                width: 4 + Math.random() * 8,
+                height: 4 + Math.random() * 8,
+                backgroundColor: i % 2 === 0 ? '#8E44AD' : '#3498DB'
+              }
+            ]} 
+          />
+        ))}
+      </Animated.View>
+
+      {/* 2. THE GLASS LAYER */}
+      <Animated.View style={[StyleSheet.absoluteFill, glassStyle]}>
+        <BlurView intensity={40} tint="light" style={StyleSheet.absoluteFill} />
+      </Animated.View>
+
       {/* 3. THE CORE LOGO */}
       <View style={styles.logoRoot}>
-        {/* ... (Nodes and Logo text remain the same) */}
-        
+        {/* Animated Waveform Threads */}
+        <View style={styles.canvasContainer}>
+          <Canvas style={{ flex: 1 }}>
+            <Path
+              path={path}
+              color="black"
+              style="stroke"
+              strokeWidth={0.5}
+              opacity={0.3}
+            />
+          </Canvas>
+        </View>
+
+        {/* The 5 Black Nodes */}
+        {LOGO_NODES.map((node, i) => (
+          <View 
+            key={i} 
+            style={[styles.blackNode, { left: node.x - 10, top: node.y - 10 }]} 
+          />
+        ))}
+
+        {/* The DRIFT Text */}
+        <Animated.View entering={FadeIn.delay(500)} style={styles.textContainer}>
+          <Text style={styles.driftText}>D R I F T</Text>
+        </Animated.View>
+
         {/* PROGRESS FILAMENT */}
         <View style={styles.progressTrack}>
            <Animated.View 
@@ -79,11 +147,10 @@ export const BrandedSplashScreen = ({ status, progress = 0 }: SplashProps) => {
   );
 };
 
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF', // Pure White Background
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -125,6 +192,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     borderRadius: 10,
     opacity: 0.3,
+  },
   progressTrack: {
     position: 'absolute',
     top: height * 0.45 + 85,
@@ -135,7 +203,7 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#F1C40F', // Golden Filament
+    backgroundColor: '#F1C40F',
   },
   statusPillContainer: {
     position: 'absolute',
@@ -157,4 +225,3 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
 });
-
