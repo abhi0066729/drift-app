@@ -1,4 +1,5 @@
-import { documentDirectory, makeDirectoryAsync, getInfoAsync, createDownloadResumable } from 'expo-file-system/legacy';
+import { documentDirectory, makeDirectoryAsync, getInfoAsync, createDownloadResumable } from 'expo-file-system';
+
 
 export type DownloadProgress = {
   fileName: string;
@@ -96,8 +97,16 @@ export class ModelDownloadService {
    * Checks if synthesis is ready.
    */
   public async isModelReady(): Promise<boolean> {
-    const modelPath = `${documentDirectory}models/llama-3.2-1b.pte`;
-    const info = await getInfoAsync(modelPath);
-    return info.exists;
+    try {
+      const modelPath = `${documentDirectory}models/llama-3.2-1b.pte`;
+      console.log(`[ModelDownloadService] Checking path: ${modelPath}`);
+      const info = await getInfoAsync(modelPath);
+      console.log(`[ModelDownloadService] Model exists: ${info.exists}`);
+      return info.exists;
+    } catch (e) {
+      console.error('[ModelDownloadService] Error checking models:', e);
+      return false;
+    }
   }
+
 }

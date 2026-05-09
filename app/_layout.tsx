@@ -41,13 +41,24 @@ export default function RootLayout() {
 
     // Initial check: Do we have the models?
     async function checkModels() {
-      const ready = await ModelDownloadService.getInstance().isModelReady();
-      if (!ready) {
+      console.log('[RootLayout] Checking for AI models...');
+      try {
+        const ready = await ModelDownloadService.getInstance().isModelReady();
+        console.log('[RootLayout] Models ready state:', ready);
+        if (!ready) {
+          console.log('[RootLayout] Models missing. Triggering consent popup.');
+          setNeedsConsent(true);
+        } else {
+          console.log('[RootLayout] Models found. Proceeding to preparation.');
+          prepare();
+        }
+      } catch (err) {
+        console.error('[RootLayout] Model check failed:', err);
+        // Fallback: Show the popup anyway if check fails
         setNeedsConsent(true);
-      } else {
-        prepare();
       }
     }
+
     checkModels();
   }, []);
 

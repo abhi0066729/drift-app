@@ -138,8 +138,9 @@ const styles = StyleSheet.create({
   driftText: { fontSize: 14, fontWeight: '300', color: 'black', letterSpacing: 12 },
   nebulaContainer: { ...StyleSheet.absoluteFillObject, backgroundColor: '#fff' },
   constellationNode: { position: 'absolute', borderRadius: 10, opacity: 0.2 },
-  overlayContainer: { position: 'absolute', bottom: 80, width: '100%', alignItems: 'center', paddingHorizontal: 40 },
-  modalAnchor: { width: '100%' },
+  overlayContainer: { position: 'absolute', bottom: 80, width: '100%', alignItems: 'center', paddingHorizontal: 40, zIndex: 100 },
+  modalAnchor: { width: '100%', zIndex: 101 },
+
   glassCard: { padding: 24, borderRadius: 32, borderWidth: 1, borderColor: 'rgba(0,0,0,0.05)', overflow: 'hidden' },
   modalTitle: { fontSize: 14, fontWeight: '800', color: 'black', marginBottom: 12, letterSpacing: 2 },
   modalBody: { fontSize: 13, color: '#666', lineHeight: 20, marginBottom: 20 },
