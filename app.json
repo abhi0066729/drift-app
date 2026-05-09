@@ -7,7 +7,8 @@
     "icon": "./assets/images/icon.png",
     "scheme": "driftapp",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
+
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.drift.palace",

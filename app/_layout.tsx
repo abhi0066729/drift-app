@@ -38,6 +38,12 @@ export default function RootLayout() {
     initializeSettings();
 
     async function prepare() {
+      // Safety Timeout: If sync takes > 15s, just open the app anyway to prevent "App Not Responding"
+      const timeout = setTimeout(() => {
+        console.warn('[RootLayout] Initialization timed out. Opening app in offline mode.');
+        setIsReady(true);
+      }, 15000);
+
       try {
         // 1. Start model downloads
         setDownloadStatus('Awakening Neural Engines...');
@@ -51,13 +57,15 @@ export default function RootLayout() {
         await SyncService.getInstance().performFullSync();
         
         // Brief pause for cinematic effect
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 800));
       } catch (e) {
-        console.warn('[RootLayout] Preparation failed:', e);
+        console.error('[RootLayout] Preparation failed catastrophically:', e);
       } finally {
+        clearTimeout(timeout);
         setIsReady(true);
       }
     }
+
 
     prepare();
   }, []);
