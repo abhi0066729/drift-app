@@ -12,15 +12,23 @@ jobs:
       - name: ⚙️ Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: 'npm'
 
       - name: 📦 Install Dependencies
         run: npm install
 
+      - name: 🚀 Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-cache: true
+
+      - name: 🛠 Prebuild Native Modules
+        run: npx expo prebuild --platform ios --no-install
+
       - name: 🏗 Build IPA (Unsigned)
         run: |
-          npx expo prebuild --platform ios
           npx expo run:ios --configuration Release --no-install --destination "generic/platform=iOS"
           mkdir -p Payload
           mv ios/build/Build/Products/Release-iphoneos/drift-app.app Payload/
