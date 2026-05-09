@@ -37,7 +37,7 @@ export class ModelDownloadService {
    */
   public async ensureModelsPresent(onProgress: (p: DownloadProgress) => void): Promise<boolean> {
     try {
-      const modelsDir = `${FileSystem.documentDirectory}models/`;
+      const modelsDir = `${(FileSystem as any).documentDirectory}models/`;
       const dirInfo = await FileSystem.getInfoAsync(modelsDir);
       
       if (!dirInfo.exists) {
@@ -98,7 +98,7 @@ export class ModelDownloadService {
    */
   public async isModelReady(): Promise<boolean> {
     try {
-      const modelPath = `${FileSystem.documentDirectory}models/llama-3.2-1b.pte`;
+      const modelPath = `${(FileSystem as any).documentDirectory}models/llama-3.2-1b.pte`;
       console.log(`[ModelDownloadService] Checking path: ${modelPath}`);
       const info = await FileSystem.getInfoAsync(modelPath);
       console.log(`[ModelDownloadService] Model exists: ${info.exists}`);

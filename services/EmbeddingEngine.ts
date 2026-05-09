@@ -31,7 +31,7 @@ export class EmbeddingEngine {
       const FileSystem = require('expo-file-system');
       this.ort = require('onnxruntime-react-native');
       
-      const modelsDir = `${FileSystem.documentDirectory}models/`;
+      const modelsDir = `${(FileSystem as any).documentDirectory}models/`;
 
       // 1. Load Tokenizer
       this.tokenizer = await AutoTokenizer.from_pretrained(

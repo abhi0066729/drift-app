@@ -14,9 +14,9 @@ export class LocalLlamaService {
   private model: any = null;
   
   private paths = {
-    model: `${FileSystem.documentDirectory}models/llama-3.2-1b.pte`,
-    tokenizer: `${FileSystem.documentDirectory}models/tokenizer.json`,
-    config: `${FileSystem.documentDirectory}models/tokenizer_config.json`
+    model: `${(FileSystem as any).documentDirectory}models/llama-3.2-1b.pte`,
+    tokenizer: `${(FileSystem as any).documentDirectory}models/tokenizer.json`,
+    config: `${(FileSystem as any).documentDirectory}models/tokenizer_config.json`
   };
 
   private isLoaded = false;
