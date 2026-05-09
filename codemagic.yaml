@@ -7,6 +7,8 @@ workflows:
       node: 24
       xcode: latest
     scripts:
+      - name: Install system dependencies
+        script: brew install vips
       - name: Install dependencies
         script: npm install
       - name: Expo Prebuild
@@ -35,10 +37,11 @@ workflows:
     name: Drift Palace Android APK
     max_build_duration: 60
     instance_type: linux
-
     environment:
       node: 24
     scripts:
+      - name: Install system dependencies
+        script: sudo apt-get update && sudo apt-get install -y libvips-dev
       - name: Install dependencies
         script: npm install
       - name: Build APK
