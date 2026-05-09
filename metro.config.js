@@ -1,4 +1,5 @@
 const { getDefaultConfig } = require('expo/metro-config');
+const path = require('path');
 
 /** @type {import('expo/metro-config').MetroConfig} */
 const config = getDefaultConfig(__dirname);
@@ -12,11 +13,17 @@ assetExts.push('wasm');
 assetExts.push('onnx');
 assetExts.push('pte');
 
-// 2. Ensure smooth module resolution for production
+// 2. Configure Mocks for Export stability
+// This redirects native-only AI libraries to a JS mock during the static export phase
+config.resolver.extraNodeModules = {
+  'react-native-executorch': path.resolve(__dirname, 'mocks/native-mock.js'),
+  'onnxruntime-react-native': path.resolve(__dirname, 'mocks/native-mock.js'),
+};
+
 config.resolver.assetExts = assetExts;
 config.resolver.sourceExts = [...sourceExts, 'mjs'];
 
-// 3. Performance optimizations for the production bundle
+// 3. Performance optimizations
 config.transformer.minifierConfig = {
   keep_classnames: true,
   keep_fnames: true,
