@@ -17,6 +17,7 @@ workflows:
         script: cd ios && pod install
       - name: Build Unsigned IPA
         script: |
+          set -e # Stop on error
           xcodebuild build -workspace ios/driftapp.xcworkspace \
             -scheme driftapp \
             -configuration Release \
@@ -28,8 +29,10 @@ workflows:
             AD_HOC_CODE_SIGNING_ALLOWED=YES
           
           mkdir -p Payload
-          mv build/Build/Products/Release-iphoneos/drift-app.app Payload/
+          # Use wildcard to find the .app regardless of exact naming
+          cp -R build/Build/Products/Release-iphoneos/*.app Payload/
           zip -r drift-palace-unsigned.ipa Payload
+
     artifacts:
       - "*.ipa"
 
