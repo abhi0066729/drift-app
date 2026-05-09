@@ -54,8 +54,10 @@
         }
       ],
       "expo-sqlite",
-      "onnxruntime-react-native"
+      "onnxruntime-react-native",
+      "expo-updates"
     ],
+
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": false
