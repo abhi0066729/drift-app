@@ -1,0 +1,162 @@
+import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
+import { Dimensions, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image } from 'expo-image';
+import { useNotesStore } from '@/store/useNotesStore';
+import { NightTheme } from '@/constants/theme';
+import { CATEGORY_COLORS } from '@/constants/Categories';
+import ReadingModal from './ReadingModal';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  FadeIn,
+  FadeOut,
+  runOnJS,
+  runOnUI,
+  scrollTo,
+  SharedValue,
+  useAnimatedProps,
+  useAnimatedRef,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useDerivedValue,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  Easing,
+  interpolateColor,
+  withSpring,
+  withTiming,
+  cancelAnimation
+} from 'react-native-reanimated';
+import Svg, { Circle, Path } from 'react-native-svg';
+
+const { width, height } = Dimensions.get('window');
+const AnimatedPath = Animated.createAnimatedComponent(Path);
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+const SPRING_CONFIG = { damping: 20, stiffness: 90, mass: 1, overshootClamping: false };
+
+// --- Orbital Config ---
+const ORBIT_RADII = [0, 140, 260, 380, 500];
+const CATEGORY_TO_RING: Record<string, number> = {
+  Reflection: 1, Creative: 1, Dream: 1,
+  Idea: 2, Research: 2, Synthesis: 2,
+  Todo: 3, Meeting: 3,
+  Journal: 4, Quote: 4,
+};
+
+function getOrbitalAngle(nodeIdx: number, totalInRing: number, ringIdx: number) {
+  'worklet';
+  const slice = (Math.PI * 2) / Math.max(1, totalInRing);
+  const offset = ringIdx % 2 === 0 ? 0 : Math.PI / totalInRing; // Stagger rings
+  return nodeIdx * slice + offset;
+}
+
+function getTargetY(node: any, activeCluster: SharedValue<number>, activeNodeOriginY: SharedValue<number>, scrollY: SharedValue<number>) {
+  'worklet';
+  if (activeCluster.value !== -1) {
+    const centerY = activeNodeOriginY.value;
+    if (node.isRoot) return centerY;
+    
+    const ringIdx = CATEGORY_TO_RING[node.categories[0]] || 4;
+    const radius = ORBIT_RADII[ringIdx];
+    const angle = getOrbitalAngle(node.clusterIndex || 0, node.totalInRing || 1, ringIdx);
+    return centerY + Math.sin(angle) * radius;
+  }
+  return node.unfocusedY;
+}
+
+function getTargetX(node: any, activeCluster: SharedValue<number>, activeNodeOriginX: SharedValue<number>) {
+  'worklet';
+  if (activeCluster.value !== -1) {
+    const centerX = width / 2;
+    if (node.isRoot) return centerX;
+    
+    const ringIdx = CATEGORY_TO_RING[node.categories[0]] || 4;
+    const radius = ORBIT_RADII[ringIdx];
+    const angle = getOrbitalAngle(node.clusterIndex || 0, node.totalInRing || 1, ringIdx);
+    return centerX + Math.cos(angle) * radius;
+  }
+  return node.unfocusedX;
+}
+
+// --- Orbital Guide Rings ---
+function SpectrumRings({ activeNodeOriginY, activeCluster, rootColor }: any) {
+  const animatedProps0 = useAnimatedProps(() => ({
+    cx: width / 2, cy: withSpring(activeNodeOriginY.value, SPRING_CONFIG),
+    r: withSpring(ORBIT_RADII[1], SPRING_CONFIG),
+    opacity: withTiming(activeCluster.value === 1 ? 0.3 : 0),
+  }));
+  const animatedProps1 = useAnimatedProps(() => ({
+    cx: width / 2, cy: withSpring(activeNodeOriginY.value, SPRING_CONFIG),
+    r: withSpring(ORBIT_RADII[2], SPRING_CONFIG),
+    opacity: withTiming(activeCluster.value === 1 ? 0.2 : 0),
+  }));
+  const animatedProps2 = useAnimatedProps(() => ({
+    cx: width / 2, cy: withSpring(activeNodeOriginY.value, SPRING_CONFIG),
+    r: withSpring(ORBIT_RADII[3], SPRING_CONFIG),
+    opacity: withTiming(activeCluster.value === 1 ? 0.15 : 0),
+  }));
+
+  return (
+    <React.Fragment>
+      <AnimatedCircle animatedProps={animatedProps0} fill="none" stroke={rootColor} strokeWidth="1" strokeDasharray="5 5" />
+      <AnimatedCircle animatedProps={animatedProps1} fill="none" stroke={rootColor} strokeWidth="1" strokeDasharray="5 5" />
+      <AnimatedCircle animatedProps={animatedProps2} fill="none" stroke={rootColor} strokeWidth="1" strokeDasharray="5 5" />
+    </React.Fragment>
+  );
+}
+
+// --- Resonance Arc (The Unique Joiner) ---
+function AnimatedOverlayPath({ node, targetNode, activeCluster, activeNodeOriginY, activeNodeOriginX, rootCategories, scrollY }: any) {
+  const sY = useDerivedValue(() => withSpring(getTargetY(node, activeCluster, activeNodeOriginY, scrollY), SPRING_CONFIG));
+  const sX = useDerivedValue(() => withSpring(getTargetX(node, activeCluster, activeNodeOriginX), SPRING_CONFIG));
+  const eY = useDerivedValue(() => withSpring(getTargetY(targetNode, activeCluster, activeNodeOriginY, scrollY), SPRING_CONFIG));
+  const eX = useDerivedValue(() => withSpring(getTargetX(targetNode, activeCluster, activeNodeOriginX), SPRING_CONFIG));
+
+  const pulseOffset = useSharedValue(0);
+  useEffect(() => {
+    pulseOffset.value = withRepeat(withTiming(40, { duration: 2000, easing: Easing.linear }), -1, false);
+  }, []);
+
+  const animatedProps = useAnimatedProps(() => {
+    const focusColor = rootCategories && rootCategories.length > 0 ? (CATEGORY_COLORS[rootCategories[0]] || '#8E44AD') : '#8E44AD';
+    const commonCategory = node.categories.find((c: string) => targetNode.categories.includes(c));
+    const strokeColor = activeCluster.value !== -1 ? focusColor : (commonCategory ? (CATEGORY_COLORS[commonCategory] || '#8E44AD') : '#8E44AD');
+    
+    const dy = Math.abs(eY.value - sY.value);
+    const dx = Math.abs(eX.value - sX.value);
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    
+    // Orbital Arcs: if both in orbit around the same center
+    let d;
+    if (activeCluster.value === 1) {
+      const tangent = dist * 0.4;
+      // We bow the arc outwards from the center
+      const centerX = width / 2;
+      const centerY = activeNodeOriginY.value;
+      const midX = (sX.value + eX.value) / 2;
+      const midY = (sY.value + eY.value) / 2;
+      const vecX = midX - centerX;
+      const vecY = midY - centerY;
+      const bowX = midX + vecX * 0.2;
+      const bowY = midY + vecY * 0.2;
+      d = `M ${sX.value} ${sY.value} Q ${bowX} ${bowY}, ${eX.value} ${eY.value}`;
+    } else {
+      const tangent = Math.max(160, dy * 0.6);
+      d = `M ${sX.value} ${sY.value} C ${sX.value} ${sY.value + tangent}, ${eX.value} ${eY.value - tangent}, ${eX.value} ${eY.value}`;
+    }
+
+    return {
+      d,
+      stroke: strokeColor,
+      strokeWidth: withTiming(activeCluster.value === 1 ? 1.5 : (node.importance * 1.5 + 0.5)),
+      opacity: withTiming(node.ageFade * (activeCluster.value === 1 ? 0.6 : 0.7)),
+      strokeDasharray: activeCluster.value === 1 ? '5 10' : 'none',
+      strokeDashoffset: -pulseOffset.value,
+    };
+  });
+  return <AnimatedPath fill="none" animatedProps={animatedProps} />;
+}
+
+// --- Animated Node Dot & Label ---
+... (updated implementation below)

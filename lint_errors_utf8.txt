@@ -1,0 +1,8 @@
+﻿
+C:\Users\ajsfe\.gemini\antigravity\scratch\drift-app\components\KineticFocusMap.tsx
+    1:38  warning  'useRef' is defined but never used                                                                                                                                                                                                                             @typescript-eslint/no-unused-vars
+  115:52  error    React Hook "useAnimatedProps" cannot be called inside a callback. React Hooks must be called in a React function component or a custom React Hook function                                                                                                     react-hooks/rules-of-hooks
+  219:6   warning  React Hook useEffect has missing dependencies: 'focusAxisX', 'scrollRef', 'stateRefs.activeCluster', 'stateRefs.activeNodeClusterIndex', 'stateRefs.activeNodeOriginX', and 'stateRefs.activeNodeOriginY'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+Γ£û 3 problems (1 error, 2 warnings)
+

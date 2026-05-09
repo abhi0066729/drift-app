@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drift App Knowledge Graph</title>
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #0d1117;
+            color: #c9d1d9;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            overflow: hidden;
+        }
+        #mynetwork {
+            width: 100vw;
+            height: 100vh;
+        }
+        .header {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+            background: rgba(13, 17, 23, 0.8);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #30363d;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+        h1 { margin: 0; font-size: 1.2rem; color: #58a6ff; }
+        .stats { font-size: 0.85rem; color: #8b949e; margin-top: 5px; }
+        .instructions { font-size: 0.8rem; color: #8b949e; margin-top: 10px; border-top: 1px solid #30363d; padding-top: 10px; }
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5rem;
+            color: #58a6ff;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Drift App - Knowledge Graph</h1>
+        <div id="stats" class="stats">Loading data...</div>
+        <div class="instructions">
+            • Drag nodes to move<br>
+            • Scroll to zoom<br>
+            • Click node for details
+        </div>
+    </div>
+    <div id="loading" class="loading">Generating Knowledge Galaxy...</div>
+    <div id="mynetwork"></div>
+
+    <script type="text/javascript">
+        async function init() {
+            try {
+                const response = await fetch('graph.json');
+                const data = await response.json();
+                
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('stats').innerText = `${data.nodes.length} Nodes • ${data.links.length} Edges`;
+
+                const communityColors = [
+                    '#58a6ff', '#3fb950', '#d29922', '#f85149', '#bc8cff', 
+                    '#1f6feb', '#2ea043', '#9e6a03', '#da3633', '#8957e5',
+                    '#79c0ff', '#56d364', '#e3b341', '#f78166', '#d2a8ff'
+                ];
+
+                const nodes = new vis.DataSet(data.nodes.map(n => ({
+                    id: n.id,
+                    label: n.label,
+                    title: `File: ${n.source_file}\nType: ${n.file_type}\nCommunity: ${n.community}`,
+                    color: {
+                        background: communityColors[n.community % communityColors.length],
+                        border: '#ffffff',
+                        highlight: { background: '#ffffff', border: '#58a6ff' }
+                    },
+                    font: { color: '#ffffff', size: 14 },
+                    shape: 'dot',
+                    size: 10 + (data.links.filter(l => l.source === n.id || l.target === n.id).length * 2)
+                })));
+
+                const edges = new vis.DataSet(data.links.map(l => ({
+                    from: l.source,
+                    to: l.target,
+                    arrows: l.directed ? 'to' : '',
+                    color: { color: 'rgba(139, 148, 158, 0.4)', highlight: '#58a6ff' },
+                    width: 1,
+                    title: l.relation || 'connection'
+                })));
+
+                const container = document.getElementById('mynetwork');
+                const layoutData = { nodes: nodes, edges: edges };
+                const options = {
+                    physics: {
+                        stabilization: true,
+                        barnesHut: {
+                            gravitationalConstant: -2000,
+                            centralGravity: 0.3,
+                            springLength: 95,
+                            springConstant: 0.04,
+                            damping: 0.09,
+                            avoidOverlap: 0.1
+                        }
+                    },
+                    interaction: {
+                        hover: true,
+                        tooltipDelay: 200,
+                        hideEdgesOnDrag: true
+                    }
+                };
+                
+                new vis.Network(container, layoutData, options);
+            } catch (err) {
+                console.error(err);
+                document.getElementById('loading').innerText = "Error loading graph.json. Make sure this HTML is in the same folder as graph.json.";
+            }
+        }
+        init();
+    </script>
+</body>
+</html>
