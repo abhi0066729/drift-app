@@ -1,6 +1,6 @@
 import { AutoTokenizer, env } from '@xenova/transformers';
-import { Asset } from 'expo-asset';
 import * as ort from 'onnxruntime-react-native';
+
 
 // Configure environment for local usage
 env.allowLocalModels = true;
@@ -27,25 +27,25 @@ export class EmbeddingEngine {
     try {
       console.log('[EmbeddingEngine] Initializing...');
 
-      // 1. Load Tokenizer
-      const tokenizerAsset = Asset.fromModule(require('../assets/models/tokenizer.json'));
-      await tokenizerAsset.downloadAsync();
+      console.log('[EmbeddingEngine] Initializing from downloaded assets...');
+      const { documentDirectory } = require('expo-file-system/legacy');
+      const modelsDir = `${documentDirectory}models/`;
 
+      // 1. Load Tokenizer
       this.tokenizer = await AutoTokenizer.from_pretrained(
-        tokenizerAsset.localUri!.replace('tokenizer.json', ''),
+        modelsDir,
         { local_files_only: true }
       );
 
       // 2. Load ONNX Model
-      const modelAsset = Asset.fromModule(require('../assets/models/multilingual-e5-small-int8.onnx'));
-      await modelAsset.downloadAsync();
-
-      this.session = await ort.InferenceSession.create(modelAsset.localUri!, {
+      const modelPath = `${modelsDir}multilingual-e5-small-int8.onnx`;
+      this.session = await ort.InferenceSession.create(modelPath, {
         executionProviders: ['cpu'],
       });
 
       this.initialized = true;
-      console.log('[EmbeddingEngine] Ready.');
+      console.log('[EmbeddingEngine] Ready with cloud-synced models.');
+
     } catch (error) {
       console.error('[EmbeddingEngine] Initialization failed:', error);
       throw error;
