@@ -1,5 +1,5 @@
+import React, { useEffect, useState } from 'react';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
@@ -15,9 +15,7 @@ import * as SystemUI from 'expo-system-ui';
 import { useNotesStore } from '@/store/useNotesStore';
 import { NightTheme } from '@/constants/theme';
 import { SyncService } from '@/services/SyncService';
-import SyncOverlay from '@/components/SyncOverlay';
-import { useState } from 'react';
-
+import { ModelDownloadService } from '@/services/ModelDownloadService';
 import { BrandedSplashScreen } from '@/components/BrandedSplashScreen';
 
 export const unstable_settings = {
@@ -25,26 +23,43 @@ export const unstable_settings = {
 };
 
 export default function RootLayout() {
-  const [isReady, setIsReady] = React.useState(false);
-  const [downloadStatus, setDownloadStatus] = React.useState<string>('Initializing...');
-  const [downloadProgress, setDownloadProgress] = React.useState<number>(0);
+  const [isReady, setIsReady] = useState(false);
+  const [downloadStatus, setDownloadStatus] = useState<string>('Initializing...');
+  const [downloadProgress, setDownloadProgress] = useState<number>(0);
   
   const colorScheme = useColorScheme();
   const initializeSettings = useSettingsStore(state => state.initialize);
   const theme = useNotesStore(state => state.theme);
 
-    }, 6500); // 6.5s to allow for full sequence + fade
+  useEffect(() => {
+    if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+      UIManager.setLayoutAnimationEnabledExperimental(true);
+    }
+    initializeSettings();
 
-    // 2. --- THE PRE-FLIGHT SYNC ---
-    (async () => {
+    async function prepare() {
       try {
+        // 1. Start model downloads
+        setDownloadStatus('Awakening Neural Engines...');
+        await ModelDownloadService.getInstance().ensureModelsPresent((p) => {
+          setDownloadProgress(p.progress);
+          setDownloadStatus(`Syncing ${p.fileName.includes('llama') ? 'Llama 3.2' : 'Semantic Engine'}...`);
+        });
+
+        // 2. Perform background sync
+        setDownloadStatus('Galaxy Synchronized.');
         await SyncService.getInstance().performFullSync();
-        setIsSynced(true);
-      } catch (err) {
-        console.error('[RootLayout] Sync failed:', err);
-        setIsSynced(true);
+        
+        // Brief pause for cinematic effect
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } catch (e) {
+        console.warn('[RootLayout] Preparation failed:', e);
+      } finally {
+        setIsReady(true);
       }
-    })();
+    }
+
+    prepare();
   }, []);
 
   useEffect(() => {
@@ -52,15 +67,15 @@ export default function RootLayout() {
     SystemUI.setBackgroundColorAsync(bgColor);
   }, [theme]);
 
-  // Determine if we should show the entry Palace
-  const showPalace = !isSplashDone || !isSynced;
-
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SQLiteProvider databaseName="drift.db" onInit={initDatabase}>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          {showPalace ? (
-            <BrandedSplashScreen />
+          {!isReady ? (
+            <BrandedSplashScreen 
+              status={downloadStatus} 
+              progress={downloadProgress} 
+            />
           ) : (
             <Stack>
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -73,5 +88,3 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
-
-
