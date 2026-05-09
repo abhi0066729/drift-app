@@ -1,4 +1,4 @@
-import { documentDirectory, getInfoAsync } from 'expo-file-system';
+import * as FileSystem from 'expo-file-system';
 import { RetrievalService } from './RetrievalService';
 import { Note } from '../store/useNotesStore';
 import { Platform } from 'react-native';
@@ -14,9 +14,9 @@ export class LocalLlamaService {
   private model: any = null;
   
   private paths = {
-    model: `${documentDirectory}models/llama-3.2-1b.pte`,
-    tokenizer: `${documentDirectory}models/tokenizer.json`,
-    config: `${documentDirectory}models/tokenizer_config.json`
+    model: `${FileSystem.documentDirectory}models/llama-3.2-1b.pte`,
+    tokenizer: `${FileSystem.documentDirectory}models/tokenizer.json`,
+    config: `${FileSystem.documentDirectory}models/tokenizer_config.json`
   };
 
   private isLoaded = false;
@@ -36,7 +36,8 @@ export class LocalLlamaService {
       // Dynamic import to prevent export-time crashes
       const { LLMModule } = require('react-native-executorch');
       
-      const modelInfo = await getInfoAsync(this.paths.model);
+      const modelInfo = await FileSystem.getInfoAsync(this.paths.model);
+
       if (!modelInfo.exists) return;
 
       this.model = await LLMModule.fromCustomModel(

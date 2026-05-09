@@ -1,4 +1,4 @@
-import { documentDirectory, makeDirectoryAsync, getInfoAsync, createDownloadResumable } from 'expo-file-system';
+import * as FileSystem from 'expo-file-system';
 
 
 export type DownloadProgress = {
@@ -37,16 +37,16 @@ export class ModelDownloadService {
    */
   public async ensureModelsPresent(onProgress: (p: DownloadProgress) => void): Promise<boolean> {
     try {
-      const modelsDir = `${documentDirectory}models/`;
-      const dirInfo = await getInfoAsync(modelsDir);
+      const modelsDir = `${FileSystem.documentDirectory}models/`;
+      const dirInfo = await FileSystem.getInfoAsync(modelsDir);
       
       if (!dirInfo.exists) {
-        await makeDirectoryAsync(modelsDir, { intermediates: true });
+        await FileSystem.makeDirectoryAsync(modelsDir, { intermediates: true });
       }
 
       for (const model of this.MODELS) {
         const localPath = `${modelsDir}${model.name}`;
-        const fileInfo = await getInfoAsync(localPath);
+        const fileInfo = await FileSystem.getInfoAsync(localPath);
 
         if (!fileInfo.exists) {
           console.log(`[ModelDownloadService] Downloading ${model.name}...`);
@@ -66,7 +66,7 @@ export class ModelDownloadService {
     const startTime = Date.now();
     let lastBytes = 0;
     
-    const downloadResumable = createDownloadResumable(
+    const downloadResumable = FileSystem.createDownloadResumable(
       url,
       localPath,
       {},
@@ -98,9 +98,9 @@ export class ModelDownloadService {
    */
   public async isModelReady(): Promise<boolean> {
     try {
-      const modelPath = `${documentDirectory}models/llama-3.2-1b.pte`;
+      const modelPath = `${FileSystem.documentDirectory}models/llama-3.2-1b.pte`;
       console.log(`[ModelDownloadService] Checking path: ${modelPath}`);
-      const info = await getInfoAsync(modelPath);
+      const info = await FileSystem.getInfoAsync(modelPath);
       console.log(`[ModelDownloadService] Model exists: ${info.exists}`);
       return info.exists;
     } catch (e) {
