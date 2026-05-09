@@ -2,6 +2,9 @@ name: Build iOS IPA (Unsigned)
 on:
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true # Ensures all actions use Node 24
+
 jobs:
   build:
     runs-on: macos-latest
@@ -12,7 +15,7 @@ jobs:
       - name: ⚙️ Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20 # Switching back to stable
+          node-version: 24 # The latest engine
 
       - name: 📦 Install Dependencies
         run: npm install
@@ -21,6 +24,7 @@ jobs:
         uses: expo/expo-github-action@v8
         with:
           expo-version: latest
+          # NO CACHE HERE - Bypasses GitHub's 400 error
 
       - name: 🛠 Prebuild Native Modules
         run: npx expo prebuild --platform ios --no-install
