@@ -18,9 +18,10 @@ import { SyncService } from '@/services/SyncService';
 import { ModelDownloadService } from '@/services/ModelDownloadService';
 import { BrandedSplashScreen } from '@/components/BrandedSplashScreen';
 import * as SplashScreen from 'expo-splash-screen';
+import * as Haptics from 'expo-haptics';
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
+// Nuclear Option: Hide splash immediately on load
+SplashScreen.hideAsync().catch(() => {});
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -29,7 +30,7 @@ export const unstable_settings = {
 export default function RootLayout() {
   const [isReady, setIsReady] = useState(false);
   const [needsConsent, setNeedsConsent] = useState(false);
-  const [downloadStatus, setDownloadStatus] = useState<string>('');
+  const [downloadStatus, setDownloadStatus] = useState<string>('IGNITING ENGINES...');
   const [downloadProgress, setDownloadProgress] = useState<number>(0);
   const [downloadSpeed, setDownloadSpeed] = useState<string>('');
   
@@ -38,19 +39,19 @@ export default function RootLayout() {
   const theme = useNotesStore(state => state.theme);
 
   useEffect(() => {
-    // Reveal the app immediately
-    SplashScreen.hideAsync();
-
+    // Immediate haptic confirmation
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    
     if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
       UIManager.setLayoutAnimationEnabledExperimental(true);
     }
     initializeSettings();
 
     async function checkModels() {
-      console.log('[RootLayout] Checking for AI models...');
+      // Force popup after 2 seconds if check is slow
       const forcePopup = setTimeout(() => {
         if (!isReady) setNeedsConsent(true);
-      }, 3000);
+      }, 2000);
 
       try {
         const ready = await ModelDownloadService.getInstance().isModelReady();
@@ -70,18 +71,17 @@ export default function RootLayout() {
   async function prepare() {
     setNeedsConsent(false);
     try {
-      setDownloadStatus('Connecting to Neural Grid...');
+      setDownloadStatus('CONNECTING TO NEURAL GRID...');
       await ModelDownloadService.getInstance().ensureModelsPresent((p) => {
         setDownloadProgress(p.progress);
         setDownloadSpeed(p.speed);
-        setDownloadStatus(`Syncing ${p.fileName.includes('llama') ? 'Llama 3.2' : 'Semantic Engine'}`);
+        setDownloadStatus(`SYNCING ${p.fileName.toUpperCase()}`);
       });
       await SyncService.getInstance().performFullSync();
-      await new Promise(resolve => setTimeout(resolve, 800));
+      setIsReady(true);
     } catch (e) {
       console.warn('[RootLayout] Preparation failed:', e);
-    } finally {
-      setIsReady(true);
+      setIsReady(true); // Fail safe: enter app anyway
     }
   }
 
