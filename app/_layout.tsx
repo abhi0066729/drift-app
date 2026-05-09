@@ -17,6 +17,10 @@ import { NightTheme } from '@/constants/theme';
 import { SyncService } from '@/services/SyncService';
 import { ModelDownloadService } from '@/services/ModelDownloadService';
 import { BrandedSplashScreen } from '@/components/BrandedSplashScreen';
+import * as SplashScreen from 'expo-splash-screen';
+
+// Prevent the splash screen from auto-hiding before asset loading is complete.
+SplashScreen.preventAutoHideAsync();
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -34,57 +38,45 @@ export default function RootLayout() {
   const theme = useNotesStore(state => state.theme);
 
   useEffect(() => {
+    // Reveal the app immediately
+    SplashScreen.hideAsync();
+
     if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
       UIManager.setLayoutAnimationEnabledExperimental(true);
     }
     initializeSettings();
 
-    // Initial check: Do we have the models?
     async function checkModels() {
       console.log('[RootLayout] Checking for AI models...');
-      
-      // Safety Trigger: If check takes > 3s, show the popup anyway
       const forcePopup = setTimeout(() => {
-        if (!isReady) {
-          console.log('[RootLayout] Safety trigger: Forcing consent popup.');
-          setNeedsConsent(true);
-        }
+        if (!isReady) setNeedsConsent(true);
       }, 3000);
 
       try {
         const ready = await ModelDownloadService.getInstance().isModelReady();
         clearTimeout(forcePopup);
-        console.log('[RootLayout] Models ready state:', ready);
         if (!ready) {
           setNeedsConsent(true);
         } else {
           prepare();
         }
       } catch (err) {
-        console.error('[RootLayout] Model check failed:', err);
         setNeedsConsent(true);
       }
     }
-
-
     checkModels();
   }, []);
 
   async function prepare() {
     setNeedsConsent(false);
     try {
-      // 1. Ensure models are present (Downloads if missing after consent)
       setDownloadStatus('Connecting to Neural Grid...');
       await ModelDownloadService.getInstance().ensureModelsPresent((p) => {
         setDownloadProgress(p.progress);
         setDownloadSpeed(p.speed);
         setDownloadStatus(`Syncing ${p.fileName.includes('llama') ? 'Llama 3.2' : 'Semantic Engine'}`);
       });
-
-      // 2. Perform background sync
-      setDownloadStatus('Galaxy Synchronized.');
       await SyncService.getInstance().performFullSync();
-      
       await new Promise(resolve => setTimeout(resolve, 800));
     } catch (e) {
       console.warn('[RootLayout] Preparation failed:', e);
