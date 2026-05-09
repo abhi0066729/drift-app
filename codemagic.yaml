@@ -1,0 +1,46 @@
+workflows:
+  ios-build-unsigned:
+    name: Drift Palace iOS (Unsigned)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      node: 20
+      xcode: latest
+    scripts:
+      - name: Install dependencies
+        script: npm install
+      - name: Expo Prebuild
+        script: npx expo prebuild --platform ios --no-install
+      - name: Install CocoaPods
+        script: cd ios && pod install
+      - name: Build Unsigned IPA
+        script: |
+          xcodebuild build -workspace ios/driftapp.xcworkspace \
+            -scheme driftapp \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES
+          
+          mkdir -p Payload
+          mv build/Build/Products/Release-iphoneos/drift-app.app Payload/
+          zip -r drift-palace-unsigned.ipa Payload
+    artifacts:
+      - "*.ipa"
+
+  android-build:
+    name: Drift Palace Android APK
+    max_build_duration: 60
+    instance_type: linux_m2
+    environment:
+      node: 20
+    scripts:
+      - name: Install dependencies
+        script: npm install
+      - name: Build APK
+        script: npx expo export --platform android
+    artifacts:
+      - dist/*.apk
