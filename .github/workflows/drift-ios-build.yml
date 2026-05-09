@@ -27,13 +27,17 @@ jobs:
       - name: 🛠 Prebuild Native Modules
         run: npx expo prebuild --platform ios --no-install
 
+      - name: 🍎 Install CocoaPods
+        run: cd ios && pod install
+
       - name: 🏗 Build IPA (Unsigned)
         run: |
-          npx expo run:ios --configuration Release --no-install --destination "generic/platform=iOS"
+          npx xcodebuild -workspace ios/driftapp.xcworkspace -scheme driftapp -configuration Release -sdk iphoneos -derivedDataPath build
           mkdir -p Payload
-          mv ios/build/Build/Products/Release-iphoneos/drift-app.app Payload/
+          mv build/Build/Products/Release-iphoneos/drift-app.app Payload/
           zip -r drift-palace-unsigned.ipa Payload
           rm -rf Payload
+
 
       - name: 📤 Upload Artifact
         uses: actions/upload-artifact@v4
