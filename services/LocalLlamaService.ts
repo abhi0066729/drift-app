@@ -1,5 +1,6 @@
 import { LLMModule } from 'react-native-executorch';
-import { documentDirectory, getInfoAsync } from 'expo-file-system/legacy';
+import { documentDirectory, getInfoAsync } from 'expo-file-system';
+
 import { RetrievalService } from './RetrievalService';
 import { Note } from '../store/useNotesStore';
 
