@@ -42,22 +42,30 @@ export default function RootLayout() {
     // Initial check: Do we have the models?
     async function checkModels() {
       console.log('[RootLayout] Checking for AI models...');
+      
+      // Safety Trigger: If check takes > 3s, show the popup anyway
+      const forcePopup = setTimeout(() => {
+        if (!isReady) {
+          console.log('[RootLayout] Safety trigger: Forcing consent popup.');
+          setNeedsConsent(true);
+        }
+      }, 3000);
+
       try {
         const ready = await ModelDownloadService.getInstance().isModelReady();
+        clearTimeout(forcePopup);
         console.log('[RootLayout] Models ready state:', ready);
         if (!ready) {
-          console.log('[RootLayout] Models missing. Triggering consent popup.');
           setNeedsConsent(true);
         } else {
-          console.log('[RootLayout] Models found. Proceeding to preparation.');
           prepare();
         }
       } catch (err) {
         console.error('[RootLayout] Model check failed:', err);
-        // Fallback: Show the popup anyway if check fails
         setNeedsConsent(true);
       }
     }
+
 
     checkModels();
   }, []);

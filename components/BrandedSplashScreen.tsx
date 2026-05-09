@@ -12,6 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 import { Canvas, Path, Skia } from '@shopify/react-native-skia';
+import * as Haptics from 'expo-haptics';
 
 const { width, height } = Dimensions.get('window');
 
@@ -42,9 +43,13 @@ export const BrandedSplashScreen = ({ status, progress = 0, speed, onConsent, ne
       -1,
       true
     );
-    glassOpacity.value = withDelay(1000, withTiming(1, { duration: 1500 }));
-    nebulaScale.value = withDelay(1000, withTiming(1, { duration: 2500 }));
-  }, []);
+    glassOpacity.value = withDelay(500, withTiming(1, { duration: 1000 }));
+    nebulaScale.value = withDelay(500, withTiming(1, { duration: 2000 }));
+    
+    if (needsConsent) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+  }, [needsConsent]);
 
   const path = useMemo(() => {
     const skPath = Skia.Path.Make();
@@ -58,72 +63,67 @@ export const BrandedSplashScreen = ({ status, progress = 0, speed, onConsent, ne
     return skPath;
   }, []);
 
-  const glassStyle = useAnimatedStyle(() => ({ opacity: glassOpacity.value }));
   const nebulaStyle = useAnimatedStyle(() => ({
-    opacity: glassOpacity.value * 0.4,
+    opacity: glassOpacity.value * 0.3,
     transform: [{ scale: nebulaScale.value }],
   }));
 
   return (
     <View style={styles.container}>
-      {/* BACKGROUND NEBULA */}
+      {/* NEBULA BACKGROUND */}
       <Animated.View style={[styles.nebulaContainer, nebulaStyle]}>
-        {[...Array(15)].map((_, i) => (
+        {[...Array(12)].map((_, i) => (
           <View key={i} style={[styles.constellationNode, { 
             left: Math.random() * width, 
             top: Math.random() * height,
-            width: 4 + Math.random() * 6,
-            height: 4 + Math.random() * 6,
-            backgroundColor: i % 2 === 0 ? '#8E44AD' : '#3498DB'
+            width: 4 + Math.random() * 8,
+            height: 4 + Math.random() * 8,
+            backgroundColor: i % 2 === 0 ? '#3498DB' : '#8E44AD'
           }]} />
         ))}
       </Animated.View>
 
-      {/* CORE LOGO & BRANDING */}
+      {/* CORE LOGO */}
       <View style={styles.logoRoot}>
         <View style={styles.canvasContainer}>
           <Canvas style={{ flex: 1 }}>
-            <Path path={path} color="black" style="stroke" strokeWidth={0.5} opacity={0.2} />
+            <Path path={path} color="black" style="stroke" strokeWidth={0.5} opacity={0.15} />
           </Canvas>
         </View>
         {LOGO_NODES.map((node, i) => (
           <View key={i} style={[styles.blackNode, { left: node.x - 10, top: node.y - 10 }]} />
         ))}
-        <Animated.View entering={FadeIn.delay(500)} style={styles.textContainer}>
+        <Animated.View entering={FadeIn.delay(300)} style={styles.textContainer}>
           <Text style={styles.driftText}>D R I F T</Text>
         </Animated.View>
       </View>
 
-      {/* CONSENT MODAL OR PROGRESS DASHBOARD */}
+      {/* INTERACTION OVERLAY */}
       <View style={styles.overlayContainer}>
         {needsConsent ? (
-          <Animated.View entering={FadeIn.duration(800)} exiting={FadeOut} style={styles.modalAnchor}>
-            <BlurView intensity={60} tint="light" style={styles.glassCard}>
+          <Animated.View entering={FadeIn.duration(600)} exiting={FadeOut} style={styles.modalAnchor}>
+            <BlurView intensity={80} tint="dark" style={styles.glassCard}>
               <Text style={styles.modalTitle}>AWAKEN THE PALACE</Text>
               <Text style={styles.modalBody}>
-                To enable offline intelligence, Drift needs to download its neural models (~600MB).
+                To enable offline intelligence, Drift needs to synchronize its neural grid (~600MB).
               </Text>
-              <TouchableOpacity style={styles.actionButton} onPress={onConsent}>
+              <TouchableOpacity style={styles.actionButton} onPress={onConsent} activeOpacity={0.7}>
                 <Text style={styles.actionButtonText}>INITIALIZE SYNC</Text>
               </TouchableOpacity>
             </BlurView>
           </Animated.View>
-        ) : (
+        ) : status ? (
           <Animated.View entering={FadeIn} style={styles.dashboardAnchor}>
-            {/* TELEMETRY ROW */}
             <View style={styles.telemetryRow}>
-              <Text style={styles.telemetryLabel}>{status?.toUpperCase()}</Text>
+              <Text style={styles.telemetryLabel}>{status.toUpperCase()}</Text>
               {speed && <Text style={styles.speedLabel}>{speed}</Text>}
             </View>
-
-            {/* PROGRESS FILAMENT */}
             <View style={styles.progressTrack}>
                <Animated.View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
             </View>
-            
             <Text style={styles.percentageText}>{Math.round(progress * 100)}% COMPLETE</Text>
           </Animated.View>
-        )}
+        ) : null}
       </View>
     </View>
   );
@@ -135,22 +135,21 @@ const styles = StyleSheet.create({
   blackNode: { position: 'absolute', width: 20, height: 20, borderRadius: 10, backgroundColor: 'black', zIndex: 10 },
   canvasContainer: { ...StyleSheet.absoluteFillObject, zIndex: 5 },
   textContainer: { position: 'absolute', top: height * 0.45 + 50, width: '100%', alignItems: 'center' },
-  driftText: { fontSize: 14, fontWeight: '300', color: 'black', letterSpacing: 12 },
+  driftText: { fontSize: 13, fontWeight: '300', color: 'black', letterSpacing: 14, opacity: 0.8 },
   nebulaContainer: { ...StyleSheet.absoluteFillObject, backgroundColor: '#fff' },
-  constellationNode: { position: 'absolute', borderRadius: 10, opacity: 0.2 },
-  overlayContainer: { position: 'absolute', bottom: 80, width: '100%', alignItems: 'center', paddingHorizontal: 40, zIndex: 100 },
-  modalAnchor: { width: '100%', zIndex: 101 },
-
-  glassCard: { padding: 24, borderRadius: 32, borderWidth: 1, borderColor: 'rgba(0,0,0,0.05)', overflow: 'hidden' },
-  modalTitle: { fontSize: 14, fontWeight: '800', color: 'black', marginBottom: 12, letterSpacing: 2 },
-  modalBody: { fontSize: 13, color: '#666', lineHeight: 20, marginBottom: 20 },
-  actionButton: { backgroundColor: 'black', paddingVertical: 14, borderRadius: 16, alignItems: 'center' },
-  actionButtonText: { color: 'white', fontWeight: 'bold', letterSpacing: 1 },
+  constellationNode: { position: 'absolute', borderRadius: 10, opacity: 0.15 },
+  overlayContainer: { position: 'absolute', bottom: 100, width: '100%', alignItems: 'center', paddingHorizontal: 30, zIndex: 100 },
+  modalAnchor: { width: '100%', zIndex: 101, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 10 },
+  glassCard: { padding: 30, borderRadius: 40, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  modalTitle: { fontSize: 13, fontWeight: '900', color: 'white', marginBottom: 12, letterSpacing: 2.5 },
+  modalBody: { fontSize: 14, color: 'rgba(255,255,255,0.7)', lineHeight: 22, marginBottom: 25 },
+  actionButton: { backgroundColor: 'white', paddingVertical: 16, borderRadius: 20, alignItems: 'center' },
+  actionButtonText: { color: 'black', fontWeight: '900', letterSpacing: 1.5, fontSize: 12 },
   dashboardAnchor: { width: '100%', alignItems: 'center' },
-  telemetryRow: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginBottom: 8 },
-  telemetryLabel: { fontSize: 10, fontWeight: '700', color: '#999', letterSpacing: 1 },
-  speedLabel: { fontSize: 10, fontWeight: '800', color: 'black' },
-  progressTrack: { width: '100%', height: 2, backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: 1, overflow: 'hidden' },
+  telemetryRow: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginBottom: 10 },
+  telemetryLabel: { fontSize: 9, fontWeight: '800', color: '#888', letterSpacing: 1.5 },
+  speedLabel: { fontSize: 10, fontWeight: '900', color: 'black' },
+  progressTrack: { width: '100%', height: 3, backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: 2, overflow: 'hidden' },
   progressFill: { height: '100%', backgroundColor: '#F1C40F' },
-  percentageText: { marginTop: 12, fontSize: 10, fontWeight: '800', color: '#CCC', letterSpacing: 1 },
+  percentageText: { marginTop: 15, fontSize: 10, fontWeight: '900', color: '#BBB', letterSpacing: 2 },
 });
