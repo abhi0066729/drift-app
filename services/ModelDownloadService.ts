@@ -4,7 +4,9 @@ export type DownloadProgress = {
   fileName: string;
   progress: number; // 0.0 to 1.0
   totalBytes: number;
+  speed: string; // e.g. "2.4 MB/s"
 };
+
 
 export class ModelDownloadService {
   private static instance: ModelDownloadService;
@@ -60,17 +62,25 @@ export class ModelDownloadService {
 
   private async downloadFile(fileName: string, localPath: string, onProgress: (p: DownloadProgress) => void) {
     const url = `${this.HF_BASE}/${fileName}`;
+    const startTime = Date.now();
+    let lastBytes = 0;
     
     const downloadResumable = createDownloadResumable(
       url,
       localPath,
       {},
       (progressData) => {
+        const now = Date.now();
+        const durationSec = (now - startTime) / 1000;
+        const speedMbps = durationSec > 0 ? (progressData.totalBytesWritten / 1024 / 1024 / durationSec) : 0;
+        const speedLabel = speedMbps > 1 ? `${speedMbps.toFixed(1)} MB/s` : `${(speedMbps * 1024).toFixed(0)} KB/s`;
+
         const progress = progressData.totalBytesWritten / progressData.totalBytesExpectedToWrite;
         onProgress({
           fileName,
           progress,
-          totalBytes: progressData.totalBytesExpectedToWrite
+          totalBytes: progressData.totalBytesExpectedToWrite,
+          speed: speedLabel
         });
       }
     );
@@ -80,6 +90,7 @@ export class ModelDownloadService {
     
     console.log(`[ModelDownloadService] Successfully saved ${fileName} to ${result.uri}`);
   }
+
 
   /**
    * Checks if synthesis is ready.

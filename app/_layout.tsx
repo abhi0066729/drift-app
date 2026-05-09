@@ -24,8 +24,10 @@ export const unstable_settings = {
 
 export default function RootLayout() {
   const [isReady, setIsReady] = useState(false);
-  const [downloadStatus, setDownloadStatus] = useState<string>('Initializing...');
+  const [needsConsent, setNeedsConsent] = useState(false);
+  const [downloadStatus, setDownloadStatus] = useState<string>('');
   const [downloadProgress, setDownloadProgress] = useState<number>(0);
+  const [downloadSpeed, setDownloadSpeed] = useState<string>('');
   
   const colorScheme = useColorScheme();
   const initializeSettings = useSettingsStore(state => state.initialize);
@@ -37,38 +39,40 @@ export default function RootLayout() {
     }
     initializeSettings();
 
-    async function prepare() {
-      // Safety Timeout: If sync takes > 15s, just open the app anyway to prevent "App Not Responding"
-      const timeout = setTimeout(() => {
-        console.warn('[RootLayout] Initialization timed out. Opening app in offline mode.');
-        setIsReady(true);
-      }, 15000);
-
-      try {
-        // 1. Start model downloads
-        setDownloadStatus('Awakening Neural Engines...');
-        await ModelDownloadService.getInstance().ensureModelsPresent((p) => {
-          setDownloadProgress(p.progress);
-          setDownloadStatus(`Syncing ${p.fileName.includes('llama') ? 'Llama 3.2' : 'Semantic Engine'}...`);
-        });
-
-        // 2. Perform background sync
-        setDownloadStatus('Galaxy Synchronized.');
-        await SyncService.getInstance().performFullSync();
-        
-        // Brief pause for cinematic effect
-        await new Promise(resolve => setTimeout(resolve, 800));
-      } catch (e) {
-        console.error('[RootLayout] Preparation failed catastrophically:', e);
-      } finally {
-        clearTimeout(timeout);
-        setIsReady(true);
+    // Initial check: Do we have the models?
+    async function checkModels() {
+      const ready = await ModelDownloadService.getInstance().isModelReady();
+      if (!ready) {
+        setNeedsConsent(true);
+      } else {
+        prepare();
       }
     }
-
-
-    prepare();
+    checkModels();
   }, []);
+
+  async function prepare() {
+    setNeedsConsent(false);
+    try {
+      // 1. Ensure models are present (Downloads if missing after consent)
+      setDownloadStatus('Connecting to Neural Grid...');
+      await ModelDownloadService.getInstance().ensureModelsPresent((p) => {
+        setDownloadProgress(p.progress);
+        setDownloadSpeed(p.speed);
+        setDownloadStatus(`Syncing ${p.fileName.includes('llama') ? 'Llama 3.2' : 'Semantic Engine'}`);
+      });
+
+      // 2. Perform background sync
+      setDownloadStatus('Galaxy Synchronized.');
+      await SyncService.getInstance().performFullSync();
+      
+      await new Promise(resolve => setTimeout(resolve, 800));
+    } catch (e) {
+      console.warn('[RootLayout] Preparation failed:', e);
+    } finally {
+      setIsReady(true);
+    }
+  }
 
   useEffect(() => {
     const bgColor = theme === 'dark' ? NightTheme.background : '#FFFFFF';
@@ -83,6 +87,9 @@ export default function RootLayout() {
             <BrandedSplashScreen 
               status={downloadStatus} 
               progress={downloadProgress} 
+              speed={downloadSpeed}
+              needsConsent={needsConsent}
+              onConsent={prepare}
             />
           ) : (
             <Stack>
