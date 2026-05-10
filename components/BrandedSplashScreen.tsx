@@ -208,11 +208,11 @@ export const BrandedSplashScreen = ({ phase, status, progress = 0, speed, onCons
       setTimeout(() => {
         Animated.spring(popupAnim, {
           toValue: 0,
-          friction: 9,      // Higher friction = less bouncy/smoother
-          tension: 20,      // Lower tension = slower drop
+          friction: 7,      // Snappier
+          tension: 50,      // More energy
           useNativeDriver: true,
         }).start();
-      }, 600); // Slightly less delay
+      }, 600);
     }
   }, [phase]);
 
@@ -328,18 +328,30 @@ export const BrandedSplashScreen = ({ phase, status, progress = 0, speed, onCons
       </View>
 
       {/* ── OVERLAY ── */}
-      <View style={styles.overlayContainer}>
+      <View style={styles.overlayContainer} pointerEvents="box-none">
 
         {/* CONSENT POPUP */}
         {phase === 'consent' && (
-          <Animated.View style={[styles.card, { backgroundColor: C.cardBg, borderColor: C.cardBorder, transform: [{ translateY: popupAnim }] }]}>
+          <Animated.View 
+            pointerEvents="auto"
+            style={[styles.card, { backgroundColor: C.cardBg, borderColor: C.cardBorder, transform: [{ translateY: popupAnim }] }]}
+          >
             <Text style={[styles.modalTitle, { color: C.cardTitle }]}>AWAKEN THE PALACE</Text>
             <Text style={[styles.modalBody, { color: C.cardBody }]}>
               Drift needs to download AI models (~600MB) to enable offline intelligence.
             </Text>
-            <TouchableOpacity style={[styles.actionButton, { backgroundColor: C.btnBg }]} onPress={onConsent} activeOpacity={0.7}>
+            <Pressable 
+              style={({ pressed }) => [
+                styles.actionButton, 
+                { backgroundColor: C.btnBg, opacity: pressed ? 0.8 : 1 }
+              ]} 
+              onPress={() => {
+                console.log('[Splash] Download button pressed');
+                onConsent?.();
+              }}
+            >
               <Text style={[styles.actionButtonText, { color: C.btnText }]}>DOWNLOAD MODELS</Text>
-            </TouchableOpacity>
+            </Pressable>
           </Animated.View>
         )}
 
