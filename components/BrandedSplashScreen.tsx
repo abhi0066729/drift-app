@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import {
   View, Text, StyleSheet, Dimensions, TouchableOpacity, Animated, Easing,
+  useColorScheme,
 } from 'react-native';
 import Svg, { Path, Circle as SvgCircle, Line } from 'react-native-svg';
 
@@ -68,8 +69,9 @@ function buildNaturalThread(time: number, phaseOff: number): string {
 }
 
 // ─── CONSTELLATION INSTANCE ──────────────────────────────────
-const ConstellationInstance = React.memo(({ pattern, cx, cy, scale }: {
+const ConstellationInstance = React.memo(({ pattern, cx, cy, scale, lineColor, starColor, starOpacity }: {
   pattern: typeof PATTERNS[0]; cx: number; cy: number; scale: number;
+  lineColor: string; starColor: string; starOpacity: number;
 }) => {
   const fade = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -89,10 +91,10 @@ const ConstellationInstance = React.memo(({ pattern, cx, cy, scale }: {
       <Svg width={W} height={H} style={StyleSheet.absoluteFill}>
         {pattern.e.map(([a, b], i) => (
           <Line key={`e${i}`} x1={positions[a].x} y1={positions[a].y}
-            x2={positions[b].x} y2={positions[b].y} stroke="rgba(255,255,255,0.3)" strokeWidth={0.8} />
+            x2={positions[b].x} y2={positions[b].y} stroke={lineColor} strokeWidth={0.8} />
         ))}
         {positions.map((p, i) => (
-          <SvgCircle key={`s${i}`} cx={p.x} cy={p.y} r={2} fill="white" opacity={0.9} />
+          <SvgCircle key={`s${i}`} cx={p.x} cy={p.y} r={2} fill={starColor} opacity={starOpacity} />
         ))}
       </Svg>
     </Animated.View>
@@ -100,7 +102,7 @@ const ConstellationInstance = React.memo(({ pattern, cx, cy, scale }: {
 });
 
 // ─── TWINKLING STAR ───────────────────────────────────────────
-const TwinkleStar = React.memo(({ x, y, r, delay }: { x: number; y: number; r: number; delay: number }) => {
+const TwinkleStar = React.memo(({ x, y, r, delay, color }: { x: number; y: number; r: number; delay: number; color: string }) => {
   const a = useRef(new Animated.Value(0.2)).current;
   useEffect(() => {
     Animated.loop(Animated.sequence([
@@ -109,7 +111,7 @@ const TwinkleStar = React.memo(({ x, y, r, delay }: { x: number; y: number; r: n
       Animated.timing(a, { toValue: 0.15, duration: 1800, useNativeDriver: true }),
     ])).start();
   }, []);
-  return <Animated.View style={{ position:'absolute', left:x, top:y, width:r*2, height:r*2, borderRadius:r, backgroundColor:'#fff', opacity:a }} />;
+  return <Animated.View style={{ position:'absolute', left:x, top:y, width:r*2, height:r*2, borderRadius:r, backgroundColor:color, opacity:a }} />;
 });
 
 // ─── PROPS ────────────────────────────────────────────────────
@@ -120,6 +122,31 @@ interface SplashProps {
 
 // ─── MAIN ─────────────────────────────────────────────────────
 export const BrandedSplashScreen = ({ status, progress = 0, speed, onConsent, needsConsent }: SplashProps) => {
+  const scheme = useColorScheme();
+  const dark = scheme === 'dark';
+
+  // Dynamic color palette
+  const C = useMemo(() => ({
+    bg: dark ? '#000' : '#F2F2F2',
+    fg: dark ? '#fff' : '#000',
+    threadColor: dark ? '#fff' : '#000',
+    threadOpacity: dark ? 0.35 : 0.25,
+    starColor: dark ? '#fff' : '#000',
+    constLine: dark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.12)',
+    constStar: dark ? 'white' : 'black',
+    constStarOpacity: dark ? 0.9 : 0.5,
+    textOpacity: dark ? 0.7 : 0.85,
+    cardBg: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+    cardBorder: dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
+    cardTitle: dark ? '#fff' : '#000',
+    cardBody: dark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.45)',
+    btnBg: dark ? '#fff' : '#000',
+    btnText: dark ? '#000' : '#fff',
+    telemetry: dark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.35)',
+    speedColor: dark ? '#fff' : '#333',
+    trackBg: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+    pctColor: dark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.25)',
+  }), [dark]);
   const [thread1, setThread1] = useState('');
   const [thread2, setThread2] = useState('');
   const timeRef = useRef(0);
@@ -164,56 +191,55 @@ export const BrandedSplashScreen = ({ status, progress = 0, speed, onConsent, ne
   []);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: C.bg }]}>
       {/* ── STAR FIELD ── */}
       {STARS.map((s, i) => (
-        <View key={i} style={{ position:'absolute', left:s.x, top:s.y, width:s.r*2, height:s.r*2, borderRadius:s.r, backgroundColor:'#fff', opacity:s.o }} />
+        <View key={i} style={{ position:'absolute', left:s.x, top:s.y, width:s.r*2, height:s.r*2, borderRadius:s.r, backgroundColor:C.starColor, opacity:s.o * (dark ? 1 : 0.25) }} />
       ))}
-      {twinklers.map((s, i) => <TwinkleStar key={`tw${i}`} x={s.x} y={s.y} r={s.r} delay={s.delay} />)}
+      {twinklers.map((s, i) => <TwinkleStar key={`tw${i}`} x={s.x} y={s.y} r={s.r} delay={s.delay} color={C.starColor} />)}
 
       {/* ── CONSTELLATIONS ── */}
       {constellations.map(c => (
-        <ConstellationInstance key={c.id} pattern={PATTERNS[c.patternIdx]} cx={c.cx} cy={c.cy} scale={c.scale} />
+        <ConstellationInstance key={c.id} pattern={PATTERNS[c.patternIdx]} cx={c.cx} cy={c.cy} scale={c.scale}
+          lineColor={C.constLine} starColor={C.constStar} starOpacity={C.constStarOpacity} />
       ))}
 
       {/* ── LOGO ── */}
       <Svg width={W} height={H} style={StyleSheet.absoluteFill}>
-        {/* Natural free-flowing threads */}
-        <Path d={thread1} stroke="#fff" strokeWidth={0.8} fill="none" opacity={0.35} />
-        <Path d={thread2} stroke="#fff" strokeWidth={0.8} fill="none" opacity={0.35} />
-        {/* Solid dark nodes */}
+        <Path d={thread1} stroke={C.threadColor} strokeWidth={1.5} fill="none" opacity={C.threadOpacity} />
+        <Path d={thread2} stroke={C.threadColor} strokeWidth={1.5} fill="none" opacity={C.threadOpacity} />
         {NODES.map((n, i) => (
-          <SvgCircle key={i} cx={n.x} cy={n.y} r={R} fill="#fff" />
+          <SvgCircle key={i} cx={n.x} cy={n.y} r={R} fill={C.fg} />
         ))}
       </Svg>
 
       {/* ── DRIFT TEXT ── */}
       <View style={styles.textAnchor}>
-        <Text style={styles.driftText}>D R I F T</Text>
+        <Text style={[styles.driftText, { color: C.fg, opacity: C.textOpacity }]}>D R I F T</Text>
       </View>
 
       {/* ── OVERLAY ── */}
       <View style={styles.overlayContainer}>
         {needsConsent ? (
-          <View style={styles.card}>
-            <Text style={styles.modalTitle}>AWAKEN THE PALACE</Text>
-            <Text style={styles.modalBody}>
+          <View style={[styles.card, { backgroundColor: C.cardBg, borderColor: C.cardBorder }]}>
+            <Text style={[styles.modalTitle, { color: C.cardTitle }]}>AWAKEN THE PALACE</Text>
+            <Text style={[styles.modalBody, { color: C.cardBody }]}>
               To enable offline intelligence, Drift needs to synchronize its neural grid (~600MB).
             </Text>
-            <TouchableOpacity style={styles.actionButton} onPress={onConsent} activeOpacity={0.7}>
-              <Text style={styles.actionButtonText}>INITIALIZE SYNC</Text>
+            <TouchableOpacity style={[styles.actionButton, { backgroundColor: C.btnBg }]} onPress={onConsent} activeOpacity={0.7}>
+              <Text style={[styles.actionButtonText, { color: C.btnText }]}>INITIALIZE SYNC</Text>
             </TouchableOpacity>
           </View>
         ) : status ? (
           <View style={styles.dashboard}>
             <View style={styles.telemetryRow}>
-              <Text style={styles.telemetryLabel}>{status.toUpperCase()}</Text>
-              {speed && <Text style={styles.speedLabel}>{speed}</Text>}
+              <Text style={[styles.telemetryLabel, { color: C.telemetry }]}>{status.toUpperCase()}</Text>
+              {speed && <Text style={[styles.speedLabel, { color: C.speedColor }]}>{speed}</Text>}
             </View>
-            <View style={styles.progressTrack}>
+            <View style={[styles.progressTrack, { backgroundColor: C.trackBg }]}>
               <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
             </View>
-            <Text style={styles.pctText}>{Math.round(progress * 100)}% COMPLETE</Text>
+            <Text style={[styles.pctText, { color: C.pctColor }]}>{Math.round(progress * 100)}% COMPLETE</Text>
           </View>
         ) : null}
       </View>
