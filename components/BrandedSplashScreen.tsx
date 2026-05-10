@@ -153,7 +153,7 @@ const TwinkleStar = React.memo(({ x, y, r, delay, color }: { x: number; y: numbe
 
 // ─── PROPS ────────────────────────────────────────────────────
 interface SplashProps {
-  phase: 'checking' | 'consent' | 'downloading' | 'loading';
+  phase: 'consent' | 'downloading' | 'loading';
   status?: string;
   progress?: number;
   speed?: string;
@@ -366,10 +366,7 @@ export const BrandedSplashScreen = ({ phase, status, progress = 0, speed, onCons
           </Animated.View>
         )}
 
-        {/* CHECKING phase — subtle indicator */}
-        {phase === 'checking' && (
-          <Text style={[styles.checkingText, { color: C.tipColor }]}>READING THE STARS...</Text>
-        )}
+
       </View>
     </View>
   );

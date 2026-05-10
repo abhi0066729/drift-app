@@ -30,7 +30,8 @@ export const unstable_settings = {
 
 export default function RootLayout() {
   const [isReady, setIsReady] = useState(false);
-  const [phase, setPhase] = useState<'checking' | 'consent' | 'downloading' | 'loading'>('checking');
+  // NUCLEAR: Start at consent. Background check will skip to loading if models exist.
+  const [phase, setPhase] = useState<'consent' | 'downloading' | 'loading'>('consent');
   const [downloadStatus, setDownloadStatus] = useState<string>('');
   const [downloadProgress, setDownloadProgress] = useState<number>(0);
   const [downloadSpeed, setDownloadSpeed] = useState<string>('');
@@ -43,40 +44,25 @@ export default function RootLayout() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     initializeSettings();
 
-    // FAIL-SAFE: If still checking after 3s, force consent
-    const failSafe = setTimeout(() => {
-      setPhase(current => current === 'checking' ? 'consent' : current);
-    }, 3000);
-
-    async function initializeApp() {
-      try {
-        // 1. Check for OTA (Don't await, let it run in background)
-        if (!__DEV__) {
-          Updates.checkForUpdateAsync().then(update => {
-            if (update.isAvailable) {
-              Updates.fetchUpdateAsync().then(() => Updates.reloadAsync());
-            }
-          }).catch(err => console.log('[OTA] Check failed:', err));
+    // OTA check (fire-and-forget, never blocks)
+    if (!__DEV__) {
+      Updates.checkForUpdateAsync().then(update => {
+        if (update.isAvailable) {
+          Updates.fetchUpdateAsync().then(() => Updates.reloadAsync());
         }
-
-        // 2. Check Models
-        const ready = await ModelDownloadService.getInstance().isModelReady();
-        clearTimeout(failSafe);
-
-        if (ready) {
-          setPhase('loading');
-          await finishLoading();
-        } else {
-          setPhase('consent');
-        }
-      } catch (e) {
-        console.warn('[RootLayout] Init failed:', e);
-        setPhase('consent');
-      }
+      }).catch(() => {});
     }
 
-    initializeApp();
-    return () => clearTimeout(failSafe);
+    // Background model check — if models already exist, skip consent silently
+    ModelDownloadService.getInstance().isModelReady().then(ready => {
+      if (ready) {
+        setPhase('loading');
+        finishLoading();
+      }
+      // If not ready, we're already showing consent — do nothing
+    }).catch(() => {
+      // Error checking — stay on consent, user can tap to download
+    });
   }, []);
 
   async function finishLoading() {
