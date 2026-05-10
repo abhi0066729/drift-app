@@ -42,14 +42,15 @@ const R = W * 0.032; // smaller nodes
 const CENTER_Y = H * 0.455;
 const THREAD_POINTS = 150; // smooth resolution
 
-function buildNaturalThread(time: number, phaseOff: number): string {
+function buildNaturalThread(time: number, phaseOff: number, targetNode: typeof NODES[0] | null): string {
   const parts: string[] = [];
   const startX = NODES[0].x;
   const endX = NODES[NODES.length - 1].x;
+  const span = endX - startX;
 
   for (let i = 0; i <= THREAD_POINTS; i++) {
     const t = i / THREAD_POINTS;
-    const x = startX + (endX - startX) * t;
+    const x = startX + span * t;
 
     // Additive synthesis: multiple sine waves = organic motion
     const wave1 = Math.sin(t * Math.PI * 3.2 - time * 1.4 + phaseOff) * 22;
@@ -62,7 +63,15 @@ function buildNaturalThread(time: number, phaseOff: number): string {
     // Taper at edges so thread fades in/out gracefully
     const edgeFade = Math.sin(t * Math.PI);
 
-    const y = CENTER_Y + (wave1 + wave2 + wave3 + drift) * edgeFade * 0.7;
+    let y = CENTER_Y + (wave1 + wave2 + wave3 + drift) * edgeFade * 0.7;
+
+    // ATTRACTOR: pull thread through one random middle node
+    if (targetNode) {
+      const dx = (x - targetNode.x) / (span * 0.12); // gaussian width
+      const pull = Math.exp(-dx * dx);                // 1.0 at node, fades smoothly
+      y = y + (targetNode.y - y) * pull;              // blend toward node position
+    }
+
     parts.push(`${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`);
   }
   return parts.join(' ');
@@ -151,17 +160,29 @@ export const BrandedSplashScreen = ({ status, progress = 0, speed, onConsent, ne
   const [thread2, setThread2] = useState('');
   const timeRef = useRef(0);
   const rafRef = useRef<number>();
+  // Which middle node each thread is attracted to (indices 1, 2, or 3)
+  const target1Ref = useRef(NODES[1 + Math.floor(Math.random() * 3)]);
+  const target2Ref = useRef(NODES[1 + Math.floor(Math.random() * 3)]);
   const [constellations, setConstellations] = useState<Array<{
     id: number; patternIdx: number; cx: number; cy: number; scale: number;
   }>>([]);
   const ctrRef = useRef(0);
 
+  // Rotate target node every ~5 seconds
+  useEffect(() => {
+    const iv = setInterval(() => {
+      target1Ref.current = NODES[1 + Math.floor(Math.random() * 3)];
+      target2Ref.current = NODES[1 + Math.floor(Math.random() * 3)];
+    }, 5000);
+    return () => clearInterval(iv);
+  }, []);
+
   // Natural wave animation
   useEffect(() => {
     const tick = () => {
       timeRef.current += 0.016;
-      setThread1(buildNaturalThread(timeRef.current, 0));
-      setThread2(buildNaturalThread(timeRef.current, 2.1));
+      setThread1(buildNaturalThread(timeRef.current, 0, target1Ref.current));
+      setThread2(buildNaturalThread(timeRef.current, 2.1, target2Ref.current));
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
@@ -209,7 +230,7 @@ export const BrandedSplashScreen = ({ status, progress = 0, speed, onConsent, ne
         <Path d={thread1} stroke={C.threadColor} strokeWidth={1.5} fill="none" opacity={C.threadOpacity} />
         <Path d={thread2} stroke={C.threadColor} strokeWidth={1.5} fill="none" opacity={C.threadOpacity} />
         {NODES.map((n, i) => (
-          <SvgCircle key={i} cx={n.x} cy={n.y} r={R} fill={C.fg} />
+          <SvgCircle key={i} cx={n.x} cy={n.y} r={R} fill={C.fg} opacity={1} />
         ))}
       </Svg>
 
