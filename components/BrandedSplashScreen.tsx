@@ -208,11 +208,11 @@ export const BrandedSplashScreen = ({ phase, status, progress = 0, speed, onCons
       setTimeout(() => {
         Animated.spring(popupAnim, {
           toValue: 0,
-          friction: 6,
-          tension: 40,
+          friction: 9,      // Higher friction = less bouncy/smoother
+          tension: 20,      // Lower tension = slower drop
           useNativeDriver: true,
         }).start();
-      }, 800); // Slight delay
+      }, 600); // Slightly less delay
     }
   }, [phase]);
 

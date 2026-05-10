@@ -76,7 +76,12 @@ export default function RootLayout() {
   }
 
   async function handleConsent() {
+    console.log('[RootLayout] DOWNLOAD BUTTON TAPPED');
     setPhase('downloading');
+    
+    // Give UI a moment to switch phases before starting the simulated download loop
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
     try {
       await ModelDownloadService.getInstance().ensureModelsPresent((p) => {
         setDownloadProgress(p.progress);
