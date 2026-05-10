@@ -53,17 +53,37 @@ export default function RootLayout() {
       }).catch(() => {});
     }
 
-    // Lead-in delay for "READING THE STARS"
-    setTimeout(() => {
-      ModelDownloadService.getInstance().isModelReady().then(ready => {
+    // Step-by-step startup sequence
+    async function startSequence() {
+      // 1. Minimum lead-in time for "READING THE STARS"
+      const startTime = Date.now();
+      
+      try {
+        // 2. Race the model check against a timeout
+        const modelCheck = Promise.race([
+          ModelDownloadService.getInstance().isModelReady(),
+          new Promise<boolean>((_, reject) => setTimeout(() => reject('timeout'), 2000))
+        ]);
+
+        const ready = await modelCheck;
+        const elapsed = Date.now() - startTime;
+        const remaining = Math.max(0, 2000 - elapsed); // Ensure at least 2s of lead-in
+        
+        await new Promise(r => setTimeout(r, remaining));
+
         if (ready) {
           setPhase('loading');
           finishLoading();
         } else {
           setPhase('consent');
         }
-      }).catch(() => setPhase('consent'));
-    }, 3000); // 3 second cinematic lead-in
+      } catch (e) {
+        console.log('[RootLayout] Model check timed out or failed, defaulting to consent.');
+        setPhase('consent');
+      }
+    }
+
+    startSequence();
   }, []);
 
   async function finishLoading() {
@@ -123,6 +143,7 @@ export default function RootLayout() {
               progress={downloadProgress} 
               speed={downloadSpeed}
               onConsent={handleConsent}
+              animationStyle={{ transform: [{ scale: popupEntry }] }}
             />
           ) : (
             <Stack>

@@ -205,14 +205,23 @@ export const BrandedSplashScreen = ({ phase, status, progress = 0, speed, onCons
 
   useEffect(() => {
     if (phase === 'consent') {
-      // Much slower, heavier bounce
-      Animated.spring(popupEntry, {
-        toValue: 1,
-        damping: 7,         // Low damping = more bounce
-        stiffness: 25,       // Low stiffness = slow
-        mass: 2,             // High mass = heavy/slow
-        useNativeDriver: true,
-      }).start();
+      // SLOW CINEMATIC BOUNCE using timing for total control
+      Animated.sequence([
+        Animated.delay(200),
+        // Drop down with overshoot
+        Animated.timing(popupEntry, {
+          toValue: 1.1,
+          duration: 1500, // Very slow
+          easing: Easing.out(Easing.back(1.5)),
+          useNativeDriver: true,
+        }),
+        // Settle back to 1.0
+        Animated.timing(popupEntry, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+        })
+      ]).start();
     }
   }, [phase]);
 
