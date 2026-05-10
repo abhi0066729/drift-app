@@ -40,67 +40,43 @@ export default function RootLayout() {
   const theme = useNotesStore(state => state.theme);
 
   useEffect(() => {
-    // Immediate haptic confirmation
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    
-    if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-      UIManager.setLayoutAnimationEnabledExperimental(true);
-    }
     initializeSettings();
 
-    // AGGRESSIVE OTA: Explicitly check for updates on every launch
-    async function checkForOTAUpdate() {
-      try {
-        if (!__DEV__) {
-          console.log('[OTA] Checking for updates...');
-          const update = await Updates.checkForUpdateAsync();
-          if (update.isAvailable) {
-            console.log('[OTA] Update found! Downloading...');
-            await Updates.fetchUpdateAsync();
-            console.log('[OTA] Update downloaded. Reloading app...');
-            await Updates.reloadAsync();
-          } else {
-            console.log('[OTA] App is up to date.');
-          }
-        }
-      } catch (e) {
-        console.log('[OTA] Update check failed (non-critical):', e);
-      }
-    }
-    // Safety timeout: if check hangs, default to consent after 2 seconds
-    const safetyTimer = setTimeout(() => {
-      if (phase === 'checking') {
-        console.log('[RootLayout] Model check safety timeout triggered.');
-        setPhase('consent');
-      }
-    }, 2500);
+    // FAIL-SAFE: If still checking after 3s, force consent
+    const failSafe = setTimeout(() => {
+      setPhase(current => current === 'checking' ? 'consent' : current);
+    }, 3000);
 
-    // Check if models are already downloaded with a small delay for hydration
-    async function checkModels() {
+    async function initializeApp() {
       try {
-        // Small delay to ensure native modules are hydrated
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
+        // 1. Check for OTA (Don't await, let it run in background)
+        if (!__DEV__) {
+          Updates.checkForUpdateAsync().then(update => {
+            if (update.isAvailable) {
+              Updates.fetchUpdateAsync().then(() => Updates.reloadAsync());
+            }
+          }).catch(err => console.log('[OTA] Check failed:', err));
+        }
+
+        // 2. Check Models
         const ready = await ModelDownloadService.getInstance().isModelReady();
-        clearTimeout(safetyTimer);
+        clearTimeout(failSafe);
 
         if (ready) {
-          console.log('[RootLayout] Models already present, skipping consent.');
           setPhase('loading');
           await finishLoading();
         } else {
-          console.log('[RootLayout] Models not found, showing consent.');
           setPhase('consent');
         }
       } catch (e) {
-        console.warn('[RootLayout] Model check failed:', e);
-        clearTimeout(safetyTimer);
+        console.warn('[RootLayout] Init failed:', e);
         setPhase('consent');
       }
     }
-    checkModels();
 
-    return () => clearTimeout(safetyTimer);
+    initializeApp();
+    return () => clearTimeout(failSafe);
   }, []);
 
   async function finishLoading() {
@@ -109,24 +85,23 @@ export default function RootLayout() {
     } catch (e) {
       console.warn('[RootLayout] Sync failed:', e);
     }
-    setIsReady(true);
+    // Give a moment for the loading tips to be seen
+    setTimeout(() => setIsReady(true), 1500);
   }
 
   async function handleConsent() {
     setPhase('downloading');
     try {
-      setDownloadStatus('CONNECTING TO NEURAL GRID...');
       await ModelDownloadService.getInstance().ensureModelsPresent((p) => {
         setDownloadProgress(p.progress);
         setDownloadSpeed(p.speed);
         setDownloadStatus(`SYNCING ${p.fileName.toUpperCase()}`);
       });
       setPhase('loading');
-      setDownloadStatus('');
       await finishLoading();
     } catch (e) {
       console.warn('[RootLayout] Download failed:', e);
-      setIsReady(true); // Fail safe: enter app anyway
+      setIsReady(true);
     }
   }
 
