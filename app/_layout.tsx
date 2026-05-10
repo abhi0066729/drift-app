@@ -143,7 +143,6 @@ export default function RootLayout() {
               progress={downloadProgress} 
               speed={downloadSpeed}
               onConsent={handleConsent}
-              animationStyle={{ transform: [{ scale: popupEntry }] }}
             />
           ) : (
             <Stack>
