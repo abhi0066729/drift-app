@@ -30,7 +30,7 @@ export const unstable_settings = {
 export default function RootLayout() {
   const [isReady, setIsReady] = useState(false);
   const [needsConsent, setNeedsConsent] = useState(true); // NUCLEAR FORCE: ALWAYS SHOW POPUP
-  const [downloadStatus, setDownloadStatus] = useState<string>('IGNITING ENGINES...');
+  const [downloadStatus, setDownloadStatus] = useState<string>('OTA CHECK: IGNITING...');
   const [downloadProgress, setDownloadProgress] = useState<number>(0);
   const [downloadSpeed, setDownloadSpeed] = useState<string>('');
   
