@@ -59,7 +59,7 @@ export const BrandedSplashScreen = ({ status, progress = 0, speed, onConsent, ne
       <View style={styles.overlayContainer}>
         {needsConsent ? (
           <View style={styles.rawCard}>
-            <Text style={styles.modalTitle}>AWAKEN THE PALACE [Base OTA Test]</Text>
+            <Text style={styles.modalTitle}>AWAKEN THE PALACE [OTA TEST]</Text>
             <Text style={styles.modalBody}>
               To enable offline intelligence, Drift needs to synchronize its neural grid (~600MB).
             </Text>
