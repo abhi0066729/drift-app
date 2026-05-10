@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import {
   View, Text, StyleSheet, Dimensions, TouchableOpacity, Animated, Easing,
-  useColorScheme,
+  useColorScheme, Pressable
 } from 'react-native';
 import Svg, { Path, Circle as SvgCircle, Line } from 'react-native-svg';
 
