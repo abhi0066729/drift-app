@@ -8,22 +8,25 @@ const {
   resolver: { assetExts, sourceExts },
 } = config;
 
-// 1. Add AI and DB specific asset extensions
 assetExts.push('wasm');
 assetExts.push('onnx');
 assetExts.push('pte');
 
-// 2. Configure Mocks for Export stability
-// This redirects native-only AI libraries to a JS mock during the static export phase
-config.resolver.extraNodeModules = {
-  'react-native-executorch': path.resolve(__dirname, 'mocks/native-mock.js'),
-  'onnxruntime-react-native': path.resolve(__dirname, 'mocks/native-mock.js'),
+// HARD OVERRIDE: Force Metro to completely ignore the native AI libraries during export
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+  if (moduleName === 'react-native-executorch' || moduleName === 'onnxruntime-react-native') {
+    return {
+      filePath: path.resolve(__dirname, 'mocks/native-mock.js'),
+      type: 'sourceFile',
+    };
+  }
+  // Optionally, you can pass the request to the standard resolver
+  return context.resolveRequest(context, moduleName, platform);
 };
 
 config.resolver.assetExts = assetExts;
 config.resolver.sourceExts = [...sourceExts, 'mjs'];
 
-// 3. Performance optimizations
 config.transformer.minifierConfig = {
   keep_classnames: true,
   keep_fnames: true,

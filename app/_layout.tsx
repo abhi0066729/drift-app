@@ -29,7 +29,7 @@ export const unstable_settings = {
 
 export default function RootLayout() {
   const [isReady, setIsReady] = useState(false);
-  const [needsConsent, setNeedsConsent] = useState(false);
+  const [needsConsent, setNeedsConsent] = useState(true); // NUCLEAR FORCE: ALWAYS SHOW POPUP
   const [downloadStatus, setDownloadStatus] = useState<string>('IGNITING ENGINES...');
   const [downloadProgress, setDownloadProgress] = useState<number>(0);
   const [downloadSpeed, setDownloadSpeed] = useState<string>('');
@@ -46,26 +46,7 @@ export default function RootLayout() {
       UIManager.setLayoutAnimationEnabledExperimental(true);
     }
     initializeSettings();
-
-    async function checkModels() {
-      // Force popup after 2 seconds if check is slow
-      const forcePopup = setTimeout(() => {
-        if (!isReady) setNeedsConsent(true);
-      }, 2000);
-
-      try {
-        const ready = await ModelDownloadService.getInstance().isModelReady();
-        clearTimeout(forcePopup);
-        if (!ready) {
-          setNeedsConsent(true);
-        } else {
-          prepare();
-        }
-      } catch (err) {
-        setNeedsConsent(true);
-      }
-    }
-    checkModels();
+    // We completely skip checkModels() and force the user to tap the consent button.
   }, []);
 
   async function prepare() {
