@@ -67,12 +67,23 @@ export default function RootLayout() {
         console.log('[OTA] Update check failed (non-critical):', e);
       }
     }
-    checkForOTAUpdate();
+    // Safety timeout: if check hangs, default to consent after 2 seconds
+    const safetyTimer = setTimeout(() => {
+      if (phase === 'checking') {
+        console.log('[RootLayout] Model check safety timeout triggered.');
+        setPhase('consent');
+      }
+    }, 2500);
 
-    // Check if models are already downloaded
+    // Check if models are already downloaded with a small delay for hydration
     async function checkModels() {
       try {
+        // Small delay to ensure native modules are hydrated
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
         const ready = await ModelDownloadService.getInstance().isModelReady();
+        clearTimeout(safetyTimer);
+
         if (ready) {
           console.log('[RootLayout] Models already present, skipping consent.');
           setPhase('loading');
@@ -83,10 +94,13 @@ export default function RootLayout() {
         }
       } catch (e) {
         console.warn('[RootLayout] Model check failed:', e);
+        clearTimeout(safetyTimer);
         setPhase('consent');
       }
     }
     checkModels();
+
+    return () => clearTimeout(safetyTimer);
   }, []);
 
   async function finishLoading() {
