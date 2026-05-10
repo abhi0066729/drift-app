@@ -19,6 +19,7 @@ import { ModelDownloadService } from '@/services/ModelDownloadService';
 import { BrandedSplashScreen } from '@/components/BrandedSplashScreen';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Haptics from 'expo-haptics';
+import * as Updates from 'expo-updates';
 
 // Nuclear Option: Hide splash immediately on load
 SplashScreen.hideAsync().catch(() => {});
@@ -46,7 +47,27 @@ export default function RootLayout() {
       UIManager.setLayoutAnimationEnabledExperimental(true);
     }
     initializeSettings();
-    // We completely skip checkModels() and force the user to tap the consent button.
+
+    // AGGRESSIVE OTA: Explicitly check for updates on every launch
+    async function checkForOTAUpdate() {
+      try {
+        if (!__DEV__) {
+          console.log('[OTA] Checking for updates...');
+          const update = await Updates.checkForUpdateAsync();
+          if (update.isAvailable) {
+            console.log('[OTA] Update found! Downloading...');
+            await Updates.fetchUpdateAsync();
+            console.log('[OTA] Update downloaded. Reloading app...');
+            await Updates.reloadAsync();
+          } else {
+            console.log('[OTA] App is up to date.');
+          }
+        }
+      } catch (e) {
+        console.log('[OTA] Update check failed (non-critical):', e);
+      }
+    }
+    checkForOTAUpdate();
   }, []);
 
   async function prepare() {

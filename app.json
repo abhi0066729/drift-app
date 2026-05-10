@@ -10,7 +10,10 @@
     "newArchEnabled": true,
     "updates": {
       "url": "https://u.expo.dev/dd37b473-efe5-42fb-a2b5-b2a01f15256e",
-      "channel": "production"
+      "checkAutomatically": "ON_LOAD",
+      "requestHeaders": {
+        "expo-channel-name": "production"
+      }
     },
     "runtimeVersion": {
       "policy": "appVersion"
