@@ -30,8 +30,8 @@ export const unstable_settings = {
 
 export default function RootLayout() {
   const [isReady, setIsReady] = useState(false);
-  const [needsConsent, setNeedsConsent] = useState(true); // NUCLEAR FORCE: ALWAYS SHOW POPUP
-  const [downloadStatus, setDownloadStatus] = useState<string>('OTA CHECK: IGNITING...');
+  const [phase, setPhase] = useState<'checking' | 'consent' | 'downloading' | 'loading'>('checking');
+  const [downloadStatus, setDownloadStatus] = useState<string>('');
   const [downloadProgress, setDownloadProgress] = useState<number>(0);
   const [downloadSpeed, setDownloadSpeed] = useState<string>('');
   
@@ -68,10 +68,38 @@ export default function RootLayout() {
       }
     }
     checkForOTAUpdate();
+
+    // Check if models are already downloaded
+    async function checkModels() {
+      try {
+        const ready = await ModelDownloadService.getInstance().isModelReady();
+        if (ready) {
+          console.log('[RootLayout] Models already present, skipping consent.');
+          setPhase('loading');
+          await finishLoading();
+        } else {
+          console.log('[RootLayout] Models not found, showing consent.');
+          setPhase('consent');
+        }
+      } catch (e) {
+        console.warn('[RootLayout] Model check failed:', e);
+        setPhase('consent');
+      }
+    }
+    checkModels();
   }, []);
 
-  async function prepare() {
-    setNeedsConsent(false);
+  async function finishLoading() {
+    try {
+      await SyncService.getInstance().performFullSync();
+    } catch (e) {
+      console.warn('[RootLayout] Sync failed:', e);
+    }
+    setIsReady(true);
+  }
+
+  async function handleConsent() {
+    setPhase('downloading');
     try {
       setDownloadStatus('CONNECTING TO NEURAL GRID...');
       await ModelDownloadService.getInstance().ensureModelsPresent((p) => {
@@ -79,10 +107,11 @@ export default function RootLayout() {
         setDownloadSpeed(p.speed);
         setDownloadStatus(`SYNCING ${p.fileName.toUpperCase()}`);
       });
-      await SyncService.getInstance().performFullSync();
-      setIsReady(true);
+      setPhase('loading');
+      setDownloadStatus('');
+      await finishLoading();
     } catch (e) {
-      console.warn('[RootLayout] Preparation failed:', e);
+      console.warn('[RootLayout] Download failed:', e);
       setIsReady(true); // Fail safe: enter app anyway
     }
   }
@@ -98,11 +127,11 @@ export default function RootLayout() {
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           {!isReady ? (
             <BrandedSplashScreen 
+              phase={phase}
               status={downloadStatus} 
               progress={downloadProgress} 
               speed={downloadSpeed}
-              needsConsent={needsConsent}
-              onConsent={prepare}
+              onConsent={handleConsent}
             />
           ) : (
             <Stack>
@@ -116,3 +145,4 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+

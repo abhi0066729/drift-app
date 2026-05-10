@@ -7,18 +7,37 @@ import Svg, { Path, Circle as SvgCircle, Line } from 'react-native-svg';
 
 const { width: W, height: H } = Dimensions.get('window');
 
-// ─── CONSTELLATION PATTERNS ──────────────────────────────────
+// ─── CONSTELLATION PATTERNS (normalized 0→1) ─────────────────
 const PATTERNS = [
-  { s:[[.35,.05],[.65,.05],[.50,.20],[.38,.40],[.50,.40],[.62,.40],[.28,.70],[.72,.70]], e:[[0,2],[1,2],[0,3],[1,5],[3,4],[4,5],[3,6],[5,7]] },
-  { s:[[0,.50],[.20,.15],[.45,.10],[.65,.25],[.75,.55],[.60,.80],[.40,.70]], e:[[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,3]] },
-  { s:[[0,.30],[.25,.70],[.50,.20],[.75,.80],[1,.30]], e:[[0,1],[1,2],[2,3],[3,4]] },
-  { s:[[.50,0],[.50,.35],[.50,.70],[.20,.35],[.80,.35],[.50,1]], e:[[0,1],[1,2],[2,5],[3,1],[4,1]] },
-  { s:[[.10,.30],[.30,.10],[.50,.15],[.65,.30],[.80,.25],[.70,.50],[.50,.60],[.35,.55]], e:[[0,1],[1,2],[2,3],[3,4],[3,5],[5,6],[6,7],[7,0]] },
-  { s:[[.50,0],[.30,.40],[.70,.40],[.25,.70],[.75,.70]], e:[[0,1],[0,2],[1,2],[1,3],[2,4],[3,4]] },
-  { s:[[.15,.50],[.30,.20],[.50,.10],[.70,.20],[.85,.50],[.75,.75],[.25,.75]], e:[[0,1],[1,2],[2,3],[3,4],[4,5],[0,6]] },
-  { s:[[.30,0],[.35,.15],[.40,.25],[.45,.40],[.50,.50],[.60,.60],[.70,.65],[.80,.70],[.85,.80],[.80,.90]], e:[[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,9]] },
-  { s:[[.30,0],[.70,0],[.25,.30],[.65,.25],[.20,.60],[.60,.55],[.30,.85],[.70,.80]], e:[[0,2],[2,4],[4,6],[1,3],[3,5],[5,7],[2,3]] },
-  { s:[[.50,0],[.30,.30],[.70,.30],[.10,.60],[.50,.50],[.90,.60]], e:[[0,1],[0,2],[1,3],[1,4],[2,4],[2,5]] },
+  { n:'Orion', s:[[.35,.05],[.65,.05],[.50,.20],[.38,.40],[.50,.40],[.62,.40],[.28,.70],[.72,.70]], e:[[0,2],[1,2],[0,3],[1,5],[3,4],[4,5],[3,6],[5,7]] },
+  { n:'Ursa Major', s:[[0,.50],[.20,.15],[.45,.10],[.65,.25],[.75,.55],[.60,.80],[.40,.70]], e:[[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,3]] },
+  { n:'Cassiopeia', s:[[0,.30],[.25,.70],[.50,.20],[.75,.80],[1,.30]], e:[[0,1],[1,2],[2,3],[3,4]] },
+  { n:'Cygnus', s:[[.50,0],[.50,.35],[.50,.70],[.20,.35],[.80,.35],[.50,1]], e:[[0,1],[1,2],[2,5],[3,1],[4,1]] },
+  { n:'Leo', s:[[.10,.30],[.30,.10],[.50,.15],[.65,.30],[.80,.25],[.70,.50],[.50,.60],[.35,.55]], e:[[0,1],[1,2],[2,3],[3,4],[3,5],[5,6],[6,7],[7,0]] },
+  { n:'Lyra', s:[[.50,0],[.30,.40],[.70,.40],[.25,.70],[.75,.70]], e:[[0,1],[0,2],[1,2],[1,3],[2,4],[3,4]] },
+  { n:'Corona', s:[[.15,.50],[.30,.20],[.50,.10],[.70,.20],[.85,.50],[.75,.75],[.25,.75]], e:[[0,1],[1,2],[2,3],[3,4],[4,5],[0,6]] },
+  { n:'Scorpius', s:[[.30,0],[.35,.15],[.40,.25],[.45,.40],[.50,.50],[.60,.60],[.70,.65],[.80,.70],[.85,.80],[.80,.90]], e:[[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,9]] },
+  { n:'Gemini', s:[[.30,0],[.70,0],[.25,.30],[.65,.25],[.20,.60],[.60,.55],[.30,.85],[.70,.80]], e:[[0,2],[2,4],[4,6],[1,3],[3,5],[5,7],[2,3]] },
+  { n:'Aquila', s:[[.50,0],[.30,.30],[.70,.30],[.10,.60],[.50,.50],[.90,.60]], e:[[0,1],[0,2],[1,3],[1,4],[2,4],[2,5]] },
+];
+
+// ─── LOADING TIPS ─────────────────────────────────────────────
+const TIPS = [
+  'Building Nexus pathways...',
+  'Creating constellation maps...',
+  'Weaving neural threads...',
+  'Calibrating drift vectors...',
+  'Mapping semantic clusters...',
+  'Aligning knowledge nodes...',
+  'Synthesizing thought patterns...',
+  'Forging the Palace gates...',
+  'Indexing memory fragments...',
+  'Tuning resonance frequencies...',
+  'Charting unknown territories...',
+  'Encoding spatial dimensions...',
+  'Linking cortex pathways...',
+  'Spinning void geometry...',
+  'Awakening dormant grids...',
 ];
 
 // ─── STAR FIELD ───────────────────────────────────────────────
@@ -27,7 +46,7 @@ const STARS = Array.from({ length: 120 }, () => ({
   r: 0.5 + Math.random() * 1.5, o: 0.15 + Math.random() * 0.45,
 }));
 
-// ─── LOGO NODES (placement unchanged, smaller radius, solid black) ──
+// ─── LOGO NODES ───────────────────────────────────────────────
 const NODES = [
   { x: W * 0.22, y: H * 0.455 },
   { x: W * 0.36, y: H * 0.475 },
@@ -35,14 +54,13 @@ const NODES = [
   { x: W * 0.64, y: H * 0.435 },
   { x: W * 0.78, y: H * 0.455 },
 ];
-const R = W * 0.032; // smaller nodes
+const R = W * 0.032;
 
-// ─── NATURAL THREAD (free-flowing, not pinned to nodes) ──────
-// Uses additive sine waves for organic motion
+// ─── NATURAL THREAD ───────────────────────────────────────────
 const CENTER_Y = H * 0.455;
-const THREAD_POINTS = 150; // smooth resolution
+const THREAD_POINTS = 150;
 
-function buildNaturalThread(time: number, phaseOff: number, targetNode: typeof NODES[0] | null): string {
+function buildNaturalThread(time: number, phaseOff: number, targetNode: { x: number; y: number } | null): string {
   const parts: string[] = [];
   const startX = NODES[0].x;
   const endX = NODES[NODES.length - 1].x;
@@ -51,33 +69,43 @@ function buildNaturalThread(time: number, phaseOff: number, targetNode: typeof N
   for (let i = 0; i <= THREAD_POINTS; i++) {
     const t = i / THREAD_POINTS;
     const x = startX + span * t;
-
-    // Additive synthesis: multiple sine waves = organic motion
     const wave1 = Math.sin(t * Math.PI * 3.2 - time * 1.4 + phaseOff) * 22;
     const wave2 = Math.sin(t * Math.PI * 5.7 - time * 0.9 + phaseOff * 0.7) * 8;
     const wave3 = Math.sin(t * Math.PI * 1.1 + time * 0.5 + phaseOff * 1.3) * 12;
-
-    // Gentle drift of the baseline
     const drift = Math.sin(t * Math.PI * 0.8 + time * 0.3) * 6;
-
-    // Taper at edges so thread fades in/out gracefully
     const edgeFade = Math.sin(t * Math.PI);
-
     let y = CENTER_Y + (wave1 + wave2 + wave3 + drift) * edgeFade * 0.7;
 
-    // ATTRACTOR: pull thread through one random middle node
     if (targetNode) {
-      const dx = (x - targetNode.x) / (span * 0.12); // gaussian width
-      const pull = Math.exp(-dx * dx);                // 1.0 at node, fades smoothly
-      y = y + (targetNode.y - y) * pull;              // blend toward node position
+      const dx = (x - targetNode.x) / (span * 0.12);
+      const pull = Math.exp(-dx * dx);
+      y = y + (targetNode.y - y) * pull;
     }
-
     parts.push(`${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`);
   }
   return parts.join(' ');
 }
 
-// ─── CONSTELLATION INSTANCE ──────────────────────────────────
+// ─── MINI CONSTELLATION (inline SVG icon) ─────────────────────
+const MiniConstellation = React.memo(({ patternIdx, size, color }: {
+  patternIdx: number; size: number; color: string;
+}) => {
+  const p = PATTERNS[patternIdx % PATTERNS.length];
+  const positions = p.s.map(([sx, sy]) => ({ x: sx * size, y: sy * size }));
+  return (
+    <Svg width={size} height={size}>
+      {p.e.map(([a, b], i) => (
+        <Line key={i} x1={positions[a].x} y1={positions[a].y}
+          x2={positions[b].x} y2={positions[b].y} stroke={color} strokeWidth={0.6} opacity={0.5} />
+      ))}
+      {positions.map((pt, i) => (
+        <SvgCircle key={`s${i}`} cx={pt.x} cy={pt.y} r={1.2} fill={color} opacity={0.8} />
+      ))}
+    </Svg>
+  );
+});
+
+// ─── BACKGROUND CONSTELLATION ─────────────────────────────────
 const ConstellationInstance = React.memo(({ pattern, cx, cy, scale, lineColor, starColor, starOpacity }: {
   pattern: typeof PATTERNS[0]; cx: number; cy: number; scale: number;
   lineColor: string; starColor: string; starOpacity: number;
@@ -125,25 +153,29 @@ const TwinkleStar = React.memo(({ x, y, r, delay, color }: { x: number; y: numbe
 
 // ─── PROPS ────────────────────────────────────────────────────
 interface SplashProps {
-  status?: string; progress?: number; speed?: string;
-  onConsent?: () => void; needsConsent?: boolean;
+  phase: 'checking' | 'consent' | 'downloading' | 'loading';
+  status?: string;
+  progress?: number;
+  speed?: string;
+  onConsent?: () => void;
 }
 
 // ─── MAIN ─────────────────────────────────────────────────────
-export const BrandedSplashScreen = ({ status, progress = 0, speed, onConsent, needsConsent }: SplashProps) => {
+export const BrandedSplashScreen = ({ phase, status, progress = 0, speed, onConsent }: SplashProps) => {
   const scheme = useColorScheme();
   const dark = scheme === 'dark';
 
-  // Dynamic color palette
+  // Dynamic color palette (light mode ~10% brighter stars/constellations)
   const C = useMemo(() => ({
     bg: dark ? '#000' : '#F2F2F2',
     fg: dark ? '#fff' : '#000',
     threadColor: dark ? '#fff' : '#000',
     threadOpacity: dark ? 0.35 : 0.25,
     starColor: dark ? '#fff' : '#000',
-    constLine: dark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.12)',
+    starOpacity: dark ? 1 : 0.35,          // boosted from 0.25
+    constLine: dark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.18)',  // boosted from 0.12
     constStar: dark ? 'white' : 'black',
-    constStarOpacity: dark ? 0.9 : 0.5,
+    constStarOpacity: dark ? 0.9 : 0.6,    // boosted from 0.5
     textOpacity: dark ? 0.7 : 0.85,
     cardBg: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
     cardBorder: dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
@@ -155,58 +187,52 @@ export const BrandedSplashScreen = ({ status, progress = 0, speed, onConsent, ne
     speedColor: dark ? '#fff' : '#333',
     trackBg: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
     pctColor: dark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.25)',
+    tipColor: dark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.30)',
+    miniConst: dark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.35)',
   }), [dark]);
+
+  // ── Wave animation state ──
   const [thread1, setThread1] = useState('');
   const [thread2, setThread2] = useState('');
   const timeRef = useRef(0);
   const rafRef = useRef<number>();
-
-  // Smooth attractor system: lerp between old and new target nodes
   const pickRandom = () => NODES[1 + Math.floor(Math.random() * 3)];
   const attr1 = useRef({ from: pickRandom(), to: pickRandom(), progress: 1 });
   const attr2 = useRef({ from: pickRandom(), to: pickRandom(), progress: 1 });
 
+  // ── Background constellations ──
   const [constellations, setConstellations] = useState<Array<{
     id: number; patternIdx: number; cx: number; cy: number; scale: number;
   }>>([]);
   const ctrRef = useRef(0);
 
-  // Rotate target node every ~5 seconds (start transition)
+  // ── Rotating tip + mini constellation ──
+  const [tipIdx, setTipIdx] = useState(Math.floor(Math.random() * TIPS.length));
+  const [miniConstIdx, setMiniConstIdx] = useState(Math.floor(Math.random() * PATTERNS.length));
+  const [barConstIdx, setBarConstIdx] = useState(Math.floor(Math.random() * PATTERNS.length));
+  const tipFade = useRef(new Animated.Value(1)).current;
+
+  // Rotate attractor every 5s
   useEffect(() => {
     const iv = setInterval(() => {
-      // Start a new smooth transition
       attr1.current = { from: attr1.current.to, to: pickRandom(), progress: 0 };
       attr2.current = { from: attr2.current.to, to: pickRandom(), progress: 0 };
     }, 5000);
     return () => clearInterval(iv);
   }, []);
 
-  // Natural wave animation
+  // Wave animation loop
   useEffect(() => {
     const tick = () => {
       timeRef.current += 0.016;
-
-      // Advance attractor lerp (~2 second transition: 0.008 per frame)
       if (attr1.current.progress < 1) attr1.current.progress = Math.min(1, attr1.current.progress + 0.008);
       if (attr2.current.progress < 1) attr2.current.progress = Math.min(1, attr2.current.progress + 0.008);
-
-      // Smooth ease (cubic ease-in-out)
-      const ease = (t: number) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-
-      const lerp1 = ease(attr1.current.progress);
-      const lerp2 = ease(attr2.current.progress);
-
-      const target1 = {
-        x: attr1.current.from.x + (attr1.current.to.x - attr1.current.from.x) * lerp1,
-        y: attr1.current.from.y + (attr1.current.to.y - attr1.current.from.y) * lerp1,
-      };
-      const target2 = {
-        x: attr2.current.from.x + (attr2.current.to.x - attr2.current.from.x) * lerp2,
-        y: attr2.current.from.y + (attr2.current.to.y - attr2.current.from.y) * lerp2,
-      };
-
-      setThread1(buildNaturalThread(timeRef.current, 0, target1));
-      setThread2(buildNaturalThread(timeRef.current, 2.1, target2));
+      const ease = (t: number) => t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2, 3) / 2;
+      const l1 = ease(attr1.current.progress), l2 = ease(attr2.current.progress);
+      const t1 = { x: attr1.current.from.x + (attr1.current.to.x - attr1.current.from.x)*l1, y: attr1.current.from.y + (attr1.current.to.y - attr1.current.from.y)*l1 };
+      const t2 = { x: attr2.current.from.x + (attr2.current.to.x - attr2.current.from.x)*l2, y: attr2.current.from.y + (attr2.current.to.y - attr2.current.from.y)*l2 };
+      setThread1(buildNaturalThread(timeRef.current, 0, t1));
+      setThread2(buildNaturalThread(timeRef.current, 2.1, t2));
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
@@ -231,6 +257,28 @@ export const BrandedSplashScreen = ({ status, progress = 0, speed, onConsent, ne
     return () => clearInterval(iv);
   }, []);
 
+  // Rotate tip text every 3s with fade
+  useEffect(() => {
+    if (phase !== 'downloading' && phase !== 'loading') return;
+    const iv = setInterval(() => {
+      Animated.timing(tipFade, { toValue: 0, duration: 400, useNativeDriver: true }).start(() => {
+        setTipIdx(prev => (prev + 1) % TIPS.length);
+        setMiniConstIdx(Math.floor(Math.random() * PATTERNS.length));
+        Animated.timing(tipFade, { toValue: 1, duration: 400, useNativeDriver: true }).start();
+      });
+    }, 3000);
+    return () => clearInterval(iv);
+  }, [phase]);
+
+  // Rotate bar constellation icon every 2s
+  useEffect(() => {
+    if (phase !== 'downloading') return;
+    const iv = setInterval(() => {
+      setBarConstIdx(Math.floor(Math.random() * PATTERNS.length));
+    }, 2000);
+    return () => clearInterval(iv);
+  }, [phase]);
+
   const twinklers = useMemo(() =>
     STARS.filter(() => Math.random() > 0.7).map((s, i) => ({ ...s, delay: i * 300 })),
   []);
@@ -239,7 +287,7 @@ export const BrandedSplashScreen = ({ status, progress = 0, speed, onConsent, ne
     <View style={[styles.container, { backgroundColor: C.bg }]}>
       {/* ── STAR FIELD ── */}
       {STARS.map((s, i) => (
-        <View key={i} style={{ position:'absolute', left:s.x, top:s.y, width:s.r*2, height:s.r*2, borderRadius:s.r, backgroundColor:C.starColor, opacity:s.o * (dark ? 1 : 0.25) }} />
+        <View key={i} style={{ position:'absolute', left:s.x, top:s.y, width:s.r*2, height:s.r*2, borderRadius:s.r, backgroundColor:C.starColor, opacity:s.o * C.starOpacity }} />
       ))}
       {twinklers.map((s, i) => <TwinkleStar key={`tw${i}`} x={s.x} y={s.y} r={s.r} delay={s.delay} color={C.starColor} />)}
 
@@ -265,7 +313,9 @@ export const BrandedSplashScreen = ({ status, progress = 0, speed, onConsent, ne
 
       {/* ── OVERLAY ── */}
       <View style={styles.overlayContainer}>
-        {needsConsent ? (
+
+        {/* CONSENT POPUP */}
+        {phase === 'consent' && (
           <View style={[styles.card, { backgroundColor: C.cardBg, borderColor: C.cardBorder }]}>
             <Text style={[styles.modalTitle, { color: C.cardTitle }]}>AWAKEN THE PALACE</Text>
             <Text style={[styles.modalBody, { color: C.cardBody }]}>
@@ -275,38 +325,75 @@ export const BrandedSplashScreen = ({ status, progress = 0, speed, onConsent, ne
               <Text style={[styles.actionButtonText, { color: C.btnText }]}>INITIALIZE SYNC</Text>
             </TouchableOpacity>
           </View>
-        ) : status ? (
+        )}
+
+        {/* DOWNLOAD PROGRESS */}
+        {phase === 'downloading' && (
           <View style={styles.dashboard}>
             <View style={styles.telemetryRow}>
-              <Text style={[styles.telemetryLabel, { color: C.telemetry }]}>{status.toUpperCase()}</Text>
-              {speed && <Text style={[styles.speedLabel, { color: C.speedColor }]}>{speed}</Text>}
+              <Text style={[styles.telemetryLabel, { color: C.telemetry }]}>{(status || '').toUpperCase()}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                {speed ? <Text style={[styles.speedLabel, { color: C.speedColor, marginRight: 8 }]}>{speed}</Text> : null}
+                <Text style={[styles.pctLabel, { color: C.fg }]}>{Math.round(progress * 100)}%</Text>
+              </View>
             </View>
-            <View style={[styles.progressTrack, { backgroundColor: C.trackBg }]}>
-              <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
+
+            {/* Progress bar with mini constellation at the end */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', width: '100%' }}>
+              <View style={[styles.progressTrack, { backgroundColor: C.trackBg, flex: 1 }]}>
+                <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
+              </View>
+              <View style={{ marginLeft: 8 }}>
+                <MiniConstellation patternIdx={barConstIdx} size={20} color={C.miniConst} />
+              </View>
             </View>
-            <Text style={[styles.pctText, { color: C.pctColor }]}>{Math.round(progress * 100)}% COMPLETE</Text>
+
+            {/* Rotating tip with mini constellation */}
+            <Animated.View style={{ opacity: tipFade, flexDirection: 'row', alignItems: 'center', marginTop: 18 }}>
+              <MiniConstellation patternIdx={miniConstIdx} size={16} color={C.miniConst} />
+              <Text style={[styles.tipText, { color: C.tipColor, marginLeft: 8 }]}>{TIPS[tipIdx]}</Text>
+            </Animated.View>
           </View>
-        ) : null}
+        )}
+
+        {/* LOADING (post-download, setting up services) */}
+        {phase === 'loading' && (
+          <Animated.View style={{ opacity: tipFade, alignItems: 'center' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <MiniConstellation patternIdx={miniConstIdx} size={24} color={C.miniConst} />
+              <Text style={[styles.loadingText, { color: C.tipColor, marginLeft: 10 }]}>{TIPS[tipIdx]}</Text>
+            </View>
+          </Animated.View>
+        )}
+
+        {/* CHECKING phase — subtle indicator */}
+        {phase === 'checking' && (
+          <Text style={[styles.checkingText, { color: C.tipColor }]}>READING THE STARS...</Text>
+        )}
       </View>
     </View>
   );
 };
 
+// ─── STYLES ───────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
   textAnchor: { position:'absolute', top: NODES[2].y + R + 28, width: W, alignItems:'center' },
-  driftText: { fontSize:13, fontWeight:'300', color:'#fff', letterSpacing:14, opacity:0.7 },
+  driftText: { fontSize:13, fontWeight:'300', letterSpacing:14 },
   overlayContainer: { position:'absolute', bottom:90, width:'100%', alignItems:'center', paddingHorizontal:28, zIndex:1000 },
-  card: { width:'100%', backgroundColor:'rgba(255,255,255,0.06)', padding:28, borderRadius:28, borderWidth:1, borderColor:'rgba(255,255,255,0.1)' },
-  modalTitle: { fontSize:12, fontWeight:'900', color:'#fff', marginBottom:12, letterSpacing:3 },
-  modalBody: { fontSize:14, color:'rgba(255,255,255,0.5)', lineHeight:22, marginBottom:24 },
-  actionButton: { backgroundColor:'#fff', paddingVertical:16, borderRadius:20, alignItems:'center' },
-  actionButtonText: { color:'#000', fontWeight:'900', letterSpacing:1.5, fontSize:12 },
-  dashboard: { width:'100%', alignItems:'center' },
+  card: { width:'100%', padding:28, borderRadius:28, borderWidth:1 },
+  modalTitle: { fontSize:12, fontWeight:'900', marginBottom:12, letterSpacing:3 },
+  modalBody: { fontSize:14, lineHeight:22, marginBottom:24 },
+  actionButton: { paddingVertical:16, borderRadius:20, alignItems:'center' },
+  actionButtonText: { fontWeight:'900', letterSpacing:1.5, fontSize:12 },
+  dashboard: { width:'100%', alignItems:'flex-start' },
   telemetryRow: { flexDirection:'row', justifyContent:'space-between', width:'100%', marginBottom:10 },
-  telemetryLabel: { fontSize:9, fontWeight:'800', color:'rgba(255,255,255,0.4)', letterSpacing:1.5 },
-  speedLabel: { fontSize:10, fontWeight:'900', color:'#fff' },
-  progressTrack: { width:'100%', height:2, backgroundColor:'rgba(255,255,255,0.08)', borderRadius:1, overflow:'hidden' },
+  telemetryLabel: { fontSize:9, fontWeight:'800', letterSpacing:1.5 },
+  speedLabel: { fontSize:10, fontWeight:'900' },
+  pctLabel: { fontSize:11, fontWeight:'900' },
+  progressTrack: { height:2, borderRadius:1, overflow:'hidden' },
   progressFill: { height:'100%', backgroundColor:'#F1C40F' },
-  pctText: { marginTop:14, fontSize:10, fontWeight:'900', color:'rgba(255,255,255,0.3)', letterSpacing:2 },
+  tipText: { fontSize:11, fontWeight:'500', letterSpacing:0.5 },
+  loadingText: { fontSize:12, fontWeight:'500', letterSpacing:0.5 },
+  checkingText: { fontSize:9, fontWeight:'800', letterSpacing:2 },
 });
