@@ -6,7 +6,7 @@ import Svg, { Path, Circle as SvgCircle, Line } from 'react-native-svg';
 
 const { width: W, height: H } = Dimensions.get('window');
 
-// ─── CONSTELLATION PATTERNS (normalized 0→1) ─────────────────
+// ─── CONSTELLATION PATTERNS ──────────────────────────────────
 const PATTERNS = [
   { s:[[.35,.05],[.65,.05],[.50,.20],[.38,.40],[.50,.40],[.62,.40],[.28,.70],[.72,.70]], e:[[0,2],[1,2],[0,3],[1,5],[3,4],[4,5],[3,6],[5,7]] },
   { s:[[0,.50],[.20,.15],[.45,.10],[.65,.25],[.75,.55],[.60,.80],[.40,.70]], e:[[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,3]] },
@@ -20,13 +20,13 @@ const PATTERNS = [
   { s:[[.50,0],[.30,.30],[.70,.30],[.10,.60],[.50,.50],[.90,.60]], e:[[0,1],[0,2],[1,3],[1,4],[2,4],[2,5]] },
 ];
 
-// ─── STATIC STAR FIELD ────────────────────────────────────────
+// ─── STAR FIELD ───────────────────────────────────────────────
 const STARS = Array.from({ length: 120 }, () => ({
   x: Math.random() * W, y: Math.random() * H,
   r: 0.5 + Math.random() * 1.5, o: 0.15 + Math.random() * 0.45,
 }));
 
-// ─── LOGO NODES ───────────────────────────────────────────────
+// ─── LOGO NODES (placement unchanged, smaller radius, solid black) ──
 const NODES = [
   { x: W * 0.22, y: H * 0.455 },
   { x: W * 0.36, y: H * 0.475 },
@@ -34,26 +34,35 @@ const NODES = [
   { x: W * 0.64, y: H * 0.435 },
   { x: W * 0.78, y: H * 0.455 },
 ];
-const R = W * 0.042;
+const R = W * 0.032; // smaller nodes
 
-// ─── WAVE THREAD (L→R traveling, bigger, slower) ──────────────
-const SAMPLES = 30;
+// ─── NATURAL THREAD (free-flowing, not pinned to nodes) ──────
+// Uses additive sine waves for organic motion
+const CENTER_Y = H * 0.455;
+const THREAD_POINTS = 150; // smooth resolution
 
-function buildWave(time: number, amp: number, phaseOff: number): string {
+function buildNaturalThread(time: number, phaseOff: number): string {
   const parts: string[] = [];
-  for (let seg = 0; seg < NODES.length - 1; seg++) {
-    const a = NODES[seg], b = NODES[seg + 1];
-    for (let i = 0; i <= SAMPLES; i++) {
-      const t = i / SAMPLES;
-      const x = a.x + (b.x - a.x) * t;
-      const baseY = a.y + (b.y - a.y) * t;
-      const globalX = (a.x + (b.x - a.x) * t) / W; // 0→1 across screen
-      const envelope = Math.sin(t * Math.PI);
-      // LEFT→RIGHT traveling wave: sin(kx - ωt)
-      const wave = Math.sin(globalX * Math.PI * 6 - time * 1.8 + phaseOff) * amp * envelope;
-      const cmd = seg === 0 && i === 0 ? 'M' : 'L';
-      parts.push(`${cmd}${x.toFixed(1)},${(baseY + wave).toFixed(1)}`);
-    }
+  const startX = W * 0.08;
+  const endX = W * 0.92;
+
+  for (let i = 0; i <= THREAD_POINTS; i++) {
+    const t = i / THREAD_POINTS;
+    const x = startX + (endX - startX) * t;
+
+    // Additive synthesis: multiple sine waves = organic motion
+    const wave1 = Math.sin(t * Math.PI * 3.2 - time * 1.4 + phaseOff) * 22;
+    const wave2 = Math.sin(t * Math.PI * 5.7 - time * 0.9 + phaseOff * 0.7) * 8;
+    const wave3 = Math.sin(t * Math.PI * 1.1 + time * 0.5 + phaseOff * 1.3) * 12;
+
+    // Gentle drift of the baseline
+    const drift = Math.sin(t * Math.PI * 0.8 + time * 0.3) * 6;
+
+    // Taper at edges so thread fades in/out gracefully
+    const edgeFade = Math.sin(t * Math.PI);
+
+    const y = CENTER_Y + (wave1 + wave2 + wave3 + drift) * edgeFade * 0.7;
+    parts.push(`${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`);
   }
   return parts.join(' ');
 }
@@ -120,12 +129,12 @@ export const BrandedSplashScreen = ({ status, progress = 0, speed, onConsent, ne
   }>>([]);
   const ctrRef = useRef(0);
 
-  // Wave animation loop (slower: 0.018 per frame)
+  // Natural wave animation
   useEffect(() => {
     const tick = () => {
-      timeRef.current += 0.018;
-      setThread1(buildWave(timeRef.current, 28, 0));
-      setThread2(buildWave(timeRef.current, 28, Math.PI));
+      timeRef.current += 0.016;
+      setThread1(buildNaturalThread(timeRef.current, 0));
+      setThread2(buildNaturalThread(timeRef.current, 2.1));
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
@@ -167,13 +176,14 @@ export const BrandedSplashScreen = ({ status, progress = 0, speed, onConsent, ne
         <ConstellationInstance key={c.id} pattern={PATTERNS[c.patternIdx]} cx={c.cx} cy={c.cy} scale={c.scale} />
       ))}
 
-      {/* ── LOGO: WAVE THREADS + NODES ── */}
+      {/* ── LOGO ── */}
       <Svg width={W} height={H} style={StyleSheet.absoluteFill}>
-        <Path d={thread1} stroke="#fff" strokeWidth={1} fill="none" opacity={0.4} />
-        <Path d={thread2} stroke="#fff" strokeWidth={1} fill="none" opacity={0.4} />
+        {/* Natural free-flowing threads */}
+        <Path d={thread1} stroke="#fff" strokeWidth={0.8} fill="none" opacity={0.35} />
+        <Path d={thread2} stroke="#fff" strokeWidth={0.8} fill="none" opacity={0.35} />
+        {/* Solid dark nodes */}
         {NODES.map((n, i) => (
-          <SvgCircle key={i} cx={n.x} cy={n.y} r={R} fill="#000"
-            stroke="rgba(255,255,255,0.15)" strokeWidth={1} />
+          <SvgCircle key={i} cx={n.x} cy={n.y} r={R} fill="#000" />
         ))}
       </Svg>
 
