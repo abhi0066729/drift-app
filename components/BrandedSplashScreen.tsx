@@ -200,6 +200,22 @@ export const BrandedSplashScreen = ({ phase, status, progress = 0, speed, onCons
   const attr1 = useRef({ from: pickRandom(), to: pickRandom(), progress: 1 });
   const attr2 = useRef({ from: pickRandom(), to: pickRandom(), progress: 1 });
 
+  // ── Popup Animation ──
+  const popupAnim = useRef(new Animated.Value(-H)).current; // Start off-screen top
+
+  useEffect(() => {
+    if (phase === 'consent') {
+      setTimeout(() => {
+        Animated.spring(popupAnim, {
+          toValue: 0,
+          friction: 6,
+          tension: 40,
+          useNativeDriver: true,
+        }).start();
+      }, 800); // Slight delay
+    }
+  }, [phase]);
+
   // ── Background constellations ──
   const [constellations, setConstellations] = useState<Array<{
     id: number; patternIdx: number; cx: number; cy: number; scale: number;
@@ -316,15 +332,15 @@ export const BrandedSplashScreen = ({ phase, status, progress = 0, speed, onCons
 
         {/* CONSENT POPUP */}
         {phase === 'consent' && (
-          <View style={[styles.card, { backgroundColor: C.cardBg, borderColor: C.cardBorder }]}>
+          <Animated.View style={[styles.card, { backgroundColor: C.cardBg, borderColor: C.cardBorder, transform: [{ translateY: popupAnim }] }]}>
             <Text style={[styles.modalTitle, { color: C.cardTitle }]}>AWAKEN THE PALACE</Text>
             <Text style={[styles.modalBody, { color: C.cardBody }]}>
-              To enable offline intelligence, Drift needs to synchronize its neural grid (~600MB).
+              Drift needs to download AI models (~600MB) to enable offline intelligence.
             </Text>
             <TouchableOpacity style={[styles.actionButton, { backgroundColor: C.btnBg }]} onPress={onConsent} activeOpacity={0.7}>
-              <Text style={[styles.actionButtonText, { color: C.btnText }]}>INITIALIZE SYNC</Text>
+              <Text style={[styles.actionButtonText, { color: C.btnText }]}>DOWNLOAD MODELS</Text>
             </TouchableOpacity>
-          </View>
+          </Animated.View>
         )}
 
         {/* DOWNLOAD PROGRESS */}
