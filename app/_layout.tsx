@@ -30,8 +30,8 @@ export const unstable_settings = {
 
 export default function RootLayout() {
   const [isReady, setIsReady] = useState(false);
-  // NUCLEAR: Start at consent. Background check will skip to loading if models exist.
-  const [phase, setPhase] = useState<'consent' | 'downloading' | 'loading'>('consent');
+  // Start at checking for the lead-in effect
+  const [phase, setPhase] = useState<'checking' | 'consent' | 'downloading' | 'loading'>('checking');
   const [downloadStatus, setDownloadStatus] = useState<string>('');
   const [downloadProgress, setDownloadProgress] = useState<number>(0);
   const [downloadSpeed, setDownloadSpeed] = useState<string>('');
@@ -44,7 +44,7 @@ export default function RootLayout() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     initializeSettings();
 
-    // OTA check (fire-and-forget, never blocks)
+    // OTA check
     if (!__DEV__) {
       Updates.checkForUpdateAsync().then(update => {
         if (update.isAvailable) {
@@ -53,16 +53,17 @@ export default function RootLayout() {
       }).catch(() => {});
     }
 
-    // Background model check — if models already exist, skip consent silently
-    ModelDownloadService.getInstance().isModelReady().then(ready => {
-      if (ready) {
-        setPhase('loading');
-        finishLoading();
-      }
-      // If not ready, we're already showing consent — do nothing
-    }).catch(() => {
-      // Error checking — stay on consent, user can tap to download
-    });
+    // Lead-in delay for "READING THE STARS"
+    setTimeout(() => {
+      ModelDownloadService.getInstance().isModelReady().then(ready => {
+        if (ready) {
+          setPhase('loading');
+          finishLoading();
+        } else {
+          setPhase('consent');
+        }
+      }).catch(() => setPhase('consent'));
+    }, 3000); // 3 second cinematic lead-in
   }, []);
 
   async function finishLoading() {
@@ -71,14 +72,19 @@ export default function RootLayout() {
     } catch (e) {
       console.warn('[RootLayout] Sync failed:', e);
     }
-    // Give a moment for the loading tips to be seen
     setTimeout(() => setIsReady(true), 1500);
   }
 
   async function handleConsent() {
+    // Definitive test for the button
+    try {
+      const { Alert } = require('react-native');
+      Alert.alert('Download Started', 'Initializing neural grid synchronization...');
+    } catch(e) {}
+
     setPhase('downloading');
     
-    // GUARANTEED SIMULATION: Run this regardless of service state
+    // GUARANTEED SIMULATION
     const simulatedModels = [
       { name: 'LLAMA-3.2-1B.PTE', size: 480 },
       { name: 'MULTILINGUAL-E5-SMALL.ONNX', size: 112 },
@@ -93,7 +99,7 @@ export default function RootLayout() {
         if (progress > 1) progress = 1;
         setDownloadProgress(progress);
         setDownloadSpeed(`${(2 + Math.random() * 4).toFixed(1)} MB/s`);
-        await new Promise(r => setTimeout(r, 200));
+        await new Promise(r => setTimeout(r, 250));
       }
     }
 

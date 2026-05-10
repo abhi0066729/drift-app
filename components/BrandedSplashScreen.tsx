@@ -153,7 +153,7 @@ const TwinkleStar = React.memo(({ x, y, r, delay, color }: { x: number; y: numbe
 
 // ─── PROPS ────────────────────────────────────────────────────
 interface SplashProps {
-  phase: 'consent' | 'downloading' | 'loading';
+  phase: 'checking' | 'consent' | 'downloading' | 'loading';
   status?: string;
   progress?: number;
   speed?: string;
@@ -205,16 +205,14 @@ export const BrandedSplashScreen = ({ phase, status, progress = 0, speed, onCons
 
   useEffect(() => {
     if (phase === 'consent') {
-      // Small delay then smooth, slow bounce entry
-      Animated.sequence([
-        Animated.delay(500),
-        Animated.spring(popupEntry, {
-          toValue: 1,
-          bounciness: 12,    // High bounce
-          speed: 3,         // Slow and smooth
-          useNativeDriver: true,
-        })
-      ]).start();
+      // Much slower, heavier bounce
+      Animated.spring(popupEntry, {
+        toValue: 1,
+        damping: 7,         // Low damping = more bounce
+        stiffness: 25,       // Low stiffness = slow
+        mass: 2,             // High mass = heavy/slow
+        useNativeDriver: true,
+      }).start();
     }
   }, [phase]);
 
@@ -410,8 +408,10 @@ export const BrandedSplashScreen = ({ phase, status, progress = 0, speed, onCons
             </View>
           </Animated.View>
         )}
-
-
+        {/* CHECKING phase — restored as requested */}
+        {phase === 'checking' && (
+          <Text style={[styles.checkingText, { color: C.tipColor }]}>READING THE STARS...</Text>
+        )}
       </View>
     </View>
   );
