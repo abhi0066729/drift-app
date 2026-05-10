@@ -201,20 +201,32 @@ export const BrandedSplashScreen = ({ phase, status, progress = 0, speed, onCons
   const attr2 = useRef({ from: pickRandom(), to: pickRandom(), progress: 1 });
 
   // ── Popup Animation ──
-  const popupAnim = useRef(new Animated.Value(-H)).current; // Start off-screen top
+  const popupEntry = useRef(new Animated.Value(0)).current; 
 
   useEffect(() => {
     if (phase === 'consent') {
-      setTimeout(() => {
-        Animated.spring(popupAnim, {
-          toValue: 0,
-          friction: 7,      // Snappier
-          tension: 50,      // More energy
+      // Small delay then smooth, slow bounce entry
+      Animated.sequence([
+        Animated.delay(500),
+        Animated.spring(popupEntry, {
+          toValue: 1,
+          bounciness: 12,    // High bounce
+          speed: 3,         // Slow and smooth
           useNativeDriver: true,
-        }).start();
-      }, 600);
+        })
+      ]).start();
     }
   }, [phase]);
+
+  const popupY = popupEntry.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-400, 0] // Drop from 400px up
+  });
+
+  const popupScale = popupEntry.interpolate({
+    inputRange: [0, 0.8, 1],
+    outputRange: [0.8, 1.05, 1] // Slight overshoot scale
+  });
 
   // ── Background constellations ──
   const [constellations, setConstellations] = useState<Array<{
@@ -334,7 +346,15 @@ export const BrandedSplashScreen = ({ phase, status, progress = 0, speed, onCons
         {phase === 'consent' && (
           <Animated.View 
             pointerEvents="auto"
-            style={[styles.card, { backgroundColor: C.cardBg, borderColor: C.cardBorder, transform: [{ translateY: popupAnim }] }]}
+            style={[
+              styles.card, 
+              { 
+                backgroundColor: C.cardBg, 
+                borderColor: C.cardBorder, 
+                opacity: popupEntry,
+                transform: [{ translateY: popupY }, { scale: popupScale }] 
+              }
+            ]}
           >
             <Text style={[styles.modalTitle, { color: C.cardTitle }]}>AWAKEN THE PALACE</Text>
             <Text style={[styles.modalBody, { color: C.cardBody }]}>
@@ -343,12 +363,9 @@ export const BrandedSplashScreen = ({ phase, status, progress = 0, speed, onCons
             <Pressable 
               style={({ pressed }) => [
                 styles.actionButton, 
-                { backgroundColor: C.btnBg, opacity: pressed ? 0.8 : 1 }
+                { backgroundColor: C.btnBg, opacity: pressed ? 0.7 : 1 }
               ]} 
-              onPress={() => {
-                console.log('[Splash] Download button pressed');
-                onConsent?.();
-              }}
+              onPress={() => onConsent?.()}
             >
               <Text style={[styles.actionButtonText, { color: C.btnText }]}>DOWNLOAD MODELS</Text>
             </Pressable>
