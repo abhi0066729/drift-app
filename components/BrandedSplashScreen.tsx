@@ -43,8 +43,8 @@ const THREAD_POINTS = 150; // smooth resolution
 
 function buildNaturalThread(time: number, phaseOff: number): string {
   const parts: string[] = [];
-  const startX = W * 0.08;
-  const endX = W * 0.92;
+  const startX = NODES[0].x;
+  const endX = NODES[NODES.length - 1].x;
 
   for (let i = 0; i <= THREAD_POINTS; i++) {
     const t = i / THREAD_POINTS;
@@ -183,7 +183,7 @@ export const BrandedSplashScreen = ({ status, progress = 0, speed, onConsent, ne
         <Path d={thread2} stroke="#fff" strokeWidth={0.8} fill="none" opacity={0.35} />
         {/* Solid dark nodes */}
         {NODES.map((n, i) => (
-          <SvgCircle key={i} cx={n.x} cy={n.y} r={R} fill="#000" />
+          <SvgCircle key={i} cx={n.x} cy={n.y} r={R} fill="#fff" />
         ))}
       </Svg>
 
