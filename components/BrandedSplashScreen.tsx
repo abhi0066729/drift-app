@@ -160,19 +160,23 @@ export const BrandedSplashScreen = ({ status, progress = 0, speed, onConsent, ne
   const [thread2, setThread2] = useState('');
   const timeRef = useRef(0);
   const rafRef = useRef<number>();
-  // Which middle node each thread is attracted to (indices 1, 2, or 3)
-  const target1Ref = useRef(NODES[1 + Math.floor(Math.random() * 3)]);
-  const target2Ref = useRef(NODES[1 + Math.floor(Math.random() * 3)]);
+
+  // Smooth attractor system: lerp between old and new target nodes
+  const pickRandom = () => NODES[1 + Math.floor(Math.random() * 3)];
+  const attr1 = useRef({ from: pickRandom(), to: pickRandom(), progress: 1 });
+  const attr2 = useRef({ from: pickRandom(), to: pickRandom(), progress: 1 });
+
   const [constellations, setConstellations] = useState<Array<{
     id: number; patternIdx: number; cx: number; cy: number; scale: number;
   }>>([]);
   const ctrRef = useRef(0);
 
-  // Rotate target node every ~5 seconds
+  // Rotate target node every ~5 seconds (start transition)
   useEffect(() => {
     const iv = setInterval(() => {
-      target1Ref.current = NODES[1 + Math.floor(Math.random() * 3)];
-      target2Ref.current = NODES[1 + Math.floor(Math.random() * 3)];
+      // Start a new smooth transition
+      attr1.current = { from: attr1.current.to, to: pickRandom(), progress: 0 };
+      attr2.current = { from: attr2.current.to, to: pickRandom(), progress: 0 };
     }, 5000);
     return () => clearInterval(iv);
   }, []);
@@ -181,8 +185,28 @@ export const BrandedSplashScreen = ({ status, progress = 0, speed, onConsent, ne
   useEffect(() => {
     const tick = () => {
       timeRef.current += 0.016;
-      setThread1(buildNaturalThread(timeRef.current, 0, target1Ref.current));
-      setThread2(buildNaturalThread(timeRef.current, 2.1, target2Ref.current));
+
+      // Advance attractor lerp (~2 second transition: 0.008 per frame)
+      if (attr1.current.progress < 1) attr1.current.progress = Math.min(1, attr1.current.progress + 0.008);
+      if (attr2.current.progress < 1) attr2.current.progress = Math.min(1, attr2.current.progress + 0.008);
+
+      // Smooth ease (cubic ease-in-out)
+      const ease = (t: number) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+      const lerp1 = ease(attr1.current.progress);
+      const lerp2 = ease(attr2.current.progress);
+
+      const target1 = {
+        x: attr1.current.from.x + (attr1.current.to.x - attr1.current.from.x) * lerp1,
+        y: attr1.current.from.y + (attr1.current.to.y - attr1.current.from.y) * lerp1,
+      };
+      const target2 = {
+        x: attr2.current.from.x + (attr2.current.to.x - attr2.current.from.x) * lerp2,
+        y: attr2.current.from.y + (attr2.current.to.y - attr2.current.from.y) * lerp2,
+      };
+
+      setThread1(buildNaturalThread(timeRef.current, 0, target1));
+      setThread2(buildNaturalThread(timeRef.current, 2.1, target2));
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
