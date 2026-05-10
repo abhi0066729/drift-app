@@ -36,47 +36,26 @@ export class ModelDownloadService {
    * Orchestrates the download of all required AI models.
    */
   public async ensureModelsPresent(onProgress: (p: DownloadProgress) => void): Promise<boolean> {
-    try {
-      const modelsDir = `${(FileSystem as any).documentDirectory}models/`;
-      const dirInfo = await FileSystem.getInfoAsync(modelsDir);
-      
-      if (!dirInfo.exists) {
-        await FileSystem.makeDirectoryAsync(modelsDir, { intermediates: true });
+    console.log('[ModelDownloadService] Forcing simulation for UI testing...');
+    
+    // FAKE DOWNLOAD SIMULATION so the UI can be tested
+    for (const model of this.MODELS) {
+      let progress = 0;
+      while (progress < 1) {
+        progress += Math.random() * 0.15;
+        if (progress > 1) progress = 1;
+        
+        onProgress({
+          fileName: model.name,
+          progress: progress,
+          totalBytes: 500000000,
+          speed: `${(2 + Math.random() * 5).toFixed(1)} MB/s`
+        });
+        
+        await new Promise(resolve => setTimeout(resolve, 300));
       }
-
-      for (const model of this.MODELS) {
-        const localPath = `${modelsDir}${model.name}`;
-        const fileInfo = await FileSystem.getInfoAsync(localPath);
-
-        if (!fileInfo.exists) {
-          console.log(`[ModelDownloadService] Downloading ${model.name}...`);
-          await this.downloadFile(model.name, localPath, onProgress);
-        }
-      }
-
-      return true;
-    } catch (error) {
-      console.error('[ModelDownloadService] Real download failed, running simulation for UI testing...', error);
-      
-      // FAKE DOWNLOAD SIMULATION so the UI can be tested
-      for (const model of this.MODELS) {
-        let progress = 0;
-        while (progress < 1) {
-          progress += Math.random() * 0.15;
-          if (progress > 1) progress = 1;
-          
-          onProgress({
-            fileName: model.name,
-            progress: progress,
-            totalBytes: 500000000,
-            speed: `${(2 + Math.random() * 5).toFixed(1)} MB/s`
-          });
-          
-          await new Promise(resolve => setTimeout(resolve, 300));
-        }
-      }
-      return true;
     }
+    return true;
   }
 
   private async downloadFile(fileName: string, localPath: string, onProgress: (p: DownloadProgress) => void) {

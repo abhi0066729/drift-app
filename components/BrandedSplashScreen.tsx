@@ -392,7 +392,7 @@ export const BrandedSplashScreen = ({ phase, status, progress = 0, speed, onCons
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
   textAnchor: { position:'absolute', top: NODES[2].y + R + 28, width: W, alignItems:'center' },
-  driftText: { fontSize:13, fontWeight:'300', letterSpacing:14 },
+  driftText: { fontSize:13, fontWeight:'800', letterSpacing:14 },
   overlayContainer: { position:'absolute', bottom:90, width:'100%', alignItems:'center', paddingHorizontal:28, zIndex:1000 },
   card: { width:'100%', padding:28, borderRadius:28, borderWidth:1 },
   modalTitle: { fontSize:12, fontWeight:'900', marginBottom:12, letterSpacing:3 },
