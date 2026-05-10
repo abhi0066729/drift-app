@@ -17,7 +17,7 @@ export class CortexService {
     return CortexService.instance;
   }
 
-  private unloadTimeout: NodeJS.Timeout | null = null;
+  private unloadTimeout: ReturnType<typeof setTimeout> | null = null;
   private readonly WARM_STATE_DURATION = 60000; // 60 seconds
 
   /**

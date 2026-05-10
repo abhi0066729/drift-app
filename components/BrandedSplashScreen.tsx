@@ -1,6 +1,5 @@
-import React, { useEffect, useMemo } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
-import { Canvas, Path, Skia } from '@shopify/react-native-skia';
 
 const { width, height } = Dimensions.get('window');
 
@@ -21,19 +20,6 @@ interface SplashProps {
 }
 
 export const BrandedSplashScreen = ({ status, progress = 0, speed, onConsent, needsConsent }: SplashProps) => {
-  
-  const path = useMemo(() => {
-    const skPath = Skia.Path.Make();
-    skPath.moveTo(LOGO_NODES[0].x, LOGO_NODES[0].y);
-    for (let i = 1; i < LOGO_NODES.length; i++) {
-      const prev = LOGO_NODES[i-1];
-      const curr = LOGO_NODES[i];
-      const cp1x = prev.x + (curr.x - prev.x) / 2;
-      skPath.cubicTo(cp1x, prev.y, cp1x, curr.y, curr.x, curr.y);
-    }
-    return skPath;
-  }, []);
-
   return (
     <View style={styles.container}>
       {/* RAW NEBULA */}
@@ -49,16 +35,21 @@ export const BrandedSplashScreen = ({ status, progress = 0, speed, onConsent, ne
         ))}
       </View>
 
-      {/* CORE LOGO */}
+      {/* CORE LOGO (No Skia, No Animations) */}
       <View style={styles.logoRoot}>
-        <View style={styles.canvasContainer}>
-          <Canvas style={{ flex: 1 }}>
-            <Path path={path} color="black" style="stroke" strokeWidth={0.5} opacity={0.15} />
-          </Canvas>
-        </View>
         {LOGO_NODES.map((node, i) => (
           <View key={i} style={[styles.blackNode, { left: node.x - 10, top: node.y - 10 }]} />
         ))}
+        {/* Simple connecting line using a generic View */}
+        <View style={{
+          position: 'absolute',
+          top: height * 0.45,
+          left: width * 0.32,
+          width: width * 0.36,
+          height: 2,
+          backgroundColor: 'rgba(0,0,0,0.15)',
+          zIndex: 1
+        }} />
         <View style={styles.textContainer}>
           <Text style={styles.driftText}>D R I F T</Text>
         </View>
@@ -97,7 +88,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
   logoRoot: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center' },
   blackNode: { position: 'absolute', width: 20, height: 20, borderRadius: 10, backgroundColor: 'black', zIndex: 10 },
-  canvasContainer: { ...StyleSheet.absoluteFillObject, zIndex: 5 },
   textContainer: { position: 'absolute', top: height * 0.45 + 50, width: '100%', alignItems: 'center' },
   driftText: { fontSize: 13, fontWeight: '300', color: 'black', letterSpacing: 14, opacity: 0.8 },
   nebulaContainer: { ...StyleSheet.absoluteFillObject, backgroundColor: '#fff' },
