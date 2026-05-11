@@ -13,6 +13,15 @@ const AnimatedPath = Animated.createAnimatedComponent(Path);
 const AnimatedLine = Animated.createAnimatedComponent(Line);
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
+interface NodeData {
+  cx: number;
+  cy: number;
+  r: number;
+  f?: string;
+  s?: string;
+  sw?: number;
+}
+
 export const OpeningTransition = ({ onComplete }: { onComplete: () => void }) => {
   const scatter = useRef(new Animated.Value(0)).current; // Phase 1: Explosion
   const zoom = useRef(new Animated.Value(0)).current;    // Phase 2: Snap & Zoom
@@ -57,7 +66,7 @@ export const OpeningTransition = ({ onComplete }: { onComplete: () => void }) =>
       {dx: 1.4, dy: 0.0, rot: 260},
     ];
     
-    const nodePairs = [
+    const nodePairs: NodeData[][] = [
       [{cx: 31, cy: 27, r: 6.5, f: THEME_COLOR}, {cx: 31, cy: 27, r: 3, f: BG_COLOR}],
       [{cx: 31, cy: 187, r: 6.5, f: THEME_COLOR}, {cx: 31, cy: 187, r: 3, f: BG_COLOR}],
       [{cx: 95, cy: 27, r: 5.5, s: THEME_COLOR, sw: 2.5}],
