@@ -2,6 +2,21 @@
 
 **Conversation ID**: `0682bb5e-3018-4c47-a9ac-366ebba0c9af`
 
+## [v42] - Synchronized Cinematic Reveal
+**Prompt ID**: `P17`  
+**Request**: "d part moves a bit late... make it move as every single element moves and rotate the d... make a bit slow"  
+**Date**: 2026-05-11  
+**Status**: ACTIVE  
+**Files Modified**: 
+- `components/OpeningTransition.tsx`: Unified animation values and added logo rotation.
+
+**Changes**:
+- Removed the 460ms phase delay; the "D" now moves simultaneously with the explosion.
+- Added -25 degree rotation to the central logo during the void dive.
+- Increased total duration to 1800ms for a slower, more premium feel.
+
+---
+
 ## [v41] - Type Stability & Cleanup
 **Prompt ID**: `P16`  
 **Request**: "@[current_problems]"  
