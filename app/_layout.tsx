@@ -57,9 +57,14 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      </Stack>
+      <SQLiteProvider databaseName="drift.db" onInit={initDatabase}>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <Stack>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          </Stack>
+          <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} translucent />
+        </ThemeProvider>
+      </SQLiteProvider>
     </GestureHandlerRootView>
   );
 }
