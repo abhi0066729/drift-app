@@ -1,5 +1,5 @@
-import * as FileSystem from 'expo-file-system';
-import { documentDirectory, getInfoAsync } from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
+import { documentDirectory, getInfoAsync } from 'expo-file-system/legacy';
 import { RetrievalService } from './RetrievalService';
 import { Note } from '../store/useNotesStore';
 import { Platform } from 'react-native';

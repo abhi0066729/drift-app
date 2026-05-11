@@ -28,7 +28,7 @@ export class EmbeddingEngine {
       console.log('[EmbeddingEngine] Initializing...');
       
       // Dynamic imports to prevent export-time crashes
-      const { documentDirectory } = require('expo-file-system');
+      const { documentDirectory } = require('expo-file-system/legacy');
       this.ort = require('onnxruntime-react-native');
       
       const modelsDir = `${documentDirectory}models/`;
