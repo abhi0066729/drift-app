@@ -39,15 +39,23 @@ export default function RootLayout() {
   const initializeSettings = useSettingsStore(state => state.initialize);
 
   useEffect(() => {
-    // Initial check
+    // Initial check with guaranteed cinematic lead-in
     const checkStatus = async () => {
+      const startTime = Date.now();
       const ready = await ModelDownloadService.getInstance().isModelReady();
-      if (ready) {
-        setPhase('loading');
-        finishLoading();
-      } else {
-        setTimeout(() => setPhase('consent'), 2000);
-      }
+      
+      const elapsed = Date.now() - startTime;
+      const minLeadIn = 3000; // 3 seconds minimum for the stars
+      const remaining = Math.max(0, minLeadIn - elapsed);
+
+      setTimeout(async () => {
+        if (ready) {
+          setPhase('loading');
+          await finishLoading();
+        } else {
+          setPhase('consent');
+        }
+      }, remaining);
     };
     checkStatus();
   }, []);
@@ -55,11 +63,14 @@ export default function RootLayout() {
   async function finishLoading() {
     try {
       initializeSettings();
+      // Igniting the core engines
       await SyncService.getInstance().performFullSync();
+      // Extra 1s buffer for thread settling
+      await new Promise(r => setTimeout(r, 1000));
     } catch (e) {
       console.warn('[RootLayout] Sync failed:', e);
     }
-    setTimeout(() => setIsReady(true), 2000);
+    setIsReady(true);
   }
 
   async function handleConsent() {
