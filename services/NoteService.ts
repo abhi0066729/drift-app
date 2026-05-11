@@ -25,11 +25,16 @@ export class NoteService {
   public async loadAllNotes() {
     try {
       const db = await DatabaseService.getInstance().getDb();
-      const notes = await db.getAllAsync<Note>(
+      const notes = await db.getAllAsync<any>(
         'SELECT * FROM notes WHERE is_deleted = 0 ORDER BY created_at DESC'
       );
-      useNotesStore.getState().setNotes(notes);
-      console.log(`[NoteService] Loaded ${notes.length} notes from database.`);
+      const mappedNotes: Note[] = notes.map(n => ({
+        ...n,
+        is_refining: !!n.is_refining,
+        is_deleted: !!n.is_deleted
+      }));
+      useNotesStore.getState().setNotes(mappedNotes);
+      console.log(`[NoteService] Loaded ${mappedNotes.length} notes from database.`);
     } catch (error) {
       console.error('[NoteService] Failed to load notes:', error);
     }
@@ -47,8 +52,8 @@ export class NoteService {
 
       await db.runAsync(
         `INSERT OR REPLACE INTO notes (
-          id, numeric_id, user_id, content, created_at, source_type, audio_url, is_deleted, entities_json
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          id, numeric_id, user_id, content, created_at, source_type, audio_url, is_deleted, entities_json, is_refining
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           note.id, 
           numericId,
@@ -57,8 +62,9 @@ export class NoteService {
           note.created_at, 
           note.source_type, 
           note.audio_url || null, 
-          note.is_deleted || 0, 
-          note.entities_json || null
+          note.is_deleted ? 1 : 0, 
+          note.entities_json || null,
+          note.is_refining ? 1 : 0
         ]
       );
 
@@ -91,12 +97,29 @@ export class NoteService {
   public async updateNote(id: string, updates: Partial<Note>) {
     try {
       const db = await DatabaseService.getInstance().getDb();
-      if (updates.content !== undefined || updates.entities_json !== undefined) {
-        await db.runAsync(
-          'UPDATE notes SET content = COALESCE(?, content), entities_json = COALESCE(?, entities_json) WHERE id = ?',
-          [updates.content || null, updates.entities_json || null, id]
-        );
+      
+      const setClauses: string[] = [];
+      const values: any[] = [];
+
+      if (updates.content !== undefined) {
+        setClauses.push('content = ?');
+        values.push(updates.content);
       }
+      if (updates.entities_json !== undefined) {
+        setClauses.push('entities_json = ?');
+        values.push(updates.entities_json);
+      }
+      if (updates.is_refining !== undefined) {
+        setClauses.push('is_refining = ?');
+        values.push(updates.is_refining ? 1 : 0);
+      }
+
+      if (setClauses.length > 0) {
+        values.push(id);
+        const query = `UPDATE notes SET ${setClauses.join(', ')} WHERE id = ?`;
+        await db.runAsync(query, values);
+      }
+      
       console.log(`[NoteService] Note ${id} updated in database.`);
     } catch (error) {
       console.error('[NoteService] Failed to update note:', error);

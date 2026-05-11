@@ -30,6 +30,17 @@ export class DatabaseService {
       if (currentVersion === 0) {
         await db.runAsync('INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)', [1, Date.now()]);
       }
+
+      // Migration v2: Add is_refining to notes
+      if (currentVersion < 2) {
+        try {
+          await db.execAsync('ALTER TABLE notes ADD COLUMN is_refining INTEGER DEFAULT 0;');
+          await db.runAsync('INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)', [2, Date.now()]);
+          console.log('[DatabaseService] Migration v2 (is_refining) applied.');
+        } catch (e) {
+          console.log('[DatabaseService] Migration v2 already applied or failed:', e);
+        }
+      }
     } catch (error) {
       console.error('[DatabaseService] Migration failed:', error);
     }

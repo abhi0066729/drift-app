@@ -16,6 +16,7 @@ export async function initDatabase(db: SQLite.SQLiteDatabase) {
       audio_url TEXT,
       is_deleted INTEGER DEFAULT 0,
       entities_json TEXT,
+      is_refining INTEGER DEFAULT 0,
       wing_id TEXT,
       room_id TEXT
     );

@@ -362,7 +362,7 @@ export default function CaptureScreen() {
   const ribbonColor = CATEGORY_COLORS[predictedCategory] || '#8E44AD';
   const isFlux = predictionStatus === 'flux';
   const labelText = inputText.trim().length > 0 
-    ? (isTypingSync ? 'AI SYNTHESIZING...' : (isFlux ? `${predictedCategory.toUpperCase()}?` : predictedCategory.toUpperCase())) 
+    ? (isFlux ? `${predictedCategory.toUpperCase()}?` : predictedCategory.toUpperCase()) 
     : 'WAITING FOR THOUGHT';
 
   return (

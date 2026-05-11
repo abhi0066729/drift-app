@@ -2,6 +2,27 @@
 
 **Conversation ID**: `0682bb5e-3018-4c47-a9ac-366ebba0c9af`
 
+## [v43] - Synthesis Stability & Tab Focus
+**Prompt ID**: `P18`  
+**Request**: "note directly went to node synthesis... wisdom journal just four existing tabs... ai is not able to predict the emotion as well the note category"  
+**Date**: 2026-05-11  
+**Status**: ACTIVE  
+**Files Modified**: 
+- `app/(tabs)/_layout.tsx`: Removed Wisdom tab (locked to 4 core tabs).
+- `services/SynthesisService.ts`: Prevented note content destruction when synthesis is offline.
+- `services/NoteService.ts`: Added persistence for `is_refining` state.
+- `services/DatabaseService.ts`: Added migration for `is_refining` column.
+- `db/schema.ts`: Added `is_refining` to notes table.
+- `app/(tabs)/capture.tsx`: Removed 'AI SYNTHESIZING' title hijacking.
+
+**Changes**:
+- Simplified UI to 4 core tabs as requested.
+- Fixed critical bug where offline synthesis would overwrite note content with "Neural static".
+- Persisted the refinement state to SQLite to ensure UI consistency across reloads.
+- Stabilized the Capture screen by keeping the title focused on categorization.
+
+---
+
 ## [v42] - Synchronized Cinematic Reveal
 **Prompt ID**: `P17`  
 **Request**: "d part moves a bit late... make it move as every single element moves and rotate the d... make a bit slow"  

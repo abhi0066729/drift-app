@@ -30,7 +30,8 @@ export class SynthesisService {
       // 2. Generate the poetic synthesis via Llama
       const result = await getLlama().synthesise(sourceNote.content);
       
-      if (!result.summary || result.summary.length < 5) {
+      if (!result.summary || result.summary.length < 5 || result.summary.includes("offline")) {
+        console.warn('[SynthesisService] Synthesis failed or offline, preserving original note.');
         updateNote(sourceNote.id, { is_refining: false });
         return null;
       }
