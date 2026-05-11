@@ -64,9 +64,19 @@ const SEMANTIC_INTENTS: Partial<Record<NoteCategory, RegExp[]>> = {
     /think/i, /feel/i, /wonder/i, /realiz/i, /honestly/i, /insight/i, /thought/i, /believe/i, /gratit/i, /reflex/i, /ponder/i, /meditat/i
   ],
   Creative: [
-    /poem/i, /lyrics/i, /story/i, /novel/i, /sketch/i, /design/i, /art/i, /doodle/i, /paint/i, /compo/i, /melody/i, /prototyp/i
+    /poem/i, /lyrics/i, /story/i, /novel/i, /sketch/i, /design/i, /art/i, /doodle/i, /paint/i, /compo/i, /melody/i, /prototyp/i, /fiction/i, /script/i
   ]
 };
+
+const EMOTION_MAP: Record<string, RegExp[]> = {
+  'Happy': [/happy/i, /great/i, /good/i, /awesome/i, /excited/i, /love/i, /fun/i, /joy/i, /grin/i, /:) /],
+  'Sad': [/sad/i, /bad/i, /blue/i, /unhappy/i, /cry/i, /alone/i, /miss/i, /down/i, /:( /],
+  'Angry': [/angry/i, /mad/i, /hate/i, /annoy/i, /frustrat/i, /piss/i, /stop/i, /ugh/i],
+  'Focused': [/focus/i, /work/i, /study/i, /deep/i, /concentrat/i, /flow/i, /product/i],
+  'Curious': [/wonder/i, /why/i, /how/i, /curious/i, /ask/i, /question/i, /mystery/i],
+  'Inspired': [/wow/i, /inspirational/i, /bright/i, /light/i, /spark/i, /new/i, /amazing/i]
+};
+
 
 // --- Stardust Component ---
 const PARTICLE_COUNT = 18;
@@ -214,9 +224,9 @@ export default function CaptureScreen() {
   const lastStrideTime = useRef(0);
   const aiTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const predictLocal = useCallback((text: string): NoteCategory => {
+  const predictLocal = useCallback((text: string): { category: NoteCategory, emotion: string } => {
     const low = text.toLowerCase();
-    if (!low.trim()) return 'Journal';
+    if (!low.trim()) return { category: 'Journal', emotion: 'Neutral' };
 
     let bestCategory: NoteCategory = 'Journal';
     let highestScore = 0;
@@ -234,7 +244,19 @@ export default function CaptureScreen() {
       }
     }
 
-    return bestCategory;
+    let bestEmotion = 'Neutral';
+    let highestEmoScore = 0;
+    for (const [emo, patterns] of Object.entries(EMOTION_MAP)) {
+      patterns.forEach(p => {
+        const matches = low.match(p);
+        if (matches) {
+          highestEmoScore += matches.length;
+          bestEmotion = emo;
+        }
+      });
+    }
+
+    return { category: bestCategory, emotion: bestEmotion };
   }, []);
 
   const runPredictionAI = async (text: string) => {
@@ -251,8 +273,11 @@ export default function CaptureScreen() {
   };
 
   useEffect(() => {
-    const currentLocal = predictLocal(inputText);
-    setPredictedCategory(currentLocal);
+    const { category, emotion } = predictLocal(inputText);
+    setPredictedCategory(category);
+    if (predictionStatus === 'flux') {
+      setEmotionHint(emotion);
+    }
     
     // Clear any existing timeout
     if (aiTimeoutRef.current) clearTimeout(aiTimeoutRef.current);
