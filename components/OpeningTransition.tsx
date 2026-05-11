@@ -6,7 +6,11 @@ const { width: W, height: H } = Dimensions.get('window');
 const THEME_COLOR = '#e0dbd2';
 const BG_COLOR = '#0e0e0e';
 
-// ─── SVG DATA FROM HTML ───────────────────────────────────────
+// Create animated wrappers for SVG elements
+const AnimatedG = Animated.createAnimatedComponent(G);
+const AnimatedRect = Animated.createAnimatedComponent(Rect);
+const AnimatedPath = Animated.createAnimatedComponent(Path);
+
 const FRONT_NODES = [
   { cx: 31,  cy: 27,  r: 6.5, fill: THEME_COLOR, inner: true, pair: 0 },
   { cx: 31,  cy: 27,  r: 3,   fill: BG_COLOR, inner: false, pair: 0 },
@@ -35,23 +39,19 @@ export const OpeningTransition = ({ onComplete }: { onComplete: () => void }) =>
   const fadeOutAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    // START SEQUENCE
     Animated.sequence([
-      // Phase 1: The Fracture (Explosion)
       Animated.timing(scatterAnim, {
         toValue: 1,
         duration: 1000,
         easing: Easing.bezier(0.2, 0, 0.8, 1),
         useNativeDriver: true,
       }),
-      // Phase 2: The Void Dive (Zoom through)
       Animated.timing(zoomAnim, {
         toValue: 1,
         duration: 1200,
         easing: Easing.bezier(0.16, 1, 0.3, 1),
         useNativeDriver: true,
       }),
-      // Phase 3: Transition to Splash
       Animated.timing(fadeOutAnim, {
         toValue: 0,
         duration: 500,
@@ -64,15 +64,6 @@ export const OpeningTransition = ({ onComplete }: { onComplete: () => void }) =>
 
   const far = Math.max(W, H) * 2.5;
   const targetScale = Math.max(W, H) / 80;
-
-  // ZOOM INTO THE VOID: The D slides away (RIGHT and DOWN)
-  const zoomStyle = {
-    transform: [
-      { scale: zoomAnim.interpolate({ inputRange: [0, 1], outputRange: [1, targetScale] }) },
-      { translateX: zoomAnim.interpolate({ inputRange: [0, 1], outputRange: [0, W * 0.8] }) },
-      { translateY: zoomAnim.interpolate({ inputRange: [0, 1], outputRange: [0, H * 0.3] }) }
-    ]
-  };
 
   const renderFrontNodes = () => {
     const pairDirs = [
@@ -104,27 +95,37 @@ export const OpeningTransition = ({ onComplete }: { onComplete: () => void }) =>
 
   return (
     <Animated.View style={[styles.container, { opacity: fadeOutAnim }]}>
-      <Animated.View style={[styles.svgTray, zoomStyle]}>
+      <Animated.View style={{
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 200,
+        height: 200,
+        transform: [
+          { scale: zoomAnim.interpolate({ inputRange: [0, 1], outputRange: [1, targetScale] }) },
+          { translateX: zoomAnim.interpolate({ inputRange: [0, 1], outputRange: [0, W * 0.8] }) },
+          { translateY: zoomAnim.interpolate({ inputRange: [0, 1], outputRange: [0, H * 0.3] }) }
+        ]
+      }}>
         <Svg width={200} height={200} viewBox="0 0 270 270" style={{ overflow: 'visible' }}>
           {/* Background fractured box */}
-          <G style={{ transform: [{rotate: scatterAnim.interpolate({inputRange:[0,1], outputRange:['0deg', '180deg']})}, {scale: scatterAnim.interpolate({inputRange:[0,1], outputRange:[1, 2]})}] } as any}>
-            <Rect x={0} y={0} width={270} height={270} fill={BG_COLOR} stroke="#222" strokeWidth={3} opacity={scatterAnim.interpolate({inputRange:[0,1], outputRange:[1,0]})} />
-          </G>
+          <AnimatedG style={{ transform: [{rotate: scatterAnim.interpolate({inputRange:[0,1], outputRange:['0deg', '180deg']})}, {scale: scatterAnim.interpolate({inputRange:[0,1], outputRange:[1, 2]})}] } as any}>
+            <AnimatedRect x={0} y={0} width={270} height={270} fill={BG_COLOR} stroke="#222" strokeWidth={3} opacity={scatterAnim.interpolate({inputRange:[0,1], outputRange:[1,0]}) as any} />
+          </AnimatedG>
 
           {/* Layer 3 - Top Right fracture */}
-          <G style={{ transform: [{ translateX: scatterAnim.interpolate({ inputRange:[0,1], outputRange:[0, far*0.6] })}, { translateY: scatterAnim.interpolate({ inputRange:[0,1], outputRange:[0, -far*0.5] })}, { rotate: scatterAnim.interpolate({ inputRange:[0,1], outputRange:['0deg', '220deg'] })} ] } as any}>
+          <AnimatedG style={{ transform: [{ translateX: scatterAnim.interpolate({ inputRange:[0,1], outputRange:[0, far*0.6] })}, { translateY: scatterAnim.interpolate({ inputRange:[0,1], outputRange:[0, -far*0.5] })}, { rotate: scatterAnim.interpolate({ inputRange:[0,1], outputRange:['0deg', '220deg'] })} ] } as any}>
             <Path d="M57 53 L57 213 L121 213 Q195 213 195 133 Q195 53 121 53 Z" fill="none" stroke={THEME_COLOR} strokeWidth={0.8} opacity={0.18} />
-          </G>
+          </AnimatedG>
 
           {/* Layer 2 - Left fracture */}
-          <G style={{ transform: [{ translateX: scatterAnim.interpolate({ inputRange:[0,1], outputRange:[0, -far*0.7] })}, { translateY: scatterAnim.interpolate({ inputRange:[0,1], outputRange:[0, far*0.1] })}, { rotate: scatterAnim.interpolate({ inputRange:[0,1], outputRange:['0deg', '-180deg'] })} ] } as any}>
+          <AnimatedG style={{ transform: [{ translateX: scatterAnim.interpolate({ inputRange:[0,1], outputRange:[0, -far*0.7] })}, { translateY: scatterAnim.interpolate({ inputRange:[0,1], outputRange:[0, far*0.1] })}, { rotate: scatterAnim.interpolate({ inputRange:[0,1], outputRange:['0deg', '-180deg'] })} ] } as any}>
             <Path d="M45 41 L45 201 L109 201 Q183 201 183 121 Q183 41 109 41 Z" fill="none" stroke={THEME_COLOR} strokeWidth={2} opacity={0.32} />
-          </G>
+          </AnimatedG>
 
           {/* Bridges - Snap upward */}
-          <G style={{ opacity: scatterAnim.interpolate({inputRange:[0,0.5], outputRange:[1,0]}), transform: [{translateY: scatterAnim.interpolate({inputRange:[0,1], outputRange:[0, -far*0.3]})}] } as any}>
+          <AnimatedG style={{ opacity: scatterAnim.interpolate({inputRange:[0,0.5], outputRange:[1,0]}) as any, transform: [{translateY: scatterAnim.interpolate({inputRange:[0,1], outputRange:[0, -far*0.3]})}] } as any}>
             {BRIDGES.map((b, i) => <Line key={i} x1={b.x1} y1={b.y1} x2={b.x2} y2={b.y2} stroke={THEME_COLOR} strokeWidth={0.9} opacity={b.op} />)}
-          </G>
+          </AnimatedG>
 
           {/* THE CORE D - Static during scatter, then zooms through */}
           <G>
@@ -149,11 +150,5 @@ const styles = StyleSheet.create({
     zIndex: 9999,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  svgTray: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 200,
-    height: 200,
   }
 });
