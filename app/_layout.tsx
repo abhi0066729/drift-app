@@ -56,7 +56,12 @@ export default function RootLayout() {
     // Cinematic startup sequence
     setTimeout(async () => {
       try {
-        const ready = await ModelDownloadService.getInstance().isModelReady();
+        // Race the check against a 2s timeout to prevent hanging
+        const ready = await Promise.race([
+          ModelDownloadService.getInstance().isModelReady(),
+          new Promise<boolean>((_, reject) => setTimeout(() => reject('timeout'), 2000))
+        ]);
+
         if (ready) {
           setPhase('loading');
           finishLoading();
@@ -64,9 +69,10 @@ export default function RootLayout() {
           setPhase('consent');
         }
       } catch (e) {
+        console.warn('[RootLayout] Startup check timed out or failed, defaulting to consent');
         setPhase('consent');
       }
-    }, 1000); // 1 second cinematic lead-in
+    }, 1000); 
   }, []);
 
   async function finishLoading() {

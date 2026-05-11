@@ -99,12 +99,21 @@ export class ModelDownloadService {
    * Checks if synthesis is ready.
    */
   public async isModelReady(): Promise<boolean> {
+    // 1. Immediate exit for debug/testing
     if (ModelDownloadService.DEBUG_FORCE_MODAL) return false;
+
     try {
+      // 2. Safety check for the native module
+      if (!FileSystem || !FileSystem.documentDirectory) {
+        console.warn('[ModelDownloadService] FileSystem not initialized');
+        return false;
+      }
+
       const modelPath = `${FileSystem.documentDirectory}models/Llama-3.2-1B-Instruct-Q4_K_M.gguf`;
       const info = await FileSystem.getInfoAsync(modelPath);
       return info.exists;
     } catch (e) {
+      console.error('[ModelDownloadService] Ready check failed:', e);
       return false;
     }
   }
