@@ -31,6 +31,9 @@ export const unstable_settings = {
 export default function RootLayout() {
   const [isReady, setIsReady] = useState(false);
   const [phase, setPhase] = useState<'checking' | 'consent' | 'downloading' | 'loading'>('checking');
+  const [downloadStatus, setDownloadStatus] = useState<string>('');
+  const [downloadProgress, setDownloadProgress] = useState<number>(0);
+  const [downloadSpeed, setDownloadSpeed] = useState<string>('');
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -40,11 +43,30 @@ export default function RootLayout() {
     return () => clearTimeout(timer);
   }, []);
 
+  async function handleConsent() {
+    setPhase('downloading');
+    try {
+      await ModelDownloadService.getInstance().ensureModelsPresent((p) => {
+        setDownloadStatus(`SYNCING ${p.fileName}`);
+        setDownloadProgress(p.progress);
+        setDownloadSpeed(p.speed);
+      });
+      setPhase('loading');
+      setTimeout(() => setIsReady(true), 1500);
+    } catch (e) {
+      console.warn('[RootLayout] Download failed:', e);
+      setPhase('consent');
+    }
+  }
+
   if (!isReady && phase !== 'loading') {
     return (
       <BrandedSplashScreen 
         phase={phase}
-        onConsent={() => setPhase('downloading')}
+        status={downloadStatus}
+        progress={downloadProgress}
+        speed={downloadSpeed}
+        onConsent={handleConsent}
       />
     );
   }
