@@ -421,20 +421,22 @@ export const BrandedSplashScreen = ({ phase, status, progress = 0, speed, onCons
         {/* CHECKING phase — restored as requested */}
         {phase === 'checking' && (
           <View style={styles.diagnosticWrapper}>
-            <Text style={[styles.checkingText, { color: C.fg, opacity: 0.4 }]}>READING THE STARS...</Text>
+            <Text style={[styles.checkingText, { color: C.fg, opacity: 0.8 }]}>
+              READING THE STARS (S{diagnosticStage})...
+            </Text>
             
-            {/* DIAGNOSTIC PULSE GRID (Battery-style) */}
+            {/* DIAGNOSTIC PULSE GRID (High Visibility) */}
             <View style={styles.pulseGrid}>
-              <View style={[styles.pulseSegment, { backgroundColor: diagnosticStage >= 1 ? '#F1C40F' : 'rgba(255,255,255,0.1)' }]} />
-              <View style={[styles.pulseSegment, { backgroundColor: diagnosticStage >= 2 ? '#F1C40F' : 'rgba(255,255,255,0.1)' }]} />
-              <View style={[styles.pulseSegment, { backgroundColor: diagnosticStage >= 3 ? '#F1C40F' : 'rgba(255,255,255,0.1)' }]} />
+              <View style={[styles.pulseSegment, { backgroundColor: diagnosticStage >= 1 ? '#00FF00' : '#FF0000' }]} />
+              <View style={[styles.pulseSegment, { backgroundColor: diagnosticStage >= 2 ? '#00FF00' : '#FF0000' }]} />
+              <View style={[styles.pulseSegment, { backgroundColor: diagnosticStage >= 3 ? '#00FF00' : '#FF0000' }]} />
             </View>
             
-            <Text style={styles.stageLabel}>
-              {diagnosticStage === 1 && 'VERIFYING SYSTEM PULSE...'}
-              {diagnosticStage === 2 && 'SCANNING NEURAL PATHS...'}
-              {diagnosticStage === 3 && 'AWAKENING AI GRID...'}
-              {diagnosticStage === 0 && 'INITIALIZING...'}
+            <Text style={[styles.stageLabel, { color: C.fg, opacity: 0.6 }]}>
+              {diagnosticStage === 1 && 'S1: SYSTEM VERIFICATION'}
+              {diagnosticStage === 2 && 'S2: PATH RESOLUTION'}
+              {diagnosticStage === 3 && 'S3: AI SYNAPSE'}
+              {diagnosticStage === 0 && 'S0: BOOTING...'}
             </Text>
           </View>
         )}

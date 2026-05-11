@@ -42,31 +42,22 @@ export default function RootLayout() {
   const theme = useNotesStore(state => state.theme);
 
   useEffect(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    initializeSettings();
-
-    // OTA check
-    if (Platform.OS !== 'web' && !__DEV__) {
-      Updates.checkForUpdateAsync().then(update => {
-        if (update.isAvailable) Updates.fetchUpdateAsync().then(() => Updates.reloadAsync());
-      }).catch(() => {});
-    }
-
-    // DIAGNOSTIC STARTUP SEQUENCE
     const runDiagnostics = async () => {
       try {
         setDiagnosticStage(1);
-        await new Promise(r => setTimeout(r, 800));
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+        initializeSettings();
+        await new Promise(r => setTimeout(r, 1000));
 
         setDiagnosticStage(2);
         const { documentDirectory } = await import('expo-file-system/legacy');
         if (!documentDirectory) throw new Error('FS_MISSING');
         
         const ready = await ModelDownloadService.getInstance().isModelReady();
-        await new Promise(r => setTimeout(r, 800));
+        await new Promise(r => setTimeout(r, 1000));
 
         setDiagnosticStage(3);
-        await new Promise(r => setTimeout(r, 800));
+        await new Promise(r => setTimeout(r, 1000));
 
         if (ready) {
           setPhase('loading');
