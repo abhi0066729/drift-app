@@ -45,7 +45,11 @@ export class SyncService {
       this.notify('scanning', 0.1, 'Waking up the cortex...');
       
       // 0. Initialize Foundations
-      await DatabaseService.getInstance().getDb();
+      const db = await DatabaseService.getInstance().getDb();
+      
+      // Cleanup: Purge legacy synthesis nodes to prevent map pollution
+      await db.runAsync("DELETE FROM notes WHERE source_type = 'synthesis'");
+      
       await NoteService.getInstance().loadAllNotes();
       
       // 1. Intelligence Check: Model Downloading

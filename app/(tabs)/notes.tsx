@@ -94,23 +94,32 @@ export default function NotesScreen() {
   const isSearchLocked = useSharedValue(false);
   const manualPullY = useSharedValue(0);
 
+  const handleDeleteNote = async (id: string) => {
+    try {
+      await NoteService.getInstance().deleteNote(id);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (e) {}
+  };
+
   const handleClear = () => {
     Alert.alert(
       "Clear Archive",
       "Are you sure you want to delete all entries?",
       [
         { text: "Cancel", style: "cancel" },
-        { text: "Delete Everything", style: "destructive", onPress: clearNotes }
+        { text: "Delete Everything", style: "destructive", onPress: async () => {
+          const notesCopy = [...notes];
+          for (const note of notesCopy) {
+            await NoteService.getInstance().deleteNote(note.id);
+          }
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }}
       ]
     );
   };
 
   const handleNotePress = (note: any) => {
     setSelectedNote(note);
-  };
-
-  const handleDeleteNote = (id: string) => {
-    useNotesStore.getState().deleteNote(id);
   };
 
   const triggerHaptic = () => {

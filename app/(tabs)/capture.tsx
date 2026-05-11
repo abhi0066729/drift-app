@@ -326,23 +326,17 @@ export default function CaptureScreen() {
     // 1. Save and Process via Service
     NoteService.getInstance().saveNote(newNote);
 
-    // 2. Perform Deep Extraction and update
+    // 2. Perform Deep Extraction (enrichment)
     extractDeep(inputText).then(aiResult => {
-      NoteService.getInstance().saveNote({
-        ...newNote,
-        is_refining: false,
+      // Just update metadata, keep is_refining: true for now
+      NoteService.getInstance().updateNote(noteId, {
         entities_json: JSON.stringify({ ...(aiResult || {}), clusterId: -1 })
       });
-    }).catch(() => {
-      NoteService.getInstance().saveNote({ ...newNote, is_refining: false });
-    });
+    }).catch(() => {});
 
-    // 3. TRIGGER RECURSIVE EVOLUTION (Phase 5)
+    // 3. TRIGGER RECURSIVE EVOLUTION (Final Synthesis)
     setIsSynthesizingLlama(true);
-    SynthesisService.getInstance().evolveThought(newNote).then(ideaNode => {
-      if (ideaNode) {
-        setSynthesisBridge(ideaNode.content);
-      }
+    SynthesisService.getInstance().evolveThought(newNote).then(() => {
       setIsSynthesizingLlama(false);
     }).catch(() => {
       setIsSynthesizingLlama(false);
