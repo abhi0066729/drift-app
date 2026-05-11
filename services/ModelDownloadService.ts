@@ -38,26 +38,42 @@ export class ModelDownloadService {
   }
 
   /**
-   * Orchestrates the download of all required AI models.
+   * Orchestrates the download of all required AI models with unified progress.
    */
   public async ensureModelsPresent(onProgress: (p: DownloadProgress) => void): Promise<boolean> {
-    console.log('[ModelDownloadService] Forcing simulation for UI testing...');
+    const totalExpectedSize = 839 * 1024 * 1024; // ~839MB total
+    let totalBytesWritten = 0;
 
-    // FAKE DOWNLOAD SIMULATION so the UI can be tested
     for (const model of this.MODELS) {
-      let progress = 0;
-      while (progress < 1) {
-        progress += Math.random() * 0.15;
-        if (progress > 1) progress = 1;
-
+      const localPath = `${FileSystem.documentDirectory}${model.name}`;
+      
+      // Check if already exists to skip or update progress
+      const info = await FileSystem.getInfoAsync(localPath);
+      if (info.exists) {
+        totalBytesWritten += info.size;
         onProgress({
           fileName: model.name,
-          progress: progress,
-          totalBytes: 500000000,
-          speed: `${(2 + Math.random() * 5).toFixed(1)} MB/s`
+          progress: Math.min(totalBytesWritten / totalExpectedSize, 1),
+          totalBytes: totalExpectedSize,
+          speed: 'SKIP'
         });
+        continue;
+      }
 
-        await new Promise(resolve => setTimeout(resolve, 300));
+      await this.downloadFile(model, localPath, (p) => {
+        // Calculate cumulative progress
+        const currentTotal = totalBytesWritten + (p.progress * (p.totalBytes || 0));
+        onProgress({
+          fileName: p.fileName,
+          progress: Math.min(currentTotal / totalExpectedSize, 1),
+          totalBytes: totalExpectedSize,
+          speed: p.speed
+        });
+      });
+
+      const finalInfo = await FileSystem.getInfoAsync(localPath);
+      if (finalInfo.exists) {
+        totalBytesWritten += finalInfo.size;
       }
     }
     return true;
