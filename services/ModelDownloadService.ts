@@ -12,12 +12,12 @@ export type DownloadProgress = {
 
 export class ModelDownloadService {
   private static instance: ModelDownloadService;
-  private static readonly DEBUG_FORCE_MODAL = true; // Set to true to test the download popup
+  private static readonly DEBUG_FORCE_MODAL = false; // Set to false for production
 
   // Official Drift Model Repository (drift-labs organization)
   private readonly HF_REPOS = {
-    base: 'https://huggingface.co/drift-labs/base/tree/main',
-    embedding: 'https://huggingface.co/drift-labs/embedding/tree/main'
+    base: 'https://huggingface.co/drift-labs/base/resolve/main',
+    embedding: 'https://huggingface.co/drift-labs/embedding/resolve/main'
   };
 
   private readonly MODELS = [
@@ -44,18 +44,26 @@ export class ModelDownloadService {
     const totalExpectedSize = 839 * 1024 * 1024; // ~839MB total
     let totalBytesWritten = 0;
 
+    const modelsDir = `${FileSystem.documentDirectory}models/`;
+    
+    // Ensure directory exists
+    const dirInfo = await FileSystem.getInfoAsync(modelsDir);
+    if (!dirInfo.exists) {
+      await FileSystem.makeDirectoryAsync(modelsDir, { intermediates: true });
+    }
+
     for (const model of this.MODELS) {
-      const localPath = `${FileSystem.documentDirectory}${model.name}`;
+      const localPath = `${modelsDir}${model.name}`;
       
       // Check if already exists to skip or update progress
       const info = await FileSystem.getInfoAsync(localPath);
-      if (info.exists) {
+      if (info.exists && info.size > 1000000) { // Simple sanity check for real file
         totalBytesWritten += info.size;
         onProgress({
           fileName: model.name,
           progress: Math.min(totalBytesWritten / totalExpectedSize, 1),
           totalBytes: totalExpectedSize,
-          speed: 'SKIP'
+          speed: 'READY'
         });
         continue;
       }
