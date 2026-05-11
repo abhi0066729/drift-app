@@ -1,10 +1,12 @@
 # Drift Version Log (V-LOG)
 
-This log tracks every production build (OTA) pushed during this development cycle.
+**Conversation ID**: `0682bb5e-3018-4c47-a9ac-366ebba0c9af`
 
 ---
 
 ## [v37] - Revert to Excellence
+**Prompt ID**: `P13`  
+**Request**: "revert to this [v33] as it has a proper splash screen"  
 **Date**: 2026-05-11  
 **Status**: ACTIVE  
 **Files Modified**: 
@@ -17,6 +19,8 @@ This log tracks every production build (OTA) pushed during this development cycl
 ---
 
 ## [v36] - Splash Revert (Attempt 1)
+**Prompt ID**: `P12`  
+**Request**: "why u always change the splash screen we need our old spalsh screen only"  
 **Status**: SUPERSEDED  
 **Files Modified**: 
 - `components/BrandedSplashScreen.tsx`
@@ -27,6 +31,8 @@ This log tracks every production build (OTA) pushed during this development cycl
 ---
 
 ## [v35] - Refined Void Zoom (Experimental)
+**Prompt ID**: `P11`  
+**Request**: "no the animation is wierd... zoom towards the right side... transition into splash screen"  
 **Status**: SUPERSEDED  
 **Files Modified**: 
 - `components/BrandedSplashScreen.tsx`
@@ -38,6 +44,8 @@ This log tracks every production build (OTA) pushed during this development cycl
 ---
 
 ## [v34] - Triple Layer Reveal (Experimental)
+**Prompt ID**: `P10`  
+**Request**: "icons comes up for a second... use the animation in the html as a transition"  
 **Status**: SUPERSEDED  
 **Files Modified**: 
 - `components/BrandedSplashScreen.tsx`
@@ -48,6 +56,8 @@ This log tracks every production build (OTA) pushed during this development cycl
 ---
 
 ## [v33] - Cinematic Polish & Header Revert
+**Prompt ID**: `P09`  
+**Request**: "why did u changed the drift palace text style... revert it... keep splash screen loading a bit more"  
 **Status**: STABLE (Base for v37)  
 **Files Modified**: 
 - `app/(tabs)/index.tsx`: Reverted header title style and subtext.
@@ -56,12 +66,14 @@ This log tracks every production build (OTA) pushed during this development cycl
 
 **Changes**:
 - Restored "QUANTUM THOUGHT FIELD" subtext styling.
-- Extended the splash screen duration to allow for "star-field" appreciation.
+- Extended the splash screen duration to 5s for cinematic lead-in.
 - Added witty messages (e.g., "Brewing neural espresso...") to loading sequence.
 
 ---
 
 ## [v32] - Stability & Crash Fix
+**Prompt ID**: `P08`  
+**Request**: "@[current_problems] also on pressing the commit button the app keep crashing"  
 **Status**: CRITICAL FIX  
 **Files Modified**: 
 - `app/(tabs)/capture.tsx`: Added missing `FadeOut` import.
@@ -74,6 +86,8 @@ This log tracks every production build (OTA) pushed during this development cycl
 ---
 
 ## [v31] - Neural Heartbeat & Instant Tap
+**Prompt ID**: `P07`  
+**Request**: "nexus node tap still taking to focus mode... tap is bit slow... verify ai is working in background"  
 **Status**: FEATURE  
 **Files Modified**: 
 - `components/NexusSurfaceMatrix.tsx`: Removed gesture conflict (Exclusive -> Simultaneous).
@@ -87,6 +101,8 @@ This log tracks every production build (OTA) pushed during this development cycl
 ---
 
 ## [v30] - Nexus Tap & Party Popper
+**Prompt ID**: `P06`  
+**Request**: "deleting notes and it keeps comming back... nexus mode tapping on any node opens focus mode"  
 **Status**: FEATURE  
 **Files Modified**: 
 - `app/(tabs)/notes.tsx`: Added missing `NoteService` import for deletions.
@@ -95,12 +111,14 @@ This log tracks every production build (OTA) pushed during this development cycl
 
 **Changes**:
 - Fixed the bug where Nexus taps would accidentally open Focus Mode.
-- Implemented the "Party Popper" feedback upon note commitment.
+- Implemented the "Party Popper" feedback (Success Pill) upon note commitment.
 - Restored Chronicle deletion persistence by fixing service import.
 
 ---
 
 ## [v29] - Persistence & Synthesis Overhaul
+**Prompt ID**: `P05`  
+**Request**: "the updates are pushin but the synthesis changes not working... app is not storing the state"  
 **Status**: CORE  
 **Files Modified**: 
 - `app/(tabs)/notes.tsx`: Switched to `NoteService.deleteNote` for DB persistence.
