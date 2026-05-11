@@ -35,21 +35,25 @@ export default function RootLayout() {
   const [downloadStatus, setDownloadStatus] = useState<string>('');
   const [downloadProgress, setDownloadProgress] = useState<number>(0);
   const [downloadSpeed, setDownloadSpeed] = useState<string>('');
-  const [diagnosticStage, setDiagnosticStage] = useState<0 | 1 | 2 | 3>(0);
+  const [diagnosticStage, setDiagnosticStage] = useState<0 | 1 | 2 | 3>(1); // Start at 1
   
   const colorScheme = useColorScheme();
   const initializeSettings = useSettingsStore(state => state.initialize);
   const theme = useNotesStore(state => state.theme);
 
   useEffect(() => {
+    // S2: This should happen INSTANTLY on mount
+    setDiagnosticStage(2);
+
     const runDiagnostics = async () => {
       try {
-        setDiagnosticStage(1);
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+        // Now try the "risky" stuff
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
         initializeSettings();
+        
         await new Promise(r => setTimeout(r, 1000));
-
-        setDiagnosticStage(2);
+        
+        setDiagnosticStage(3); // If we reach here, we're past the "risky" stuff
         const { documentDirectory } = await import('expo-file-system/legacy');
         if (!documentDirectory) throw new Error('FS_MISSING');
         

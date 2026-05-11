@@ -13,13 +13,13 @@ export type DownloadProgress = {
 export class ModelDownloadService {
   private static instance: ModelDownloadService;
   private static readonly DEBUG_FORCE_MODAL = true; // Set to true to test the download popup
-  
+
   // Official Drift Model Repository (drift-labs organization)
   private readonly HF_REPOS = {
-    base: 'https://huggingface.co/drift-labs/base/resolve/main',
-    embedding: 'https://huggingface.co/drift-labs/embedding/resolve/main'
+    base: 'https://huggingface.co/drift-labs/base/tree/main',
+    embedding: 'https://huggingface.co/drift-labs/embedding/tree/main'
   };
-  
+
   private readonly MODELS = [
     { name: 'Llama-3.2-1B-Instruct-Q4_K_M.gguf', size: '808MB', repo: 'base' },
     { name: 'model_quantized.onnx', size: '31MB', repo: 'embedding' },
@@ -28,7 +28,7 @@ export class ModelDownloadService {
   ];
 
 
-  private constructor() {}
+  private constructor() { }
 
   public static getInstance(): ModelDownloadService {
     if (!ModelDownloadService.instance) {
@@ -42,21 +42,21 @@ export class ModelDownloadService {
    */
   public async ensureModelsPresent(onProgress: (p: DownloadProgress) => void): Promise<boolean> {
     console.log('[ModelDownloadService] Forcing simulation for UI testing...');
-    
+
     // FAKE DOWNLOAD SIMULATION so the UI can be tested
     for (const model of this.MODELS) {
       let progress = 0;
       while (progress < 1) {
         progress += Math.random() * 0.15;
         if (progress > 1) progress = 1;
-        
+
         onProgress({
           fileName: model.name,
           progress: progress,
           totalBytes: 500000000,
           speed: `${(2 + Math.random() * 5).toFixed(1)} MB/s`
         });
-        
+
         await new Promise(resolve => setTimeout(resolve, 300));
       }
     }
@@ -68,7 +68,7 @@ export class ModelDownloadService {
     const url = `${repoUrl}/${model.name}`;
     const startTime = Date.now();
     let lastBytes = 0;
-    
+
     const downloadResumable = FileSystem.createDownloadResumable(
       url,
       localPath,
@@ -91,7 +91,7 @@ export class ModelDownloadService {
 
     const result = await downloadResumable.downloadAsync();
     if (!result) throw new Error(`Download of ${model.name} failed`);
-    
+
     console.log(`[ModelDownloadService] Successfully saved ${model.name} to ${result.uri}`);
   }
 
