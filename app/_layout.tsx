@@ -35,6 +35,7 @@ export default function RootLayout() {
   const [downloadStatus, setDownloadStatus] = useState<string>('');
   const [downloadProgress, setDownloadProgress] = useState<number>(0);
   const [downloadSpeed, setDownloadSpeed] = useState<string>('');
+  const [diagnosticStage, setDiagnosticStage] = useState<0 | 1 | 2 | 3>(0);
   
   const colorScheme = useColorScheme();
   const initializeSettings = useSettingsStore(state => state.initialize);
@@ -45,21 +46,7 @@ export default function RootLayout() {
     initializeSettings();
 
     // OTA check
-    if (!__DEV__) {
-      Updates.checkForUpdateAsync().then(update => {
-        if (update.isAvailable) {
-          Updates.fetchUpdateAsync().then(() => Updates.reloadAsync());
-        }
-      }).catch(() => {});
-    }
-
-  const [diagnosticStage, setDiagnosticStage] = useState<0 | 1 | 2 | 3>(0);
-
-  useEffect(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    initializeSettings();
-
-    if (Platform.OS !== 'web') {
+    if (Platform.OS !== 'web' && !__DEV__) {
       Updates.checkForUpdateAsync().then(update => {
         if (update.isAvailable) Updates.fetchUpdateAsync().then(() => Updates.reloadAsync());
       }).catch(() => {});
@@ -68,21 +55,18 @@ export default function RootLayout() {
     // DIAGNOSTIC STARTUP SEQUENCE
     const runDiagnostics = async () => {
       try {
-        // STAGE 1: SYSTEM PULSE (FileSystem & Commit Check)
         setDiagnosticStage(1);
-        await new Promise(r => setTimeout(r, 800)); // Cinematic delay
+        await new Promise(r => setTimeout(r, 800));
 
-        // STAGE 2: NEURAL PATHS (Model & DocumentDir Resolution)
         setDiagnosticStage(2);
         const { documentDirectory } = await import('expo-file-system/legacy');
         if (!documentDirectory) throw new Error('FS_MISSING');
         
         const ready = await ModelDownloadService.getInstance().isModelReady();
-        await new Promise(r => setTimeout(r, 800)); // Cinematic delay
+        await new Promise(r => setTimeout(r, 800));
 
-        // STAGE 3: AI GRID (Service Handshake)
         setDiagnosticStage(3);
-        await new Promise(r => setTimeout(r, 800)); // Cinematic delay
+        await new Promise(r => setTimeout(r, 800));
 
         if (ready) {
           setPhase('loading');
@@ -92,7 +76,7 @@ export default function RootLayout() {
         }
       } catch (e) {
         console.warn('[RootLayout] Diagnostics failed:', e);
-        setPhase('consent'); // Fallback to popup so user isn't stuck
+        setPhase('consent');
       }
     };
 
