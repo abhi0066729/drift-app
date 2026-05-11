@@ -100,14 +100,23 @@ export class ModelDownloadService {
       (progressData) => {
         const now = Date.now();
         const durationSec = (now - startTime) / 1000;
-        const speedMbps = durationSec > 0 ? (progressData.totalBytesWritten / 1024 / 1024 / durationSec) : 0;
-        const speedLabel = speedMbps > 1 ? `${speedMbps.toFixed(1)} MB/s` : `${(speedMbps * 1024).toFixed(0)} KB/s`;
+        
+        // Speed Calculation Guard
+        let speedLabel = '...';
+        if (durationSec > 0) {
+          const speedMbps = (progressData.totalBytesWritten / 1024 / 1024 / durationSec);
+          speedLabel = speedMbps > 1 ? `${speedMbps.toFixed(1)} MB/s` : `${(speedMbps * 1024).toFixed(0)} KB/s`;
+        }
 
-        const progress = progressData.totalBytesWritten / progressData.totalBytesExpectedToWrite;
+        // Progress Guard
+        const total = progressData.totalBytesExpectedToWrite;
+        const written = progressData.totalBytesWritten;
+        const progress = (total > 0) ? (written / total) : 0;
+
         onProgress({
           fileName: model.name,
-          progress,
-          totalBytes: progressData.totalBytesExpectedToWrite,
+          progress: isFinite(progress) ? progress : 0,
+          totalBytes: total > 0 ? total : 0,
           speed: speedLabel
         });
       }

@@ -45,11 +45,16 @@ export default function RootLayout() {
 
   async function handleConsent() {
     setPhase('downloading');
+    let lastUpdate = 0;
     try {
       await ModelDownloadService.getInstance().ensureModelsPresent((p) => {
-        setDownloadStatus(`SYNCING ${p.fileName}`);
-        setDownloadProgress(p.progress);
-        setDownloadSpeed(p.speed);
+        const now = Date.now();
+        if (now - lastUpdate > 100 || p.progress === 1) { // Throttle to 10fps
+          setDownloadStatus(`SYNCING ${p.fileName}`);
+          setDownloadProgress(p.progress);
+          setDownloadSpeed(p.speed);
+          lastUpdate = now;
+        }
       });
       setPhase('loading');
       setTimeout(() => setIsReady(true), 1500);
