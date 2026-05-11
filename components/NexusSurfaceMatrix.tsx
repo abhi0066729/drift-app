@@ -254,9 +254,9 @@ export default function NexusSurfaceMatrix({ notes, theme, onPress }: NexusSurfa
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     setExpandState({ node, sx: absoluteX, sy: absoluteY });
     
-    // Also notify the parent (to open the ReadingModal)
+    // Notify the parent to open the ReadingModal (using 'text' type)
     if (onPress) {
-      onPress(node, 'dot');
+      onPress(node, 'text');
     }
   }, [onPress]);
 

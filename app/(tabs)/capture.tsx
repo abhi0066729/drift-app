@@ -302,8 +302,6 @@ export default function CaptureScreen() {
     }, [])
   );
 
-
-
   const handleCapture = useCallback(() => {
     if (!inputText.trim()) return;
     const noteId = Crypto.randomUUID();
@@ -328,13 +326,12 @@ export default function CaptureScreen() {
 
     // 2. Perform Deep Extraction (enrichment)
     extractDeep(inputText).then(aiResult => {
-      // Just update metadata, keep is_refining: true for now
       NoteService.getInstance().updateNote(noteId, {
         entities_json: JSON.stringify({ ...(aiResult || {}), clusterId: -1 })
       });
     }).catch(() => {});
 
-    // 3. TRIGGER RECURSIVE EVOLUTION (Final Synthesis)
+    // 3. TRIGGER RECURSIVE EVOLUTION
     setIsSynthesizingLlama(true);
     SynthesisService.getInstance().evolveThought(newNote).then(() => {
       setIsSynthesizingLlama(false);
@@ -342,26 +339,18 @@ export default function CaptureScreen() {
       setIsSynthesizingLlama(false);
     });
 
-    
     setLastActionNode({ id: noteId, category: currentCategory });
-
+    
+    // Trigger "Party Popper" effect
+    try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch(e){}
     setShowSmartAction(true);
+    
     setTimeout(() => {
       setShowSmartAction(false);
-    }, 4000);
+    }, 2500);
 
     setInputText('');
   }, [inputText, predictedCategory, emotionHint]);
-
-
-
-  const handleSmartAction = () => {
-    if (!lastActionNode) return;
-    try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch(e){}
-    Alert.alert("Sentient Action", `Synthesizing ${lastActionNode.category} with your active threads.`);
-    setShowSmartAction(false);
-    router.push('/');
-  };
 
   const handleSkipRefinement = () => {
     setPredictionStatus('anchored');
@@ -380,7 +369,11 @@ export default function CaptureScreen() {
       <View style={[styles.container, { backgroundColor: isDark ? NightTheme.background : '#FFFFFF' }]}>
         <KeyboardAvoidingView style={StyleSheet.absoluteFill} behavior={undefined}>
           
-          <NeuralNebula baseColor={ribbonColor} isTyping={inputText.length > 0} isSynthesizing={isTypingSync} />
+          <NeuralNebula 
+            baseColor={showSmartAction ? '#2ECC71' : ribbonColor} 
+            isTyping={inputText.length > 0} 
+            isSynthesizing={isTypingSync || showSmartAction} 
+          />
           <View style={StyleSheet.absoluteFill} pointerEvents="none">
             {[...Array(PARTICLE_COUNT)].map((_, i) => <Particle key={i} index={i} />)}
           </View>
@@ -439,8 +432,19 @@ export default function CaptureScreen() {
               <MemoryEcho note={resonantNote} theme={theme} />
             </View>
 
-            
-
+            {showSmartAction && (
+              <Animated.View 
+                entering={FadeInDown.springify()} 
+                exiting={FadeOut.duration(300)}
+                style={styles.successPillContainer}
+              >
+                <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
+                <View style={styles.successPillContent}>
+                   <Ionicons name="checkmark-circle" size={20} color="#2ECC71" />
+                   <Text style={styles.successPillText}>THOUGHT CAPTURED & EVOLVING</Text>
+                </View>
+              </Animated.View>
+            )}
 
             {/* PHASE 3: SEMANTIC BRIDGE DISPLAY */}
             {(isSynthesizingLlama || synthesisBridge) && (
@@ -560,30 +564,26 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 1,
   },
-  smartActionContainer: {
+  successPillContainer: {
     position: 'absolute',
-    bottom: 50,
-    left: 40,
-    right: 40,
+    bottom: 120,
+    alignSelf: 'center',
     borderRadius: 30,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 15,
-    elevation: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(46, 204, 113, 0.3)',
     zIndex: 1000,
   },
-  smartActionButton: {
+  successPillContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 18,
-    gap: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    gap: 12,
   },
-  smartActionText: {
+  successPillText: {
     color: '#FFF',
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '800',
     letterSpacing: 1.5,
   },
@@ -643,4 +643,3 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
   }
 });
-

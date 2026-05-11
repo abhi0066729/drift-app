@@ -25,6 +25,7 @@ import ScrollToTopButton from '@/components/ScrollToTopButton';
 import ReadingModal from '@/components/ReadingModal';
 import * as Haptics from 'expo-haptics';
 import { NightTheme } from '@/constants/theme';
+import { NoteService } from '@/services/NoteService';
 
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
