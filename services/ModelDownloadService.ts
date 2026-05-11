@@ -1,4 +1,5 @@
 import * as FileSystem from 'expo-file-system';
+import { documentDirectory, getInfoAsync } from 'expo-file-system';
 
 
 export type DownloadProgress = {
@@ -104,13 +105,13 @@ export class ModelDownloadService {
 
     try {
       // 2. Safety check for the native module
-      if (!FileSystem || !FileSystem.documentDirectory) {
-        console.warn('[ModelDownloadService] FileSystem not initialized');
+      if (!documentDirectory) {
+        console.warn('[ModelDownloadService] documentDirectory not available');
         return false;
       }
 
-      const modelPath = `${FileSystem.documentDirectory}models/Llama-3.2-1B-Instruct-Q4_K_M.gguf`;
-      const info = await FileSystem.getInfoAsync(modelPath);
+      const modelPath = `${documentDirectory}models/Llama-3.2-1B-Instruct-Q4_K_M.gguf`;
+      const info = await getInfoAsync(modelPath);
       return info.exists;
     } catch (e) {
       console.error('[ModelDownloadService] Ready check failed:', e);

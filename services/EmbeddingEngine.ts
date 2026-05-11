@@ -28,10 +28,10 @@ export class EmbeddingEngine {
       console.log('[EmbeddingEngine] Initializing...');
       
       // Dynamic imports to prevent export-time crashes
-      const FileSystem = require('expo-file-system');
+      const { documentDirectory } = require('expo-file-system');
       this.ort = require('onnxruntime-react-native');
       
-      const modelsDir = `${(FileSystem as any).documentDirectory}models/`;
+      const modelsDir = `${documentDirectory}models/`;
 
       // 1. Load Tokenizer
       this.tokenizer = await AutoTokenizer.from_pretrained(
