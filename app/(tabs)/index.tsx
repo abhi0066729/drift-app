@@ -1,5 +1,4 @@
 import ChronosNexusToggle from '@/components/ChronosNexusToggle';
-import GhostOverlay from '@/components/GhostOverlay';
 import KineticFocusMap from '@/components/KineticFocusMap';
 import ReadingModal from '@/components/ReadingModal';
 import ScrollToTopButton from '@/components/ScrollToTopButton';
@@ -236,7 +235,11 @@ export default function HomeScreen() {
     setShowScrollTop(false);
   };
 
-  const expandedGhostNode = mappedNotes.find((n: any) => n.id === expandedGhostId);
+  const displayNode = useMemo(() => {
+    if (readingNode) return readingNode;
+    if (expandedGhostId) return mappedNotes.find(n => n.id === expandedGhostId);
+    return null;
+  }, [readingNode, expandedGhostId, mappedNotes]);
 
   return (
     <KeyboardAvoidingView
@@ -268,7 +271,7 @@ export default function HomeScreen() {
             <ChronosNexusToggle activeView={activeView} onToggle={setActiveView} />
           </View>
         </View>
-
+        
         {!hasSearchMatches && <MapSearchEmptyState />}
 
         <PanGestureHandler
@@ -343,9 +346,17 @@ export default function HomeScreen() {
 
         <ScrollToTopButton visible={showScrollTop} onPress={scrollToTop} />
 
-        {expandedGhostNode && <GhostOverlay node={expandedGhostNode} onClose={() => setExpandedGhostId(null)} />}
         {focusRootNode && <KineticFocusMap rootNode={focusRootNode} mappedNotes={mappedNotes} onClose={() => setFocusRootNode(null)} />}
-        {readingNode && <ReadingModal node={readingNode} onClose={() => setReadingNode(null)} />}
+        {displayNode && (
+          <ReadingModal 
+            node={displayNode} 
+            searchQuery={searchQuery}
+            onClose={() => {
+              setReadingNode(null);
+              setExpandedGhostId(null);
+            }} 
+          />
+        )}
       </View>
     </KeyboardAvoidingView>
   );
