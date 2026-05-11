@@ -53,13 +53,50 @@ export default function RootLayout() {
       }).catch(() => {});
     }
 
-    // FORCED STARTUP SEQUENCE - Ensuring the popup appears
-    const timer = setTimeout(() => {
-      console.log('[RootLayout] Transitioning to consent phase...');
-      setPhase('consent');
-    }, 2000);
+  const [diagnosticStage, setDiagnosticStage] = useState<0 | 1 | 2 | 3>(0);
 
-    return () => clearTimeout(timer);
+  useEffect(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    initializeSettings();
+
+    if (Platform.OS !== 'web') {
+      Updates.checkForUpdateAsync().then(update => {
+        if (update.isAvailable) Updates.fetchUpdateAsync().then(() => Updates.reloadAsync());
+      }).catch(() => {});
+    }
+
+    // DIAGNOSTIC STARTUP SEQUENCE
+    const runDiagnostics = async () => {
+      try {
+        // STAGE 1: SYSTEM PULSE (FileSystem & Commit Check)
+        setDiagnosticStage(1);
+        await new Promise(r => setTimeout(r, 800)); // Cinematic delay
+
+        // STAGE 2: NEURAL PATHS (Model & DocumentDir Resolution)
+        setDiagnosticStage(2);
+        const { documentDirectory } = await import('expo-file-system/legacy');
+        if (!documentDirectory) throw new Error('FS_MISSING');
+        
+        const ready = await ModelDownloadService.getInstance().isModelReady();
+        await new Promise(r => setTimeout(r, 800)); // Cinematic delay
+
+        // STAGE 3: AI GRID (Service Handshake)
+        setDiagnosticStage(3);
+        await new Promise(r => setTimeout(r, 800)); // Cinematic delay
+
+        if (ready) {
+          setPhase('loading');
+          finishLoading();
+        } else {
+          setPhase('consent');
+        }
+      } catch (e) {
+        console.warn('[RootLayout] Diagnostics failed:', e);
+        setPhase('consent'); // Fallback to popup so user isn't stuck
+      }
+    };
+
+    runDiagnostics();
   }, []);
 
   async function finishLoading() {
@@ -119,6 +156,7 @@ export default function RootLayout() {
               progress={downloadProgress} 
               speed={downloadSpeed}
               onConsent={handleConsent}
+              diagnosticStage={diagnosticStage}
             />
           ) : (
             <Stack>

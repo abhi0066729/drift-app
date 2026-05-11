@@ -158,10 +158,11 @@ interface SplashProps {
   progress?: number;
   speed?: string;
   onConsent?: () => void;
+  diagnosticStage?: 0 | 1 | 2 | 3; // 0=none, 1=FS, 2=Paths, 3=AI
 }
 
 // ─── MAIN ─────────────────────────────────────────────────────
-export const BrandedSplashScreen = ({ phase, status, progress = 0, speed, onConsent }: SplashProps) => {
+export const BrandedSplashScreen = ({ phase, status, progress = 0, speed, onConsent, diagnosticStage = 0 }: SplashProps) => {
   const scheme = useColorScheme();
   const dark = scheme === 'dark';
 
@@ -419,7 +420,23 @@ export const BrandedSplashScreen = ({ phase, status, progress = 0, speed, onCons
         )}
         {/* CHECKING phase — restored as requested */}
         {phase === 'checking' && (
-          <Text style={[styles.checkingText, { color: C.tipColor }]}>READING THE STARS...</Text>
+          <View style={styles.diagnosticWrapper}>
+            <Text style={[styles.checkingText, { color: C.fg, opacity: 0.4 }]}>READING THE STARS...</Text>
+            
+            {/* DIAGNOSTIC PULSE GRID (Battery-style) */}
+            <View style={styles.pulseGrid}>
+              <View style={[styles.pulseSegment, { backgroundColor: diagnosticStage >= 1 ? '#F1C40F' : 'rgba(255,255,255,0.1)' }]} />
+              <View style={[styles.pulseSegment, { backgroundColor: diagnosticStage >= 2 ? '#F1C40F' : 'rgba(255,255,255,0.1)' }]} />
+              <View style={[styles.pulseSegment, { backgroundColor: diagnosticStage >= 3 ? '#F1C40F' : 'rgba(255,255,255,0.1)' }]} />
+            </View>
+            
+            <Text style={styles.stageLabel}>
+              {diagnosticStage === 1 && 'VERIFYING SYSTEM PULSE...'}
+              {diagnosticStage === 2 && 'SCANNING NEURAL PATHS...'}
+              {diagnosticStage === 3 && 'AWAKENING AI GRID...'}
+              {diagnosticStage === 0 && 'INITIALIZING...'}
+            </Text>
+          </View>
         )}
       </View>
     </View>
@@ -446,5 +463,9 @@ const styles = StyleSheet.create({
   progressFill: { height:'100%', backgroundColor:'#F1C40F' },
   tipText: { fontSize:11, fontWeight:'500', letterSpacing:0.5 },
   loadingText: { fontSize:12, fontWeight:'500', letterSpacing:0.5 },
-  checkingText: { fontSize:9, fontWeight:'800', letterSpacing:2 },
+  checkingText: { fontSize:9, fontWeight:'800', letterSpacing:2, marginBottom:12 },
+  diagnosticWrapper: { alignItems: 'center' },
+  pulseGrid: { flexDirection: 'row', gap: 6, marginBottom: 8 },
+  pulseSegment: { width: 30, height: 6, borderRadius: 2 },
+  stageLabel: { fontSize: 8, fontWeight: '900', color: 'rgba(255,255,255,0.3)', letterSpacing: 1 },
 });
