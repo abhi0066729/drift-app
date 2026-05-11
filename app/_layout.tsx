@@ -35,13 +35,32 @@ export default function RootLayout() {
   const [downloadProgress, setDownloadProgress] = useState<number>(0);
   const [downloadSpeed, setDownloadSpeed] = useState<string>('');
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setPhase('consent');
-    }, 2000);
+  const colorScheme = useColorScheme();
+  const initializeSettings = useSettingsStore(state => state.initialize);
 
-    return () => clearTimeout(timer);
+  useEffect(() => {
+    // Initial check
+    const checkStatus = async () => {
+      const ready = await ModelDownloadService.getInstance().isModelReady();
+      if (ready) {
+        setPhase('loading');
+        finishLoading();
+      } else {
+        setTimeout(() => setPhase('consent'), 2000);
+      }
+    };
+    checkStatus();
   }, []);
+
+  async function finishLoading() {
+    try {
+      initializeSettings();
+      await SyncService.getInstance().performFullSync();
+    } catch (e) {
+      console.warn('[RootLayout] Sync failed:', e);
+    }
+    setTimeout(() => setIsReady(true), 2000);
+  }
 
   async function handleConsent() {
     setPhase('downloading');
@@ -49,17 +68,18 @@ export default function RootLayout() {
     try {
       await ModelDownloadService.getInstance().ensureModelsPresent((p) => {
         const now = Date.now();
-        if (now - lastUpdate > 100 || p.progress === 1) { // Throttle to 10fps
+        if (now - lastUpdate > 100 || p.progress === 1) {
           setDownloadStatus(`SYNCING ${p.fileName}`);
           setDownloadProgress(p.progress);
           setDownloadSpeed(p.speed);
           lastUpdate = now;
         }
       });
+      
       setPhase('loading');
-      setTimeout(() => setIsReady(true), 1500);
+      await finishLoading();
     } catch (e) {
-      console.warn('[RootLayout] Download failed:', e);
+      console.error('[RootLayout] Download flow failed:', e);
       setPhase('consent');
     }
   }
