@@ -11,7 +11,7 @@ export type DownloadProgress = {
 
 export class ModelDownloadService {
   private static instance: ModelDownloadService;
-  private static readonly DEBUG_FORCE_MODAL = false; // Set to true to test the download popup
+  private static readonly DEBUG_FORCE_MODAL = true; // Set to true to test the download popup
   
   // Official Drift Model Repository (drift-labs organization)
   private readonly HF_REPOS = {
@@ -101,10 +101,8 @@ export class ModelDownloadService {
   public async isModelReady(): Promise<boolean> {
     if (ModelDownloadService.DEBUG_FORCE_MODAL) return false;
     try {
-      const { documentDirectory } = require('expo-file-system');
-      const modelPath = `${documentDirectory}models/Llama-3.2-1B-Instruct-Q4_K_M.gguf`;
-      const { getInfoAsync } = require('expo-file-system');
-      const info = await getInfoAsync(modelPath);
+      const modelPath = `${FileSystem.documentDirectory}models/Llama-3.2-1B-Instruct-Q4_K_M.gguf`;
+      const info = await FileSystem.getInfoAsync(modelPath);
       return info.exists;
     } catch (e) {
       return false;

@@ -66,7 +66,7 @@ export default function RootLayout() {
       } catch (e) {
         setPhase('consent');
       }
-    }, 3000); // 3 second cinematic lead-in
+    }, 1000); // 1 second cinematic lead-in
   }, []);
 
   async function finishLoading() {
