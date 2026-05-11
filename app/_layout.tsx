@@ -89,8 +89,8 @@ export default function RootLayout() {
     
     // GUARANTEED SIMULATION
     const simulatedModels = [
-      { name: 'LLAMA-3.2-1B.PTE', size: 480 },
-      { name: 'MULTILINGUAL-E5-SMALL.ONNX', size: 112 },
+      { name: 'LLAMA-3.2-1B-Q4_K_M.GGUF', size: 702 },
+      { name: 'MODEL_QUANTIZED.ONNX', size: 112 },
       { name: 'TOKENIZER.JSON', size: 1.2 }
     ];
 

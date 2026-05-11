@@ -11,15 +11,19 @@ export type DownloadProgress = {
 
 export class ModelDownloadService {
   private static instance: ModelDownloadService;
+  private static readonly DEBUG_FORCE_MODAL = false; // Set to true to test the download popup
   
   // Official Drift Model Repository (drift-labs organization)
-  private readonly HF_BASE = 'https://huggingface.co/drift-labs/core/resolve/main';
+  private readonly HF_REPOS = {
+    base: 'https://huggingface.co/drift-labs/base/resolve/main',
+    embedding: 'https://huggingface.co/drift-labs/embedding/resolve/main'
+  };
   
   private readonly MODELS = [
-    { name: 'llama-3.2-1b.pte', size: '480MB' },
-    { name: 'multilingual-e5-small-int8.onnx', size: '112MB' },
-    { name: 'tokenizer.json', size: '1.2MB' },
-    { name: 'tokenizer_config.json', size: '4KB' }
+    { name: 'Llama-3.2-1B-Instruct-Q4_K_M.gguf', size: '808MB', repo: 'base' },
+    { name: 'model_quantized.onnx', size: '31MB', repo: 'embedding' },
+    { name: 'tokenizer.json', size: '17.2MB', repo: 'base' },
+    { name: 'tokenizer_config.json', size: '56KB', repo: 'base' }
   ];
 
 
@@ -58,8 +62,9 @@ export class ModelDownloadService {
     return true;
   }
 
-  private async downloadFile(fileName: string, localPath: string, onProgress: (p: DownloadProgress) => void) {
-    const url = `${this.HF_BASE}/${fileName}`;
+  private async downloadFile(model: { name: string, repo: string }, localPath: string, onProgress: (p: DownloadProgress) => void) {
+    const repoUrl = this.HF_REPOS[model.repo as keyof typeof this.HF_REPOS] || this.HF_REPOS.base;
+    const url = `${repoUrl}/${model.name}`;
     const startTime = Date.now();
     let lastBytes = 0;
     
@@ -75,7 +80,7 @@ export class ModelDownloadService {
 
         const progress = progressData.totalBytesWritten / progressData.totalBytesExpectedToWrite;
         onProgress({
-          fileName,
+          fileName: model.name,
           progress,
           totalBytes: progressData.totalBytesExpectedToWrite,
           speed: speedLabel
@@ -84,9 +89,9 @@ export class ModelDownloadService {
     );
 
     const result = await downloadResumable.downloadAsync();
-    if (!result) throw new Error(`Download of ${fileName} failed`);
+    if (!result) throw new Error(`Download of ${model.name} failed`);
     
-    console.log(`[ModelDownloadService] Successfully saved ${fileName} to ${result.uri}`);
+    console.log(`[ModelDownloadService] Successfully saved ${model.name} to ${result.uri}`);
   }
 
 
@@ -94,9 +99,10 @@ export class ModelDownloadService {
    * Checks if synthesis is ready.
    */
   public async isModelReady(): Promise<boolean> {
+    if (ModelDownloadService.DEBUG_FORCE_MODAL) return false;
     try {
       const { documentDirectory } = require('expo-file-system');
-      const modelPath = `${documentDirectory}models/llama-3.2-1b.pte`;
+      const modelPath = `${documentDirectory}models/Llama-3.2-1B-Instruct-Q4_K_M.gguf`;
       const { getInfoAsync } = require('expo-file-system');
       const info = await getInfoAsync(modelPath);
       return info.exists;

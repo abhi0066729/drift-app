@@ -40,7 +40,7 @@ export class EmbeddingEngine {
       );
 
       // 2. Load ONNX Model
-      const modelPath = `${modelsDir}multilingual-e5-small-int8.onnx`;
+      const modelPath = `${modelsDir}model_quantized.onnx`;
       this.session = await this.ort.InferenceSession.create(modelPath, {
         executionProviders: ['cpu'],
       });
