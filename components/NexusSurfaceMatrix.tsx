@@ -319,7 +319,7 @@ export default function NexusSurfaceMatrix({ notes, theme, onPress }: NexusSurfa
     runOnJS(clearAllNotes)();
   });
 
-  const gesture = Gesture.Exclusive(tripleTap, doubleTap, Gesture.Simultaneous(pan, pinch));
+  const gesture = Gesture.Simultaneous(pan, pinch);
 
   const nodeContainerStyle = useAnimatedStyle(() => ({
     transform: [

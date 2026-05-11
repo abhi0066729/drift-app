@@ -4,6 +4,42 @@ import ReadingModal from '@/components/ReadingModal';
 import ScrollToTopButton from '@/components/ScrollToTopButton';
 import UserModeMap from '@/components/UserModeMap';
 import { NightTheme } from '@/constants/theme';
+import { DatabaseService } from '@/services/DatabaseService';
+
+const NeuralHeartbeat = () => {
+  const notes = useNotesStore(state => state.notes);
+  const isThinking = notes.some(n => n.is_refining);
+  const opacity = useSharedValue(0.3);
+  
+  useEffect(() => {
+    if (isThinking) {
+      opacity.value = withRepeat(
+        withSequence(
+          withTiming(1, { duration: 600, easing: Easing.inOut(Easing.sin) }),
+          withTiming(0.3, { duration: 600, easing: Easing.inOut(Easing.sin) })
+        ),
+        -1,
+        true
+      );
+    } else {
+      opacity.value = withTiming(0.3, { duration: 1000 });
+    }
+  }, [isThinking]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ scale: isThinking ? withSpring(1.2) : withSpring(1) }],
+  }));
+
+  return (
+    <View style={styles.heartbeatContainer}>
+      <Animated.View style={[styles.heartbeatDot, animatedStyle, { backgroundColor: isThinking ? '#2ECC71' : '#8E44AD' }]} />
+      <Text style={[styles.heartbeatText, { color: isThinking ? '#2ECC71' : 'rgba(255,255,255,0.2)' }]}>
+        {isThinking ? 'NEURAL ENGINE ACTIVE' : 'CORTEX STANDBY'}
+      </Text>
+    </View>
+  );
+};
 import { useNotesStore, Note } from '@/store/useNotesStore';
 import { calculateSearchMatch, generateFullGhostPool, processContextualConnections } from '@/utils/noteUtils';
 import { CortexService } from '@/services/CortexService';
@@ -210,7 +246,7 @@ export default function HomeScreen() {
     if (node.is_ghost) {
       setExpandedGhostId(node.id);
     } else {
-      if (type === 'text') {
+      if (type === 'text' || activeView === 'nexus') {
         setReadingNode(node);
       } else {
         setFocusRootNode(node);
@@ -250,10 +286,10 @@ export default function HomeScreen() {
       <View style={[styles.container, { paddingTop: insets.top + 20, backgroundColor: theme === 'dark' ? NightTheme.background : '#FFFFFF' }]}>
         <View style={[styles.header, { backgroundColor: theme === 'dark' ? NightTheme.background : '#FFFFFF' }]}>
           <View style={styles.headerTextContainer}>
-            <View>
-              <Text style={[styles.title, { color: theme === 'dark' ? '#E8E6E0' : '#111111' }]}>DRIFT MAP</Text>
-              <Text style={styles.subtitle}>KINETIC SEMANTIC SYNTHESIS</Text>
-            </View>
+              <View>
+                <Text style={[styles.title, { color: theme === 'dark' ? NightTheme.textPrimary : '#111111' }]}>DRIFT PALACE</Text>
+                <NeuralHeartbeat />
+              </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <TouchableOpacity onPress={toggleSearch} style={[styles.themeToggleBtn, { backgroundColor: isSearchLocked.value ? 'rgba(142, 68, 173, 0.1)' : 'transparent' }]}>
                 <Search size={20} color={isSearchLocked.value ? "#8E44AD" : (theme === 'dark' ? '#E8E6E0' : '#111111')} strokeWidth={2} />
@@ -368,7 +404,31 @@ const styles = StyleSheet.create({
   headerTextContainer: { width: '100%', paddingHorizontal: 24, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4, marginTop: 20 },
   themeToggleBtn: { padding: 8, borderRadius: 20, backgroundColor: 'rgba(124, 58, 237, 0.1)' },
   title: { fontSize: 21, fontWeight: '300', letterSpacing: 3, textTransform: 'uppercase' },
-  subtitle: { fontSize: 9, fontWeight: '700', color: '#8E44AD', textTransform: 'uppercase', letterSpacing: 3, marginTop: 6 },
+  headerSubtitle: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#8E44AD',
+    textTransform: 'uppercase',
+    letterSpacing: 3,
+    marginTop: 6,
+  },
+  heartbeatContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+    gap: 6,
+  },
+  heartbeatDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  heartbeatText: {
+    fontSize: 8,
+    fontWeight: '800',
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+  },
   toggleContainer: { width: '100%', alignItems: 'center', marginTop: 10 },
   emptyText: { fontSize: 18, color: '#999999', fontWeight: '300', lineHeight: 28, paddingHorizontal: 32, marginTop: 0, textAlign: 'center' },
   searchContainer: { position: 'absolute', top: 0, left: 0, right: 0, paddingHorizontal: 22, zIndex: 100, height: 60, justifyContent: 'center' },
