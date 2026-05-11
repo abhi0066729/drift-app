@@ -195,7 +195,7 @@ export const BrandedSplashScreen = ({ phase, status, progress = 0, speed, onCons
   const [thread1, setThread1] = useState('');
   const [thread2, setThread2] = useState('');
   const timeRef = useRef(0);
-  const rafRef = useRef<number>();
+  const rafRef = useRef<number | undefined>(undefined);
   const pickRandom = () => NODES[1 + Math.floor(Math.random() * 3)];
   const attr1 = useRef({ from: pickRandom(), to: pickRandom(), progress: 1 });
   const attr2 = useRef({ from: pickRandom(), to: pickRandom(), progress: 1 });
