@@ -2,6 +2,22 @@
 
 **Conversation ID**: `0682bb5e-3018-4c47-a9ac-366ebba0c9af`
 
+## [v40] - Physics Mastery (Direct HTML Logic)
+**Prompt ID**: `P15`  
+**Request**: "animation doesn't look nice why don't use the direct logic from html file"  
+**Date**: 2026-05-11  
+**Status**: ACTIVE  
+**Files Modified**: 
+- `components/OpeningTransition.tsx`: Rebuilt with exact HTML multipliers and timings.
+
+**Changes**:
+- Replaced approximate physics with one-to-one HTML scattering logic (far * 0.6, rotate 220, etc.).
+- Implemented the 460ms snap-delay from the original script.
+- Resolved SVG type errors by implementing optimized `Animated` wrappers.
+- Fine-tuned the "Void Zoom" to dive specifically into the D's negative space.
+
+---
+
 ## [v38] - Cinematic Lead-in (Zero-Touch Splash)
 **Prompt ID**: `P14`  
 **Request**: "zoom into blank space... it is not a splash screen its just a element used into transition... don't even touch my splash screen"  
