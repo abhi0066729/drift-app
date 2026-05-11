@@ -2,9 +2,22 @@
 
 **Conversation ID**: `0682bb5e-3018-4c47-a9ac-366ebba0c9af`
 
+## [v38] - Cinematic Lead-in (Zero-Touch Splash)
+**Prompt ID**: `P14`  
+**Request**: "zoom into blank space... it is not a splash screen its just a element used into transition... don't even touch my splash screen"  
+**Date**: 2026-05-11  
+**Status**: ACTIVE  
+**Files Modified**: 
+- `components/OpeningTransition.tsx`: Created new component for SVG explosion.
+- `app/_layout.tsx`: Integrated transition sequence before splash screen.
+
+**Changes**:
+- Implemented "Void Zoom" and "Individual Node Fracture" as a standalone entry sequence.
+- Isolated the animation from `BrandedSplashScreen.tsx` to preserve the original design.
+- Ensured smooth 60fps handoff between the transition and the perfect splash screen.
+
 ---
 
-## [v37] - Revert to Excellence
 **Prompt ID**: `P13`  
 **Request**: "revert to this [v33] as it has a proper splash screen"  
 **Date**: 2026-05-11  

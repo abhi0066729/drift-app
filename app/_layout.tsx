@@ -17,6 +17,7 @@ import { NightTheme } from '@/constants/theme';
 import { SyncService } from '@/services/SyncService';
 import { ModelDownloadService } from '@/services/ModelDownloadService';
 import { BrandedSplashScreen } from '@/components/BrandedSplashScreen';
+import { OpeningTransition } from '@/components/OpeningTransition';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Haptics from 'expo-haptics';
 import * as Updates from 'expo-updates';
@@ -29,6 +30,7 @@ export const unstable_settings = {
 };
 
 export default function RootLayout() {
+  const [showOpening, setShowOpening] = useState(true);
   const [isReady, setIsReady] = useState(false);
   const [phase, setPhase] = useState<'checking' | 'consent' | 'downloading' | 'loading'>('checking');
   const [downloadStatus, setDownloadStatus] = useState<string>('');
@@ -95,6 +97,10 @@ export default function RootLayout() {
     }
   }
 
+  if (showOpening) {
+    return <OpeningTransition onComplete={() => setShowOpening(false)} />;
+  }
+
   if (!isReady && phase !== 'loading') {
     return (
       <BrandedSplashScreen 
@@ -120,4 +126,3 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
-
