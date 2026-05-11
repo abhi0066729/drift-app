@@ -18,8 +18,9 @@ workflows:
       - name: Build Unsigned IPA
         script: |
           set -e # Stop on error
-          xcodebuild build -workspace ios/driftapp.xcworkspace \
-            -scheme driftapp \
+          # Expo prebuild uses the "name" field from app.json for the workspace name
+          xcodebuild build -workspace ios/Drift.xcworkspace \
+            -scheme Drift \
             -configuration Release \
             -sdk iphoneos \
             -derivedDataPath build \
