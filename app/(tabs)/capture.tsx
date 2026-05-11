@@ -8,6 +8,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import Animated, { 
   FadeIn, 
   FadeInDown, 
+  FadeOut,
   useAnimatedStyle, 
   withTiming, 
   useSharedValue, 
