@@ -45,7 +45,7 @@ export default function RootLayout() {
       const ready = await ModelDownloadService.getInstance().isModelReady();
       
       const elapsed = Date.now() - startTime;
-      const minLeadIn = 3000; // 3 seconds minimum for the stars
+      const minLeadIn = 5000; // 5 seconds for the stars
       const remaining = Math.max(0, minLeadIn - elapsed);
 
       setTimeout(async () => {

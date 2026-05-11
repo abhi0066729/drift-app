@@ -291,6 +291,7 @@ export default function HomeScreen() {
           <View style={styles.headerTextContainer}>
               <View>
                 <Text style={[styles.title, { color: theme === 'dark' ? NightTheme.textPrimary : '#111111' }]}>DRIFT PALACE</Text>
+                <Text style={styles.headerSubtitle}>QUANTUM THOUGHT FIELD</Text>
                 <NeuralHeartbeat />
               </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
