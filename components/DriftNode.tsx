@@ -292,12 +292,14 @@ function DriftNode({ node, onPress, onDragStart, onDragUpdateSharedX, onDragUpda
           })}
         >
           <Text style={[styles.noteCategory, { color: mainColor, marginBottom: 6, opacity: Math.min(1, node.ageFade + 0.4) }]}>
-            {isSynthesis ? '✧ SYNTHESIS ✧' : (node.is_refining ? 'REFINING...' : node.category?.toUpperCase())}
+            {isSynthesis ? '✧ SYNTHESIS ✧' : (node.is_refining ? 'SYNTHESIZING...' : node.category?.toUpperCase())}
             {isPinned && ' ✦ IN STUDIO'}
           </Text>
 
           <View style={{ maxHeight: 60, overflow: 'hidden' }}>
-            <Text numberOfLines={3} style={[styles.noteContent, { color: theme === 'dark' ? NightTheme.textPrimary : '#111111' }, node.is_refining && { color: theme === 'dark' ? NightTheme.textMuted : '#BBBBBB' }]}>{node.content}</Text>
+            <Text numberOfLines={3} style={[styles.noteContent, { color: theme === 'dark' ? NightTheme.textPrimary : '#111111' }, node.is_refining && { color: theme === 'dark' ? NightTheme.textMuted : '#888888', fontStyle: 'italic' }]}>
+              {node.is_refining ? 'The synthesis engine is distilling this thought...' : node.content}
+            </Text>
           </View>
         </Pressable>
       </Animated.View>
