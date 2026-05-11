@@ -1,7 +1,3 @@
-const API_KEY = process.env.EXPO_PUBLIC_OPENROUTER_API_KEY;
-const MODEL_FAST = 'nvidia/nemotron-3-super-120b-a12b:free';
-const MODEL_DEEP = 'nvidia/nemotron-3-super-120b-a12b:free';
-
 export type NoteCategory = 
   | 'Journal' 
   | 'Study' 
@@ -24,124 +20,77 @@ export interface ExtractedEntities {
   dates: string[];
 }
 
-/**
- * Utility to scrub markdown and extra text from JSON response
- */
-function scrubJSON(text: string): string | null {
-  if (!text) return null;
-  let clean = text.replace(/```json/gi, '').replace(/```/g, '').trim();
-  const start = clean.indexOf('{');
-  const end = clean.lastIndexOf('}');
-  
-  if (start !== -1 && end !== -1 && end > start) {
-      return clean.substring(start, end + 1);
-  }
+export const SEMANTIC_INTENTS: Partial<Record<NoteCategory, RegExp[]>> = {
+  Todo: [/task/i, /todo/i, /buy/i, /remind/i, /finish/i, /action/i, /check/i, /urgent/i, /must/i, /checklist/i, /\[ \]/, /need to/i, /should/i],
+  Idea: [/idea/i, /concept/i, /brainstorm/i, /maybe/i, /what if/i, /project/i, /vision/i, /bulb/i, /innov/i, /potential/i, /spark/i, /insight/i],
+  Meeting: [/meet/i, /sync/i, /huddl/i, /call/i, /agend/i, /discuss/i, /participant/i, /zoom/i, /teams/i, /skype/i, /invite/i, /calend/i, /huddle/i, /interview/i],
+  Dream: [/dream/i, /nightm/i, /vivid/i, /vision/i, /last night/i, /slept/i, /woke up/i, /unconsc/i, /dreaming/i, /lucid/i],
+  Study: [/learn/i, /read/i, /study/i, /course/i, /lesson/i, /exam/i, /test/i, /acad/i, /grad/i, /chapter/i, /book/i, /lectur/i, /tutorial/i],
+  Research: [/data/i, /analy/i, /expe/i, /scien/i, /hypo/i, /evidence/i, /stats/i, /finding/i, /investig/i, /discov/i, /paper/i, /source/i],
+  Quote: [/said/i, /stated/i, /mention/i, /wrote/i, /author/i, /remark/i, /"|'|“|”/, /quoted/i, /cite/i],
+  Reflection: [/think/i, /feel/i, /wonder/i, /realiz/i, /honestly/i, /insight/i, /thought/i, /believe/i, /gratit/i, /reflex/i, /ponder/i, /meditat/i, /journal/i, /dear diary/i],
+  Creative: [/poem/i, /lyrics/i, /story/i, /novel/i, /sketch/i, /design/i, /art/i, /doodle/i, /paint/i, /compo/i, /melody/i, /prototyp/i, /fiction/i, /script/i]
+};
 
-  // KEYWORD-DRILL FALLBACK
-  // If the AI was "chatty" and didn't output valid JSON, we scan for keywords
-  const validCategories = ['Journal','Study','Idea','Todo','Dream','Research','Quote','Meeting','Reflection','Creative'];
-  const lowerText = clean.toLowerCase();
-  for (const cat of validCategories) {
-      if (lowerText.includes(cat.toLowerCase())) {
-          return JSON.stringify({ category: cat, emotion: 'Neutral' });
-      }
-  }
-
-  return null;
-}
+export const EMOTION_MAP: Record<string, RegExp[]> = {
+  'Happy': [/happy/i, /great/i, /good/i, /awesome/i, /excited/i, /love/i, /fun/i, /joy/i, /grin/i, /\:\)/],
+  'Sad': [/sad/i, /bad/i, /blue/i, /unhappy/i, /cry/i, /alone/i, /miss/i, /down/i, /\:\(/],
+  'Angry': [/angry/i, /mad/i, /hate/i, /annoy/i, /frustrat/i, /piss/i, /stop/i, /ugh/i],
+  'Focused': [/focus/i, /work/i, /study/i, /deep/i, /concentrat/i, /flow/i, /product/i],
+  'Curious': [/wonder/i, /why/i, /how/i, /curious/i, /ask/i, /question/i, /mystery/i],
+  'Inspired': [/wow/i, /inspirational/i, /bright/i, /light/i, /spark/i, /new/i, /amazing/i]
+};
 
 /**
- * FAST PREDICTION (Real-time hints)
+ * FAST PREDICTION (100% Local Heuristics)
  */
 export async function extractRealtime(text: string): Promise<{ category: NoteCategory; emotion: string } | null> {
-  if (!API_KEY || !text.trim()) return null;
+  const low = text.toLowerCase();
+  if (!low.trim()) return { category: 'Journal', emotion: 'Neutral' };
 
-  const validCategories: NoteCategory[] = ['Journal','Study','Idea','Todo','Dream','Research','Quote','Meeting','Reflection','Creative'];
+  let bestCategory: NoteCategory = 'Journal';
+  let highestScore = 0;
 
-  try {
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: MODEL_FAST,
-        messages: [
-          { 
-            role: 'system', 
-            content: `You are a strict JSON engine. Respond with ONLY valid JSON. NOTHING ELSE. No preamble. No conversation.
-            
-            SCHEMA: {"category": "category_name", "emotion": "emotion_name"}
-            CATEGORIES: [Journal, Study, Idea, Todo, Dream, Research, Quote, Meeting, Reflection, Creative]
-            
-            If unsure, default to "Journal".`
-          },
-          { role: 'user', content: `Analyze: "${text}"` }
-        ],
-        max_tokens: 30,
-        temperature: 0.1,
-      }),
+  for (const [cat, patterns] of Object.entries(SEMANTIC_INTENTS)) {
+    let score = 0;
+    patterns.forEach(pattern => {
+      const matches = low.match(pattern);
+      if (matches) score += matches.length;
     });
-
-    const data = await response.json();
-    const rawContent = data.choices?.[0]?.message?.content || '';
-    console.log('[AI Realtime Raw]:', rawContent);
-
-    const scrubbed = scrubJSON(rawContent);
-    if (!scrubbed) return null;
-    const parsed = JSON.parse(scrubbed);
-    if (parsed.category && validCategories.includes(parsed.category)) {
-      return parsed;
+    if (score > highestScore) {
+      highestScore = score;
+      bestCategory = cat as NoteCategory;
     }
-  } catch (e) {
-    console.warn('[AI Realtime] Parse failed:', e);
   }
-  return null;
+
+  let bestEmotion = 'Neutral';
+  let highestEmoScore = 0;
+  for (const [emo, patterns] of Object.entries(EMOTION_MAP)) {
+    patterns.forEach(p => {
+      const matches = low.match(p);
+      if (matches) {
+        highestEmoScore += matches.length;
+        bestEmotion = emo;
+      }
+    });
+  }
+
+  return { category: bestCategory, emotion: bestEmotion };
 }
 
 /**
- * DEEP SYNTHESIS (Background enrichment)
+ * DEEP SYNTHESIS (Future Local Llama-based background task)
  */
 export async function extractDeep(text: string): Promise<ExtractedEntities | null> {
-  if (!API_KEY) return null;
-
-  const validCategories: NoteCategory[] = ['Journal','Study','Idea','Todo','Dream','Research','Quote','Meeting','Reflection','Creative'];
-
-  const systemPrompt = `Analyze this note. Return ONLY valid JSON.
-Pick ONE: Journal, Study, Idea, Todo, Dream, Research, Quote, Meeting, Reflection, Creative.
-JSON: {"category": "...", "emotion": "...", "people": [], "topics": [], "sentiment": "neutral", "urgency": "medium", "dates": []}`;
-
-  try {
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: MODEL_DEEP,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: text }
-        ],
-        temperature: 0.1,
-        max_tokens: 300,
-      }),
-    });
-
-    const data = await response.json();
-    const rawContent = data.choices?.[0]?.message?.content || '';
-    console.log('[AI Deep Raw]:', rawContent);
-
-    const scrubbed = scrubJSON(rawContent);
-    if (!scrubbed) return null;
-    const parsed = JSON.parse(scrubbed);
-    if (parsed.category && validCategories.includes(parsed.category)) {
-      return parsed;
-    }
-  } catch (e) {
-    console.error('[AI Deep] Parse failed:', e);
-  }
-  return null;
+  // Currently falls back to real-time local logic to preserve offline status
+  const basic = await extractRealtime(text);
+  return {
+    category: basic?.category || 'Journal',
+    emotion: basic?.emotion || 'Neutral',
+    people: [],
+    topics: [],
+    sentiment: 'neutral',
+    urgency: 'low',
+    dates: []
+  };
 }

@@ -19,7 +19,7 @@ import Animated, {
   useDerivedValue,
   SharedValue
 } from 'react-native-reanimated';
-import { extractRealtime, extractDeep, NoteCategory } from '@/services/ai';
+import { extractRealtime, extractDeep, NoteCategory, SEMANTIC_INTENTS, EMOTION_MAP } from '@/services/ai';
 import { LinearGradient } from 'expo-linear-gradient';
 import { NightTheme } from '@/constants/theme';
 import { CATEGORY_COLORS } from '@/constants/Categories';
@@ -30,53 +30,9 @@ import { Alert } from 'react-native';
 import { LocalLlamaService } from '@/services/LocalLlamaService';
 import { CortexService } from '@/services/CortexService';
 import { SynthesisService } from '@/services/SynthesisService';
-
-
-
+import { NoteService } from '@/services/NoteService';
 
 const { width, height } = Dimensions.get('window');
-
-// --- Universal Intent Engine (Semantic Roots) ---
-// Focused on word stems to catch various forms (e.g., 'meeting' vs 'meet')
-const SEMANTIC_INTENTS: Partial<Record<NoteCategory, RegExp[]>> = {
-  Todo: [
-    /task/i, /todo/i, /buy/i, /remind/i, /finish/i, /action/i, /check/i, /urgent/i, /must/i, /checklist/i, /\[ \]/
-  ],
-  Idea: [
-    /idea/i, /concept/i, /brainstorm/i, /maybe/i, /what if/i, /project/i, /vision/i, /bulb/i, /innov/i, /potential/i
-  ],
-  Meeting: [
-    /meet/i, /sync/i, /huddl/i, /call/i, /agend/i, /discuss/i, /participant/i, /zoom/i, /teams/i, /skype/i, /invite/i, /calend/i, /huddle/i
-  ],
-  Dream: [
-    /dream/i, /nightm/i, /vivid/i, /vision/i, /last night/i, /slept/i, /woke up/i, /unconsc/i, /dreaming/i
-  ],
-  Study: [
-    /learn/i, /read/i, /study/i, /course/i, /lesson/i, /exam/i, /test/i, /acad/i, /grad/i, /chapter/i, /book/i
-  ],
-  Research: [
-    /data/i, /analy/i, /expe/i, /scien/i, /hypo/i, /evidence/i, /stats/i, /finding/i, /investig/i, /discov/i
-  ],
-  Quote: [
-    /said/i, /stated/i, /mention/i, /wrote/i, /author/i, /remark/i, /"|'|“|”/
-  ],
-  Reflection: [
-    /think/i, /feel/i, /wonder/i, /realiz/i, /honestly/i, /insight/i, /thought/i, /believe/i, /gratit/i, /reflex/i, /ponder/i, /meditat/i
-  ],
-  Creative: [
-    /poem/i, /lyrics/i, /story/i, /novel/i, /sketch/i, /design/i, /art/i, /doodle/i, /paint/i, /compo/i, /melody/i, /prototyp/i, /fiction/i, /script/i
-  ]
-};
-
-const EMOTION_MAP: Record<string, RegExp[]> = {
-  'Happy': [/happy/i, /great/i, /good/i, /awesome/i, /excited/i, /love/i, /fun/i, /joy/i, /grin/i, /\:\)/],
-  'Sad': [/sad/i, /bad/i, /blue/i, /unhappy/i, /cry/i, /alone/i, /miss/i, /down/i, /\:\(/],
-  'Angry': [/angry/i, /mad/i, /hate/i, /annoy/i, /frustrat/i, /piss/i, /stop/i, /ugh/i],
-  'Focused': [/focus/i, /work/i, /study/i, /deep/i, /concentrat/i, /flow/i, /product/i],
-  'Curious': [/wonder/i, /why/i, /how/i, /curious/i, /ask/i, /question/i, /mystery/i],
-  'Inspired': [/wow/i, /inspirational/i, /bright/i, /light/i, /spark/i, /new/i, /amazing/i]
-};
-
 
 // --- Stardust Component ---
 const PARTICLE_COUNT = 18;
@@ -190,8 +146,6 @@ const SoftHint = ({ label, onPress, theme }: { label: string, onPress: () => voi
   );
 };
 
-import { NoteService } from '@/services/NoteService';
-
 export default function CaptureScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -218,10 +172,6 @@ export default function CaptureScreen() {
   );
 
   const inputRef = useRef<TextInput>(null);
-
-  
-  const lastStrideWordCount = useRef(0);
-  const lastStrideTime = useRef(0);
   const aiTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const predictLocal = useCallback((text: string): { category: NoteCategory, emotion: string } => {
@@ -287,27 +237,7 @@ export default function CaptureScreen() {
       return;
     }
 
-    // --- SMART TRIGGER STRATEGY ---
-    const endsWithPunctuation = /[.!?]$/.test(inputText.trim());
-    const words = inputText.trim().split(/\s+/);
-    const hasEnoughWords = words.length >= 4;
-
-    // 1. Immediate trigger on sentence end
-    if (endsWithPunctuation && hasEnoughWords) {
-      runPredictionAI(inputText);
-      return;
-    }
-
-    // 2. Proactive stride (every 5-6 words)
-    const timeSinceLastStride = Date.now() - lastStrideTime.current;
-    if (words.length - lastStrideWordCount.current >= 6 && timeSinceLastStride > 1500) {
-      lastStrideWordCount.current = words.length;
-      lastStrideTime.current = Date.now();
-      runPredictionAI(inputText);
-      return;
-    }
-
-    // 3. Debounced trigger (800ms pause)
+    // Debounced trigger (800ms pause)
     setPredictionStatus('flux');
     aiTimeoutRef.current = setTimeout(() => {
       runPredictionAI(inputText);
@@ -317,7 +247,7 @@ export default function CaptureScreen() {
     return () => {
       if (aiTimeoutRef.current) clearTimeout(aiTimeoutRef.current);
     };
-  }, [inputText, predictLocal, notes]);
+  }, [inputText, predictLocal]);
 
   useFocusEffect(
     useCallback(() => {
