@@ -69,8 +69,8 @@ const SEMANTIC_INTENTS: Partial<Record<NoteCategory, RegExp[]>> = {
 };
 
 const EMOTION_MAP: Record<string, RegExp[]> = {
-  'Happy': [/happy/i, /great/i, /good/i, /awesome/i, /excited/i, /love/i, /fun/i, /joy/i, /grin/i, /:) /],
-  'Sad': [/sad/i, /bad/i, /blue/i, /unhappy/i, /cry/i, /alone/i, /miss/i, /down/i, /:( /],
+  'Happy': [/happy/i, /great/i, /good/i, /awesome/i, /excited/i, /love/i, /fun/i, /joy/i, /grin/i, /\:\)/],
+  'Sad': [/sad/i, /bad/i, /blue/i, /unhappy/i, /cry/i, /alone/i, /miss/i, /down/i, /\:\(/],
   'Angry': [/angry/i, /mad/i, /hate/i, /annoy/i, /frustrat/i, /piss/i, /stop/i, /ugh/i],
   'Focused': [/focus/i, /work/i, /study/i, /deep/i, /concentrat/i, /flow/i, /product/i],
   'Curious': [/wonder/i, /why/i, /how/i, /curious/i, /ask/i, /question/i, /mystery/i],
