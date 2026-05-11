@@ -53,26 +53,13 @@ export default function RootLayout() {
       }).catch(() => {});
     }
 
-    // Cinematic startup sequence
-    setTimeout(async () => {
-      try {
-        // Race the check against a 2s timeout to prevent hanging
-        const ready = await Promise.race([
-          ModelDownloadService.getInstance().isModelReady(),
-          new Promise<boolean>((_, reject) => setTimeout(() => reject('timeout'), 2000))
-        ]);
+    // FORCED STARTUP SEQUENCE - Ensuring the popup appears
+    const timer = setTimeout(() => {
+      console.log('[RootLayout] Transitioning to consent phase...');
+      setPhase('consent');
+    }, 2000);
 
-        if (ready) {
-          setPhase('loading');
-          finishLoading();
-        } else {
-          setPhase('consent');
-        }
-      } catch (e) {
-        console.warn('[RootLayout] Startup check timed out or failed, defaulting to consent');
-        setPhase('consent');
-      }
-    }, 1000); 
+    return () => clearTimeout(timer);
   }, []);
 
   async function finishLoading() {

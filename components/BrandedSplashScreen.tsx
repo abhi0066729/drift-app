@@ -201,7 +201,7 @@ export const BrandedSplashScreen = ({ phase, status, progress = 0, speed, onCons
   const attr2 = useRef({ from: pickRandom(), to: pickRandom(), progress: 1 });
 
   // ── Popup Animation ──
-  const popupEntry = useRef(new Animated.Value(0)).current; 
+  const popupEntry = useRef(new Animated.Value(1)).current; 
 
   useEffect(() => {
     if (phase === 'consent') {
