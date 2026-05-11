@@ -31,14 +31,9 @@ export const unstable_settings = {
 export default function RootLayout() {
   const [isReady, setIsReady] = useState(false);
   const [phase, setPhase] = useState<'checking' | 'consent' | 'downloading' | 'loading'>('checking');
-  const [diagnosticStage, setDiagnosticStage] = useState<0 | 1 | 2 | 3>(1);
 
   useEffect(() => {
-    // S2: IF THIS RUNS, WE ARE IN THE EFFECT
-    setDiagnosticStage(2);
-    
     const timer = setTimeout(() => {
-      setDiagnosticStage(3); // S3: IF THIS RUNS, THE EVENT LOOP IS ALIVE
       setPhase('consent');
     }, 2000);
 
@@ -49,7 +44,6 @@ export default function RootLayout() {
     return (
       <BrandedSplashScreen 
         phase={phase}
-        diagnosticStage={diagnosticStage}
         onConsent={() => setPhase('downloading')}
       />
     );
