@@ -53,24 +53,10 @@ export default function RootLayout() {
       }).catch(() => {});
     }
 
-    // Step-by-step startup sequence
-    async function startSequence() {
-      // 1. Minimum lead-in time for "READING THE STARS"
-      const startTime = Date.now();
-      
+    // Cinematic startup sequence
+    setTimeout(async () => {
       try {
-        // 2. Race the model check against a timeout
-        const modelCheck = Promise.race([
-          ModelDownloadService.getInstance().isModelReady(),
-          new Promise<boolean>((_, reject) => setTimeout(() => reject('timeout'), 2000))
-        ]);
-
-        const ready = await modelCheck;
-        const elapsed = Date.now() - startTime;
-        const remaining = Math.max(0, 2000 - elapsed); // Ensure at least 2s of lead-in
-        
-        await new Promise(r => setTimeout(r, remaining));
-
+        const ready = await ModelDownloadService.getInstance().isModelReady();
         if (ready) {
           setPhase('loading');
           finishLoading();
@@ -78,12 +64,9 @@ export default function RootLayout() {
           setPhase('consent');
         }
       } catch (e) {
-        console.log('[RootLayout] Model check timed out or failed, defaulting to consent.');
         setPhase('consent');
       }
-    }
-
-    startSequence();
+    }, 3000); // 3 second cinematic lead-in
   }, []);
 
   async function finishLoading() {

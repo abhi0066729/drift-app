@@ -12,8 +12,8 @@ export type DownloadProgress = {
 export class ModelDownloadService {
   private static instance: ModelDownloadService;
   
-  // Official Drift Model Repository (Hugging Face)
-  private readonly HF_BASE = 'https://huggingface.co/abhi0066729/drift-core/resolve/main';
+  // Official Drift Model Repository (drift-labs organization)
+  private readonly HF_BASE = 'https://huggingface.co/drift-labs/core/resolve/main';
   
   private readonly MODELS = [
     { name: 'llama-3.2-1b.pte', size: '480MB' },
@@ -95,13 +95,12 @@ export class ModelDownloadService {
    */
   public async isModelReady(): Promise<boolean> {
     try {
-      const modelPath = `${(FileSystem as any).documentDirectory}models/llama-3.2-1b.pte`;
-      console.log(`[ModelDownloadService] Checking path: ${modelPath}`);
-      const info = await FileSystem.getInfoAsync(modelPath);
-      console.log(`[ModelDownloadService] Model exists: ${info.exists}`);
+      const { documentDirectory } = require('expo-file-system');
+      const modelPath = `${documentDirectory}models/llama-3.2-1b.pte`;
+      const { getInfoAsync } = require('expo-file-system');
+      const info = await getInfoAsync(modelPath);
       return info.exists;
     } catch (e) {
-      console.error('[ModelDownloadService] Error checking models:', e);
       return false;
     }
   }
