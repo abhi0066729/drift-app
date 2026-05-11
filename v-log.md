@@ -2,6 +2,21 @@
 
 **Conversation ID**: `0682bb5e-3018-4c47-a9ac-366ebba0c9af`
 
+## [v41] - Type Stability & Cleanup
+**Prompt ID**: `P16`  
+**Request**: "@[current_problems]"  
+**Date**: 2026-05-11  
+**Status**: ACTIVE  
+**Files Modified**: 
+- `components/OpeningTransition.tsx`: Defined NodeData interface and fixed union-type errors.
+
+**Changes**:
+- Resolved all TypeScript lint errors in the node scattering logic.
+- Optimized animated value typing for smoother runtime performance.
+- Maintained the perfect HTML physics mapping.
+
+---
+
 ## [v40] - Physics Mastery (Direct HTML Logic)
 **Prompt ID**: `P15`  
 **Request**: "animation doesn't look nice why don't use the direct logic from html file"  
