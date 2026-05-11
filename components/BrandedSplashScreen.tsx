@@ -62,13 +62,13 @@ function buildNaturalThread(time: number, phaseOff: number, targetNode: { x: num
 
 const MiniConstellation = React.memo(({ patternIdx, size, color }: any) => {
   const p = PATTERNS[patternIdx % PATTERNS.length];
-  const positions = p.s.map(([sx, sy]) => ({ x: sx * size, y: sy * size }));
+  const positions = p.s.map(([sx, sy]: number[]) => ({ x: sx * size, y: sy * size }));
   return (
     <Svg width={size} height={size}>
-      {p.e.map(([a, b], i) => (
+      {p.e.map(([a, b]: number[], i: number) => (
         <Line key={i} x1={positions[a].x} y1={positions[a].y} x2={positions[b].x} y2={positions[b].y} stroke={color} strokeWidth={0.6} opacity={0.5} />
       ))}
-      {positions.map((pt, i) => (
+      {positions.map((pt: {x: number, y: number}, i: number) => (
         <SvgCircle key={`s${i}`} cx={pt.x} cy={pt.y} r={1.2} fill={color} opacity={0.8} />
       ))}
     </Svg>
@@ -83,15 +83,15 @@ const ConstellationInstance = React.memo(({ pattern, cx, cy, scale, lineColor, s
     ]).start();
   }, []);
   const positions = useMemo(() =>
-    pattern.s.map(([sx, sy]) => ({ x: cx + (sx - 0.5) * scale, y: cy + (sy - 0.5) * scale })),
+    pattern.s.map(([sx, sy]: number[]) => ({ x: cx + (sx - 0.5) * scale, y: cy + (sy - 0.5) * scale })),
   [pattern, cx, cy, scale]);
   return (
     <Animated.View style={[StyleSheet.absoluteFill, { opacity: fade }]}>
       <Svg width={W} height={H} style={StyleSheet.absoluteFill}>
-        {pattern.e.map(([a, b], i) => (
+        {pattern.e.map(([a, b]: number[], i: number) => (
           <Line key={`e${i}`} x1={positions[a].x} y1={positions[a].y} x2={positions[b].x} y2={positions[b].y} stroke={lineColor} strokeWidth={0.8} />
         ))}
-        {positions.map((p, i) => (
+        {positions.map((p: {x: number, y: number}, i: number) => (
           <SvgCircle key={`s${i}`} cx={p.x} cy={p.y} r={2} fill={starColor} opacity={starOpacity} />
         ))}
       </Svg>
