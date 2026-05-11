@@ -1,5 +1,5 @@
 import { NoteService } from './NoteService';
-import { Note } from '../store/useNotesStore';
+import { useNotesStore, Note } from '../store/useNotesStore';
 import * as Crypto from 'expo-crypto';
 
 const getLlama = () => require('./LocalLlamaService').LocalLlamaService.getInstance();

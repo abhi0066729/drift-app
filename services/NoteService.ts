@@ -86,6 +86,24 @@ export class NoteService {
   }
 
   /**
+   * Updates a note's content and metadata.
+   */
+  public async updateNote(id: string, updates: Partial<Note>) {
+    try {
+      const db = await DatabaseService.getInstance().getDb();
+      if (updates.content !== undefined || updates.entities_json !== undefined) {
+        await db.runAsync(
+          'UPDATE notes SET content = COALESCE(?, content), entities_json = COALESCE(?, entities_json) WHERE id = ?',
+          [updates.content || null, updates.entities_json || null, id]
+        );
+      }
+      console.log(`[NoteService] Note ${id} updated in database.`);
+    } catch (error) {
+      console.error('[NoteService] Failed to update note:', error);
+    }
+  }
+
+  /**
    * Marks a note as deleted in SQLite and removes from store.
    */
   public async deleteNote(id: string) {
