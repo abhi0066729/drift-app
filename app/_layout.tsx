@@ -1,29 +1,20 @@
-import React, { useEffect, useState } from 'react';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
 import { SQLiteProvider } from 'expo-sqlite';
+import { StatusBar } from 'expo-status-bar';
+import React, { Suspense, useEffect, useState } from 'react';
+import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { Platform, UIManager } from 'react-native';
+import 'react-native-reanimated';
+import * as SQLite from 'expo-sqlite';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { initDatabase } from '../db/schema';
 import { useSettingsStore } from '@/store/useSettingsStore';
+import { initDatabase } from '../db/schema';
 
-import * as SystemUI from 'expo-system-ui';
-import { useNotesStore } from '@/store/useNotesStore';
-import { NightTheme } from '@/constants/theme';
-import { SyncService } from '@/services/SyncService';
-import { ModelDownloadService } from '@/services/ModelDownloadService';
 import { BrandedSplashScreen } from '@/components/BrandedSplashScreen';
 import { OpeningTransition } from '@/components/OpeningTransition';
-import * as SplashScreen from 'expo-splash-screen';
-import * as Haptics from 'expo-haptics';
-import * as Updates from 'expo-updates';
-
-// Nuclear Option: Hide splash immediately on load
-SplashScreen.hideAsync().catch(() => {});
+import { ModelDownloadService } from '@/services/ModelDownloadService';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -33,6 +24,7 @@ export default function RootLayout() {
   const [showOpening, setShowOpening] = useState(true);
   const [isReady, setIsReady] = useState(false);
   const [phase, setPhase] = useState<'checking' | 'consent' | 'downloading' | 'loading'>('checking');
+  
   const [downloadStatus, setDownloadStatus] = useState<string>('');
   const [downloadProgress, setDownloadProgress] = useState<number>(0);
   const [downloadSpeed, setDownloadSpeed] = useState<string>('');
@@ -40,89 +32,101 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
   const initializeSettings = useSettingsStore(state => state.initialize);
 
-  useEffect(() => {
-    // Initial check with guaranteed cinematic lead-in
-    const checkStatus = async () => {
-      const startTime = Date.now();
-      const ready = await ModelDownloadService.getInstance().isModelReady();
-      
-      const elapsed = Date.now() - startTime;
-      const minLeadIn = 5000; // 5 seconds for the stars
-      const remaining = Math.max(0, minLeadIn - elapsed);
+  // STEP 1: Logo Animation finished
+  const handleOpeningComplete = () => {
+    setShowOpening(false);
+    // Stagger the next phase to ensure the Logo unmounts cleanly
+    setTimeout(() => checkDeployment(), 50);
+  };
 
-      setTimeout(async () => {
-        if (ready) {
-          setPhase('loading');
-          await finishLoading();
-        } else {
-          setPhase('consent');
-        }
-      }, remaining);
-    };
-    checkStatus();
-  }, []);
-
-  async function finishLoading() {
+  /**
+   * STARTUP GUARD: Orchestrates the handoff from cinematic intro to AI readiness.
+   * Now includes strict timeouts to prevent hangs during filesystem/database checks.
+   */
+  async function checkDeployment() {
     try {
+      console.log('[RootLayout] Firing startup guard...');
       initializeSettings();
-      // Igniting the core engines
-      await SyncService.getInstance().performFullSync();
-      // Extra 1s buffer for thread settling
-      await new Promise(r => setTimeout(r, 1000));
+
+      // Step 2: Initialize Database (Sequential v91 method)
+      const db = await SQLite.openDatabaseAsync('drift.db');
+      await initDatabase(db);
+      console.log('[RootLayout] Database heartbeat verified.');
+      
+      // Step 3: Check AI Models with hard safety timeout
+      const modelCheck = ModelDownloadService.getInstance().isModelReady();
+      const timeout = new Promise<boolean>((_, reject) => 
+        setTimeout(() => reject(new Error('Startup Guard: Model Check Timeout')), 7000)
+      );
+
+      const ready = await Promise.race([modelCheck, timeout]).catch((err) => {
+        console.warn(`[RootLayout] Model check bypassed: ${err.message}`);
+        return false;
+      });
+      
+      if (ready) {
+        setPhase('loading');
+        // Final transition into the Drift Palace
+        setTimeout(() => setIsReady(true), 1200);
+      } else {
+        // Fallback to consent phase if models are missing or check stalled
+        setPhase('consent');
+      }
     } catch (e) {
-      console.warn('[RootLayout] Sync failed:', e);
+      console.error('[RootLayout] Fatal startup error, emergency bypass to app:', e);
+      setIsReady(true);
     }
-    setIsReady(true);
   }
 
   async function handleConsent() {
     setPhase('downloading');
-    let lastUpdate = 0;
     try {
       await ModelDownloadService.getInstance().ensureModelsPresent((p) => {
-        const now = Date.now();
-        if (now - lastUpdate > 100 || p.progress === 1) {
-          setDownloadStatus(`SYNCING ${p.fileName}`);
-          setDownloadProgress(p.progress);
-          setDownloadSpeed(p.speed);
-          lastUpdate = now;
-        }
+        setDownloadStatus(`SYNCING ${p.fileName}`);
+        setDownloadProgress(p.progress);
+        setDownloadSpeed(p.speed);
       });
-      
+
       setPhase('loading');
-      await finishLoading();
+      setTimeout(() => setIsReady(true), 1000);
     } catch (e) {
       console.error('[RootLayout] Download flow failed:', e);
       setPhase('consent');
     }
   }
 
-  if (showOpening) {
-    return <OpeningTransition onComplete={() => setShowOpening(false)} />;
-  }
-
-  if (!isReady && phase !== 'loading') {
-    return (
-      <BrandedSplashScreen 
-        phase={phase}
-        status={downloadStatus}
-        progress={downloadProgress}
-        speed={downloadSpeed}
-        onConsent={handleConsent}
-      />
-    );
-  }
-
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SQLiteProvider databaseName="drift.db" onInit={initDatabase}>
-        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <Stack>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          </Stack>
-          <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} translucent />
-        </ThemeProvider>
-      </SQLiteProvider>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#000000' }}>
+      {/* 
+        PRESERVED CINEMATIC FLOW:
+        1. OpeningTransition (Logo) renders ALONE to prevent JS thread lag.
+        2. Once done, it unmounts and BrandedSplashScreen (Star check) mounts.
+        3. Startup Guard (checkDeployment) runs in the background.
+        4. Once models/DB are ready, the main Stack mounts.
+      */}
+      
+      {showOpening ? (
+        <OpeningTransition onComplete={handleOpeningComplete} />
+      ) : !isReady ? (
+        <BrandedSplashScreen
+          phase={phase}
+          status={downloadStatus}
+          progress={downloadProgress}
+          speed={downloadSpeed}
+          onConsent={handleConsent}
+        />
+      ) : (
+        <Suspense fallback={<View style={{ flex: 1, backgroundColor: '#000000' }} />}>
+          <SQLiteProvider databaseName="drift.db">
+            <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              </Stack>
+              <StatusBar style="light" translucent />
+            </ThemeProvider>
+          </SQLiteProvider>
+        </Suspense>
+      )}
     </GestureHandlerRootView>
   );
 }

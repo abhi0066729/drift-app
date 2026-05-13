@@ -1,18 +1,16 @@
-import React, { useEffect } from 'react';
-import { View, TouchableOpacity, Dimensions, StyleSheet, Text } from 'react-native';
+import { NightTheme } from '@/constants/theme';
+import { useNotesStore } from '@/store/useNotesStore';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { BlurView } from 'expo-blur';
-import Animated, { 
-  useSharedValue, 
-  useAnimatedStyle, 
-  withTiming, 
-  withSpring, 
-  withSequence,
-  withDelay,
-  Easing
+import React, { useEffect } from 'react';
+import { Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming
 } from 'react-native-reanimated';
-import { useNotesStore } from '@/store/useNotesStore';
-import { NightTheme } from '@/constants/theme';
 
 const { width } = Dimensions.get('window');
 const TAB_BAR_WIDTH = width - 64;
@@ -23,8 +21,7 @@ const getLabel = (routeName: string) => {
     case 'capture': return 'CAPTURE';
     case 'notes': return 'NOTES';
     case 'pulse': return 'STUDIO';
-    case 'people': return 'PEOPLE';
-    default: return 'HOME';
+    default: return '';
   }
 };
 
@@ -32,7 +29,7 @@ function KineticTabItem({ route, isFocused, onPress, onLongPress, theme }: any) 
   // Shared values for the gravity drop
   const dropY = useSharedValue(isFocused ? 0 : 0);
   const dotOpacity = useSharedValue(isFocused ? 1 : 0.4);
-  
+
   // Shared values for the impact ripple
   const rippleScale = useSharedValue(0.5);
   const rippleOpacity = useSharedValue(0);
@@ -57,7 +54,7 @@ function KineticTabItem({ route, isFocused, onPress, onLongPress, theme }: any) 
     } else {
       // Defocus state
       dotOpacity.value = withTiming(0.4, { duration: 200 });
-      dropY.value = withTiming(0, { duration: 200 }); 
+      dropY.value = withTiming(0, { duration: 200 });
     }
   }, [isFocused]);
 
@@ -83,7 +80,7 @@ function KineticTabItem({ route, isFocused, onPress, onLongPress, theme }: any) 
         <View style={styles.dotContainer}>
           {/* Background impact ripple */}
           <Animated.View style={[styles.rippleRing, rippleStyle]} />
-          
+
           {/* The physical gravity dot */}
           <Animated.View style={[
             styles.nodeDot,
@@ -103,30 +100,33 @@ function KineticTabItem({ route, isFocused, onPress, onLongPress, theme }: any) 
 
 export default function KineticTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const theme = useNotesStore(state => state.theme);
-  
+
   return (
     <View style={[styles.tabBarContainer, { borderColor: theme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.4)', shadowOpacity: theme === 'dark' ? 0.3 : 0.1 }]}>
       <BlurView intensity={theme === 'dark' ? 80 : 100} tint={theme === 'dark' ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight'} style={styles.blurContainer}>
         <View style={styles.tabsRow}>
-          {state.routes.map((route, index) => {
-            const isFocused = state.index === index;
-            const onPress = () => {
-              const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
-              if (!isFocused && !event.defaultPrevented) navigation.navigate(route.name, route.params);
-            };
-            const onLongPress = () => navigation.emit({ type: 'tabLongPress', target: route.key });
+          {(() => {
+            const filteredRoutes = state.routes.filter(r => ['index', 'capture', 'notes', 'pulse'].includes(r.name));
+            return filteredRoutes.map((route) => {
+              const isFocused = state.routes[state.index].key === route.key;
+              const onPress = () => {
+                const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+                if (!isFocused && !event.defaultPrevented) navigation.navigate(route.name, route.params);
+              };
+              const onLongPress = () => navigation.emit({ type: 'tabLongPress', target: route.key });
 
-            return (
-              <KineticTabItem 
-                key={route.key} 
-                route={route} 
-                isFocused={isFocused} 
-                onPress={onPress} 
-                onLongPress={onLongPress} 
-                theme={theme}
-              />
-            );
-          })}
+              return (
+                <KineticTabItem
+                  key={route.key}
+                  route={route}
+                  isFocused={isFocused}
+                  onPress={onPress}
+                  onLongPress={onLongPress}
+                  theme={theme}
+                />
+              );
+            });
+          })()}
         </View>
       </BlurView>
     </View>

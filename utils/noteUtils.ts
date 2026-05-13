@@ -186,7 +186,7 @@ export function processContextualConnections(notes: Note[], width: number, searc
     const note = processedNotes[i];
     
     // STRICT FLOW: Refining notes have NO threads and don't contribute to category paths yet
-    if (note.is_refining) {
+    if (note.pipeline_step !== 'complete' && note.pipeline_step !== undefined) {
         note.connections = [];
         note.connectedNodeId = null;
         note.connectedNodeIndex = null;

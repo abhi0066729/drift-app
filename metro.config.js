@@ -12,15 +12,24 @@ assetExts.push('wasm');
 assetExts.push('onnx');
 assetExts.push('pte');
 
-// HARD OVERRIDE: Force Metro to completely ignore the native AI libraries during export
+/**
+ * SELECTIVE AI RESOLVER:
+ * - Web: Mocked (Native AI modules do not exist on web).
+ * - Native (Android/iOS): Real (Requires a fresh 'eas build' to link native code).
+ */
 config.resolver.resolveRequest = (context, moduleName, platform) => {
-  if (moduleName === 'react-native-executorch' || moduleName === 'onnxruntime-react-native') {
+  const isNativeAiModule =
+    moduleName === 'react-native-executorch' ||
+    moduleName === 'onnxruntime-react-native';
+
+  if (platform === 'web' && isNativeAiModule) {
     return {
       filePath: path.resolve(__dirname, 'mocks/native-mock.js'),
       type: 'sourceFile',
     };
   }
-  // Optionally, you can pass the request to the standard resolver
+
+  // Standard resolver for everything else
   return context.resolveRequest(context, moduleName, platform);
 };
 

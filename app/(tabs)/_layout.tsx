@@ -1,8 +1,8 @@
 import { preloadNavigationAssets } from '@/utils/assetLoader';
-import { Tabs } from 'expo-router';
-import { FileText, Home, PlusCircle, Orbit } from 'lucide-react-native';
-import React, { useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import { Tabs } from 'expo-router';
+import { FileText, Orbit, Sparkles } from 'lucide-react-native';
+import React, { useEffect } from 'react';
 
 const PAPER = '#f5f0e8';
 const INK_3 = '#7a756b';
@@ -13,7 +13,7 @@ import KineticTabBar from '@/components/KineticTabBar';
 
 export default function TabLayout() {
   useEffect(() => {
-    preloadNavigationAssets();
+    // preloadNavigationAssets(); // Disabled: 60MB of GIFs causes OOM and startup hangs
   }, []);
 
   return (
@@ -26,7 +26,7 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Today',
-          tabBarIcon: ({ color }) => <Home size={24} color={color} />,
+          tabBarIcon: ({ color }) => <Sparkles size={24} color={color} />,
         }}
       />
       <Tabs.Screen

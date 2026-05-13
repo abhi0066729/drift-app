@@ -1,4 +1,4 @@
-import React, { useEffect, memo } from 'react';
+import React, { useEffect, memo, useMemo } from 'react';
 import { StyleSheet, Text, View, Pressable, Dimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming, withSpring, runOnJS, type SharedValue } from 'react-native-reanimated';
@@ -45,10 +45,15 @@ function DriftNode({ node, onPress, onDragStart, onDragUpdateSharedX, onDragUpda
   const isPinned = useNotesStore(state => state.studioSeeds?.includes(node.id));
   const isSynthesis = node.source_type === 'synthesis';
   
-  const mainColor = isSynthesis ? '#9B59B6' : (isRefining ? '#4A90E2' : (CATEGORY_COLORS[primaryCat] || '#8E44AD'));
+  // Real-time status subscription
+  const liveNote = useNotesStore(state => state.notes.find(n => n.id === node.id));
+  const pipelineStep = liveNote?.pipeline_step || node.pipeline_step || 'complete';
+  const isComplete = pipelineStep === 'complete';
+
+  const mainColor = isSynthesis ? '#9B59B6' : (!isComplete ? '#8E44AD' : (CATEGORY_COLORS[primaryCat] || '#8E44AD'));
   const color1 = mainColor;
-  const color2 = isSynthesis ? '#F1C40F' : (isRefining ? '#9013FE' : (CATEGORY_COLORS[secondaryCat] || color1));
-  const isDual = isSynthesis || (sortedResonances.length > 1 && primaryCat !== secondaryCat);
+  const color2 = isSynthesis ? '#F1C40F' : (!isComplete ? '#8E44AD' : (CATEGORY_COLORS[secondaryCat] || color1));
+  const isDual = isSynthesis || (isComplete && sortedResonances.length > 1 && primaryCat !== secondaryCat);
 
   
   const pulseScale = useSharedValue(1);
@@ -58,6 +63,25 @@ function DriftNode({ node, onPress, onDragStart, onDragUpdateSharedX, onDragUpda
   
   const searchPulseScale = useSharedValue(1);
   const searchPulseOpacity = useSharedValue(0);
+
+  const entities = useMemo(() => {
+    if (!node.entities_json) return null;
+    try { return JSON.parse(node.entities_json); } catch (e) { return null; }
+  }, [node.entities_json]);
+
+  const resonanceStr = useMemo(() => {
+    if (!entities || !entities.resonances || typeof entities.resonances !== 'object') return null;
+    try {
+      const entries = Object.entries(entities.resonances)
+        .sort(([, a], [, b]) => (b as number) - (a as number))
+        .slice(0, 2);
+      
+      if (entries.length === 0) return null;
+      return entries.map(([cat, val]) => `${cat}: ${Math.round((val as number) * 100)}%`).join(' | ');
+    } catch (e) {
+      return null;
+    }
+  }, [entities]);
 
   useEffect(() => {
     if (searchStatus === 'match') {
@@ -74,6 +98,36 @@ function DriftNode({ node, onPress, onDragStart, onDragUpdateSharedX, onDragUpda
       searchPulseOpacity.value = withTiming(0);
     }
   }, [searchStatus]);
+
+
+  const pipelineRotation = useSharedValue(0);
+
+  useEffect(() => {
+    if (pipelineStep !== 'complete' && pipelineStep !== 'idle' && pipelineStep !== 'error') {
+      pipelineRotation.value = withRepeat(
+        withTiming(360, { duration: 2000, easing: Easing.linear }),
+        -1,
+        false
+      );
+    } else {
+      pipelineRotation.value = 0;
+    }
+  }, [pipelineStep]);
+
+  const pipelineRingStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${pipelineRotation.value}deg` }],
+    opacity: pipelineStep === 'complete' ? withTiming(0) : withTiming(1),
+  }));
+
+  const getPipelineColor = (step: string) => {
+    switch (step) {
+      case 'embedding': return '#FF9F43';
+      case 'vectorizing': return '#3498DB';
+      case 'synthesizing': return '#8E44AD';
+      case 'error': return '#E74C3C';
+      default: return 'transparent';
+    }
+  };
 
   useEffect(() => {
     if (node.is_ghost || isFirst || isRefining || isSynthesis) {
@@ -258,7 +312,18 @@ function DriftNode({ node, onPress, onDragStart, onDragUpdateSharedX, onDragUpda
             {isDual && !isRefining && (
                <Animated.View style={[{ position: 'absolute', width: node.nodeRadius * 3.5, height: node.nodeRadius * 3.5, borderRadius: node.nodeRadius * 1.75, backgroundColor: color2, opacity: 0.4 }, outerPulseStyle]} />
             )}
-            <View style={[{ position: 'absolute', width: node.nodeRadius * 2, height: node.nodeRadius * 2, borderRadius: node.nodeRadius, backgroundColor: color1, opacity: node.is_refining ? 0.5 : 1.0 }]} />
+            {pipelineStep !== 'complete' && (
+              <Animated.View style={[{ 
+                position: 'absolute', 
+                width: node.nodeRadius * 6.5, 
+                height: node.nodeRadius * 6.5, 
+                borderRadius: node.nodeRadius * 3.25, 
+                borderWidth: 1.5, 
+                borderColor: getPipelineColor(pipelineStep),
+                borderStyle: 'dashed',
+              }, pipelineRingStyle]} />
+            )}
+            <View style={{ position: 'absolute', width: node.nodeRadius * 2, height: node.nodeRadius * 2, borderRadius: node.nodeRadius, backgroundColor: color1, opacity: node.is_refining ? 0.5 : 1.0 }} />
           </Animated.View>
         </GestureDetector>
       </Animated.View>
@@ -270,7 +335,7 @@ function DriftNode({ node, onPress, onDragStart, onDragUpdateSharedX, onDragUpda
           top: 30, 
           left: (node.isRight ? -node.dynamicWidth - PADDING : PADDING), 
           width: node.dynamicWidth, 
-          height: 60, 
+          minHeight: 60, 
           justifyContent: 'center' 
         }, innerContentStyle]}
       >
@@ -291,16 +356,31 @@ function DriftNode({ node, onPress, onDragStart, onDragUpdateSharedX, onDragUpda
             opacity: pressed ? 0.7 : 1.0
           })}
         >
-          <Text style={[styles.noteCategory, { color: mainColor, marginBottom: 6, opacity: Math.min(1, node.ageFade + 0.4) }]}>
-            {isSynthesis ? '✧ SYNTHESIS ✧' : (node.is_refining ? 'SYNTHESIZING...' : node.category?.toUpperCase())}
+          <Text style={[styles.noteCategory, { color: pipelineStep === 'error' ? '#FF5555' : mainColor, marginBottom: 6, opacity: Math.min(1, node.ageFade + 0.4) }]}>
+            {isSynthesis ? '✧ SYNTHESIS ✧' : (pipelineStep === 'error' ? `ERROR: ${node.pipeline_metrics?.error_message?.toUpperCase() || 'FAILED'}` : (!isComplete ? 'SYNTHESIZING...' : (node.category || 'Journal').toUpperCase()))}
             {isPinned && ' ✦ IN STUDIO'}
           </Text>
 
+          {node.pipeline_step === 'complete' && resonanceStr && (
+            <Text style={{ fontSize: 8, color: mainColor, marginBottom: 4, opacity: 0.6, fontWeight: '500' }}>
+              {resonanceStr}
+            </Text>
+          )}
+
           <View style={{ maxHeight: 60, overflow: 'hidden' }}>
-            <Text numberOfLines={3} style={[styles.noteContent, { color: theme === 'dark' ? NightTheme.textPrimary : '#111111' }, node.is_refining && { color: theme === 'dark' ? NightTheme.textMuted : '#888888', fontStyle: 'italic' }]}>
-              {node.is_refining ? 'The synthesis engine is distilling this thought...' : node.content}
+            <Text numberOfLines={3} style={[styles.noteContent, { color: theme === 'dark' ? NightTheme.textPrimary : '#111111' }, pipelineStep !== 'complete' && { color: theme === 'dark' ? NightTheme.textMuted : '#888888', fontStyle: 'italic' }]}>
+              {node.content}
             </Text>
           </View>
+
+          {pipelineStep !== 'complete' && node.pipeline_metrics && (
+            <Text style={{ fontSize: 7, color: mainColor, marginTop: 4, fontWeight: '600', letterSpacing: 0.5 }}>
+              {node.pipeline_metrics.embedding_ms ? `EMB: ${node.pipeline_metrics.embedding_ms}ms ` : ''}
+              {node.pipeline_metrics.vectorizing_ms ? `| VEC: ${node.pipeline_metrics.vectorizing_ms}ms ` : ''}
+              {node.pipeline_metrics.synthesis_ms ? `| AI: ${node.pipeline_metrics.synthesis_ms}ms` : ''}
+              {!node.pipeline_metrics.total_ms && ` | ELAPSED: ${Date.now() - node.pipeline_metrics.start_time}ms`}
+            </Text>
+          )}
         </Pressable>
       </Animated.View>
     </Animated.View>

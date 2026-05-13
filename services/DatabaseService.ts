@@ -31,14 +31,15 @@ export class DatabaseService {
         await db.runAsync('INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)', [1, Date.now()]);
       }
 
-      // Migration v2: Add is_refining to notes
-      if (currentVersion < 2) {
+      // Migration v3: Add pipeline columns to notes
+      if (currentVersion < 3) {
         try {
-          await db.execAsync('ALTER TABLE notes ADD COLUMN is_refining INTEGER DEFAULT 0;');
-          await db.runAsync('INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)', [2, Date.now()]);
-          console.log('[DatabaseService] Migration v2 (is_refining) applied.');
+          await db.execAsync('ALTER TABLE notes ADD COLUMN pipeline_step TEXT;');
+          await db.execAsync('ALTER TABLE notes ADD COLUMN pipeline_metrics TEXT;');
+          await db.runAsync('INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)', [3, Date.now()]);
+          console.log('[DatabaseService] Migration v3 (pipeline columns) applied.');
         } catch (e) {
-          console.log('[DatabaseService] Migration v2 already applied or failed:', e);
+          console.log('[DatabaseService] Migration v3 failed:', e);
         }
       }
     } catch (error) {

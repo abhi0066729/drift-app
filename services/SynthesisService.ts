@@ -1,9 +1,14 @@
-import { NoteService } from './NoteService';
 import { useNotesStore, Note } from '../store/useNotesStore';
-import * as Crypto from 'expo-crypto';
+import { getLlama } from './ai';
+import { ResourceCoordinator } from './ResourceCoordinator';
 
-const getLlama = () => require('./LocalLlamaService').LocalLlamaService.getInstance();
-
+/**
+ * SynthesisService.ts
+ * 
+ * THE EVOLUTION ENGINE:
+ * - Orchestrates the transition from a raw Journal note to a Synthesized Thought.
+ * - Handles category refinement, summary weaving, and resonance hydration.
+ */
 export class SynthesisService {
   private static instance: SynthesisService;
 
@@ -16,47 +21,106 @@ export class SynthesisService {
     return SynthesisService.instance;
   }
 
-  /**
-   * Evolves a thought in-place.
-   */
   public async evolveThought(sourceNote: Note) {
-    console.log(`[SynthesisService] Evolving note in-place: ${sourceNote.id}`);
-    const updateNote = useNotesStore.getState().updateNote;
-
+    const { updateNote } = useNotesStore.getState();
+    
     try {
-      // 1. Mark as refining for UI pulsation
-      updateNote(sourceNote.id, { is_refining: true });
+      // 1. Initial State: Signal that refinement has begun
+      updateNote(sourceNote.id, { is_refining: true, pipeline_step: 'synthesizing' });
 
-      // 2. Generate the poetic synthesis via Llama
-      const result = await getLlama().synthesise(sourceNote.content);
+      // 2. Deep Synthesis via Llama
+      console.log(`[SynthesisService] Starting AI synthesis for: ${sourceNote.id}`);
+      const synthesisStart = Date.now();
       
-      if (!result.summary || result.summary.length < 5 || result.summary.includes("offline")) {
+      await ResourceCoordinator.getInstance().requestBrain('synthesis');
+
+      const llamaPromise = getLlama().synthesise(sourceNote.content);
+      const llamaTimeout = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Llama Synthesis Timeout')), 30000)
+      );
+
+      const result = await Promise.race([llamaPromise, llamaTimeout]);
+      ResourceCoordinator.getInstance().releaseBrain();
+      
+      const synthesisEnd = Date.now();
+      const synthesisMs = synthesisEnd - synthesisStart;
+      console.log(`[SynthesisService] AI synthesis complete in ${synthesisMs}ms for: ${sourceNote.id}`);
+      
+      if (!result.summary || result.summary.length < 5 || result.summary.includes("offline") || result.summary.includes("Neural static")) {
         console.warn('[SynthesisService] Synthesis failed or offline, preserving original note.');
-        updateNote(sourceNote.id, { is_refining: false });
-        return null;
+        updateNote(sourceNote.id, { is_refining: false, pipeline_step: 'complete' });
+        return { summary: "Synthesis offline.", topic: "Offline" };
       }
 
-      // 3. Update the ORIGINAL node with the evolved content
-      const updatedNote = {
-        content: result.summary,
+      // 3. Final Categorization & Resonance Hydration
+      const finalCategory = result.category || sourceNote.category || 'Journal';
+      
+      const entities = {
+        summary: result.summary,
+        category: finalCategory,
+        emotion: result.emotion,
+        resonances: result.resonances,
+        children: result.connections,
+        synthesized_at: Date.now(),
+        is_evolved: true,
+        original_content: sourceNote.content
+      };
+
+      const finalChanges = {
+        category: finalCategory,
+        entities_json: JSON.stringify(entities),
         is_refining: false,
-        entities_json: JSON.stringify({
-          ...JSON.parse(sourceNote.entities_json || '{}'),
-          is_evolved: true,
-          original_content: sourceNote.content,
-          topic: result.topic
+        pipeline_step: 'complete' as const,
+        pipeline_metrics: JSON.stringify({
+          ...sourceNote.pipeline_metrics,
+          synthesis_ms: synthesisMs,
+          total_ms: Date.now() - (sourceNote.pipeline_metrics?.start_time || Date.now())
         })
       };
 
-      await NoteService.getInstance().updateNote(sourceNote.id, updatedNote);
-      updateNote(sourceNote.id, updatedNote);
+      const { DatabaseService } = require('./DatabaseService');
+      const db = await DatabaseService.getInstance().getDb();
+      await db.runAsync(
+        'UPDATE notes SET category = ?, entities_json = ?, is_refining = ?, pipeline_step = ?, pipeline_metrics = ? WHERE id = ?',
+        [finalChanges.category, finalChanges.entities_json, 0, 'complete', finalChanges.pipeline_metrics, sourceNote.id]
+      );
+
+      updateNote(sourceNote.id, {
+        ...finalChanges,
+        pipeline_metrics: JSON.parse(finalChanges.pipeline_metrics)
+      });
 
       console.log(`[SynthesisService] Evolution complete for: ${sourceNote.id}`);
-      return sourceNote;
+      return { summary: result.summary, topic: finalCategory };
     } catch (error) {
-      console.error('[SynthesisService] Evolution failed:', error);
-      updateNote(sourceNote.id, { is_refining: false });
-      return null;
+      console.error('[SynthesisService] Evolution failed or timed out:', error);
+      
+      // FALLBACK: Use Shadow Engine (Keywords) instead of failing
+      const { predictIntent } = require('./ai');
+      const fallbackEntities = predictIntent(sourceNote.content);
+      
+      const recoveryChanges = {
+        category: fallbackEntities.category || 'Journal',
+        entities_json: JSON.stringify({
+          summary: "Synthesis bypassed (Resource limit).",
+          category: fallbackEntities.category || 'Journal',
+          emotion: fallbackEntities.emotion || 'neutral',
+          resonances: fallbackEntities.resonances || { Journal: 1.0 },
+          is_evolved: false
+        }),
+        is_refining: false,
+        pipeline_step: 'complete' as const
+      };
+
+      const { DatabaseService } = require('./DatabaseService');
+      const db = await DatabaseService.getInstance().getDb();
+      await db.runAsync(
+        'UPDATE notes SET category = ?, entities_json = ?, is_refining = ?, pipeline_step = ? WHERE id = ?',
+        [recoveryChanges.category, recoveryChanges.entities_json, 0, 'complete', sourceNote.id]
+      );
+      updateNote(sourceNote.id, recoveryChanges);
+      
+      return { summary: "Synthesis bypassed.", topic: recoveryChanges.category };
     }
   }
 }

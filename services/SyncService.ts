@@ -50,9 +50,9 @@ export class SyncService {
       // Cleanup: Purge legacy synthesis nodes to prevent map pollution
       await db.runAsync("DELETE FROM notes WHERE source_type = 'synthesis'");
       
-      await NoteService.getInstance().loadAllNotes();
+      await NoteService.getInstance().loadVisibleNotes(100);
       
-      // 1. Intelligence Check: Model Downloading
+      // 1. Intelligence Check: Model Downloading Only
       this.notify('downloading', 0.2, 'Verifying Neural Core...');
       const ready = await ModelDownloadService.getInstance().isModelReady();
       if (!ready) {
@@ -61,22 +61,11 @@ export class SyncService {
         });
       }
 
-      // 2. Engine Activation
-      this.notify('scanning', 0.7, 'Igniting Semantic Engines...');
-      await getEmbed().init();
-      await VectorSearchService.getInstance().init();
-      await getLlama().init();
-
-      // 3. Thought Synchronization
-      this.notify('embedding', 0.8, 'Mapping thought clusters...');
-      await EmbeddingManager.getInstance().backfillEmbeddings();
-
-      // 4. Galaxy Rebalancing
-      this.notify('physics', 0.9, 'Equilibrating the Nexus...');
-      // In Phase 3, this would be a full DBSCAN pass
-      
+      // 2. MAMMOTH SCALE: Intelligence activation is now handled 
+      // by the AIJobScheduler in the background.
       this.notify('complete', 1.0, 'Palace Ready.');
-      console.log('[SyncService] Pre-flight sync complete.');
+      console.log('[SyncService] Startup verification complete.');
+      
     } catch (error) {
       console.error('[SyncService] Sync failed:', error);
       this.notify('idle', 0, 'Sync interrupted. Retrying...');

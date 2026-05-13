@@ -5,6 +5,8 @@ import ScrollToTopButton from '@/components/ScrollToTopButton';
 import UserModeMap from '@/components/UserModeMap';
 import { NightTheme } from '@/constants/theme';
 import { DatabaseService } from '@/services/DatabaseService';
+import { NoteService } from '@/services/NoteService';
+import { SyncService } from '@/services/SyncService';
 
 const NeuralHeartbeat = () => {
   const notes = useNotesStore(state => state.notes);
@@ -25,6 +27,26 @@ const NeuralHeartbeat = () => {
       opacity.value = withTiming(0.3, { duration: 1000 });
     }
   }, [isThinking]);
+
+  useEffect(() => {
+    // MAMMOTH SCALE STARTUP
+    // 1. Ignite the background intelligence engine
+    const scheduler = require('@/services/AIJobScheduler').AIJobScheduler.getInstance();
+    scheduler.start();
+
+    // 2. Load only the visible projection from SQLite
+    // This happens after 500ms to ensure the UI transition is buttery smooth
+    const timer = setTimeout(() => {
+      NoteService.getInstance().loadVisibleNotes(50).catch(e => 
+        console.warn('[TodayScreen] Initial note load failed:', e)
+      );
+    }, 500);
+
+    return () => {
+      clearTimeout(timer);
+      scheduler.stop();
+    };
+  }, []);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
@@ -98,7 +120,7 @@ const MapSearchEmptyState = () => {
   );
 };
 
-export default function HomeScreen() {
+export default function TodayScreen() {
   const insets = useSafeAreaInsets();
   const notes = useNotesStore(useShallow(state => state.notes));
   const addNote = useNotesStore(state => state.addNote);
@@ -141,7 +163,11 @@ export default function HomeScreen() {
     return [...notes, ...adjustedGhosts];
   }, [notes]);
 
-  const mappedNotes = useMemo(() => processContextualConnections(displayNotes, width, searchQuery), [displayNotes, searchQuery]);
+  const lastUpdate = useNotesStore(state => state.lastUpdate);
+
+  const mappedNotes = useMemo(() => {
+    return processContextualConnections(displayNotes, width, searchQuery);
+  }, [displayNotes, width, searchQuery, lastUpdate]);
   const totalHeight = mappedNotes.length > 0 ? mappedNotes[mappedNotes.length - 1].unfocusedY + 500 : height;
 
   const hasSearchMatches = useMemo(() => {
@@ -152,23 +178,45 @@ export default function HomeScreen() {
   const handleDoubleTapSeed = (event: any) => {
     if (event.nativeEvent.state === State.ACTIVE) {
       const seedData = [
-        { id: `p1-${Date.now()}`, content: "Primary signal localized. Single-dimension thought flow.", created_at: Date.now() - 100000, entities_json: JSON.stringify({ category: 'Idea', emotion: 'focused' }) },
-        { id: `p2-${Date.now()}`, content: "Journal entry from the morning. Simple reflection.", created_at: Date.now() - 200000, entities_json: JSON.stringify({ category: 'Journal', emotion: 'calm' }) },
-        { id: `p3-${Date.now()}`, content: "Deep work session. Focused on a single task.", created_at: Date.now() - 300000, entities_json: JSON.stringify({ category: 'Study', emotion: 'concentrated' }) },
-        { id: `p4-${Date.now()}`, content: "Running late. No time for deep thought.", created_at: Date.now() - 400000, entities_json: JSON.stringify({ category: 'Todo', emotion: 'hurried' }) },
-        { id: `p5-${Date.now()}`, content: "Lunch was good. Not much else to say.", created_at: Date.now() - 500000, entities_json: JSON.stringify({ category: 'Journal', emotion: 'neutral' }) },
-        { id: `p6-${Date.now()}`, content: "Abstract ideation. Exploring one thread at a time.", created_at: Date.now() - 600000, entities_json: JSON.stringify({ category: 'Idea', emotion: 'curious' }) },
-        { id: `p7-${Date.now()}`, content: "Task #24 finalized. Moving to next item.", created_at: Date.now() - 700000, entities_json: JSON.stringify({ category: 'Todo', emotion: 'efficient' }) },
-        { id: `p8-${Date.now()}`, content: "Quiet evening. Single category mindset.", created_at: Date.now() - 800000, entities_json: JSON.stringify({ category: 'Reflection', emotion: 'still' }) },
-        { id: `p9-${Date.now()}`, content: "Another focused ideation point.", created_at: Date.now() - 900000, entities_json: JSON.stringify({ category: 'Idea', emotion: 'clear' }) },
-        { id: `p10-${Date.now()}`, content: "Final baseline entry. Pure dimension.", created_at: Date.now() - 1000000, entities_json: JSON.stringify({ category: 'Journal', emotion: 'grounded' }) },
+        { id: `p1-${Date.now()}`, content: "Primary signal localized. Single-dimension thought flow.", created_at: Date.now() - 100000, source_type: 'text', pipeline_step: 'complete', entities_json: JSON.stringify({ category: 'Idea', emotion: 'focused' }) },
+        { id: `p2-${Date.now()}`, content: "Journal entry from the morning. Simple reflection.", created_at: Date.now() - 200000, source_type: 'text', pipeline_step: 'complete', entities_json: JSON.stringify({ category: 'Journal', emotion: 'calm' }) },
+        { id: `p3-${Date.now()}`, content: "Deep work session. Focused on a single task.", created_at: Date.now() - 300000, source_type: 'text', pipeline_step: 'complete', entities_json: JSON.stringify({ category: 'Study', emotion: 'concentrated' }) },
+        { id: `p4-${Date.now()}`, content: "Running late. No time for deep thought.", created_at: Date.now() - 400000, source_type: 'text', pipeline_step: 'complete', entities_json: JSON.stringify({ category: 'Todo', emotion: 'hurried' }) },
+        { id: `p5-${Date.now()}`, content: "Lunch was good. Not much else to say.", created_at: Date.now() - 500000, source_type: 'text', pipeline_step: 'complete', entities_json: JSON.stringify({ category: 'Journal', emotion: 'neutral' }) },
+        { id: `p6-${Date.now()}`, content: "Abstract ideation. Exploring one thread at a time.", created_at: Date.now() - 600000, source_type: 'text', pipeline_step: 'complete', entities_json: JSON.stringify({ category: 'Idea', emotion: 'curious' }) },
+        { id: `p7-${Date.now()}`, content: "Task #24 finalized. Moving to next item.", created_at: Date.now() - 700000, source_type: 'text', pipeline_step: 'complete', entities_json: JSON.stringify({ category: 'Todo', emotion: 'efficient' }) },
+        { id: `p8-${Date.now()}`, content: "Quiet evening. Single category mindset.", created_at: Date.now() - 800000, source_type: 'text', pipeline_step: 'complete', entities_json: JSON.stringify({ category: 'Reflection', emotion: 'still' }) },
+        { id: `p9-${Date.now()}`, content: "Another focused ideation point.", created_at: Date.now() - 900000, source_type: 'text', pipeline_step: 'complete', entities_json: JSON.stringify({ category: 'Idea', emotion: 'clear' }) },
+        { id: `p10-${Date.now()}`, content: "Final baseline entry. Pure dimension.", created_at: Date.now() - 1000000, source_type: 'text', pipeline_step: 'complete', entities_json: JSON.stringify({ category: 'Journal', emotion: 'grounded' }) },
       ];
-
-      seedData.reverse().forEach(n => addNote(n as any));
+      seedData.reverse().forEach(async (n) => { await NoteService.getInstance().saveNote(n as any); });
       try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch (e) { }
       Alert.alert("Pure Baseline Initialized", "10 single-dimension thoughts have been imported.");
     }
   };
+
+  const handleTripleTapSeed = (event: any) => {
+    if (event.nativeEvent.state === State.ACTIVE) {
+      const multidimData = [
+        { id: `m1-${Date.now()}`, content: "Visualizing a clock that melts based on focus levels. Perfect idea for a kinetic wallpaper.", created_at: Date.now() - 50000, source_type: 'text', pipeline_step: 'complete', entities_json: JSON.stringify({ category: 'Creative', resonances: { Creative: 0.8, Idea: 0.2 } }) },
+        { id: `m2-${Date.now()}`, content: "Dreamt of a vast library where books were made of water. Ripple-content.", created_at: Date.now() - 150000, source_type: 'text', pipeline_step: 'complete', entities_json: JSON.stringify({ category: 'Dream', resonances: { Dream: 0.9, Reflection: 0.1 } }) },
+        { id: `m3-${Date.now()}`, content: "Call the developer for the neural engine update. Verify HNSW index stability.", created_at: Date.now() - 250000, source_type: 'text', pipeline_step: 'complete', entities_json: JSON.stringify({ category: 'Todo', resonances: { Todo: 0.7, Meeting: 0.3 } }) },
+        { id: `m4-${Date.now()}`, content: "There's a strange peace in seeing thoughts drifting like celestial bodies.", created_at: Date.now() - 350000, source_type: 'text', pipeline_step: 'complete', entities_json: JSON.stringify({ category: 'Reflection', resonances: { Reflection: 1.0 } }) },
+        { id: `m5-${Date.now()}`, content: "Reading about Graph Neural Networks (GNNs). Signal propagation across nodes.", created_at: Date.now() - 450000, source_type: 'text', pipeline_step: 'complete', entities_json: JSON.stringify({ category: 'Study', resonances: { Study: 0.8, Idea: 0.2 } }) },
+        { id: `m6-${Date.now()}`, content: "Sync with the architecture team. Discussed obsidian void and glassmorphic modals.", created_at: Date.now() - 550000, source_type: 'text', pipeline_step: 'complete', entities_json: JSON.stringify({ category: 'Meeting', resonances: { Meeting: 0.9, Creative: 0.1 } }) },
+        { id: `m7-${Date.now()}`, content: "App Concept: A journal that uses your heart rate to change node gravity.", created_at: Date.now() - 650000, source_type: 'text', pipeline_step: 'complete', entities_json: JSON.stringify({ category: 'Idea', resonances: { Idea: 0.8, Study: 0.2 } }) },
+        { id: `m8-${Date.now()}`, content: "'Everything is noise until we decide to listen.' - Found in an old notebook.", created_at: Date.now() - 750000, source_type: 'text', pipeline_step: 'complete', entities_json: JSON.stringify({ category: 'Quote', resonances: { Quote: 1.0 } }) },
+        { id: `m9-${Date.now()}`, content: "Sketching a new UI layout where the navigation bar is a liquid blob.", created_at: Date.now() - 850000, source_type: 'text', pipeline_step: 'complete', entities_json: JSON.stringify({ category: 'Creative', resonances: { Creative: 0.9, Idea: 0.1 } }) },
+        { id: `m10-${Date.now()}`, content: "Deep clean the studio workspace. Clear space, clear mind.", created_at: Date.now() - 950000, source_type: 'text', pipeline_step: 'complete', entities_json: JSON.stringify({ category: 'Todo', resonances: { Todo: 0.8, Reflection: 0.2 } }) },
+      ];
+      multidimData.reverse().forEach(async (n) => { await NoteService.getInstance().saveNote(n as any); });
+      try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch (e) { }
+      Alert.alert("Multidimensional Baseline Initialized", "10 diverse thoughts have been imported across all categories.");
+    }
+  };
+
+  const tripleTapRef = useRef<any>(null);
+  const doubleTapRef = useRef<any>(null);
 
 
   const triggerHaptic = () => {
@@ -363,20 +411,33 @@ export default function HomeScreen() {
                   </Animated.View>
                 )}
 
-                <TapGestureHandler onHandlerStateChange={handleDoubleTapSeed} numberOfTaps={2}>
+                <TapGestureHandler
+                  ref={tripleTapRef}
+                  onHandlerStateChange={handleTripleTapSeed}
+                  numberOfTaps={3}
+                >
                   <View style={{ flex: 1 }}>
-                    <UserModeMap
-                      ref={mapRef}
-                      mappedNotes={mappedNotes}
-                      activeView={activeView}
-                      theme={theme}
-                      searchQuery={searchQuery}
-                      onNodePress={handleNodePress}
-                      scrollY={scrollOffset}
-                      onScroll={handleScroll}
-                      width={width}
-                      totalHeight={totalHeight}
-                    />
+                    <TapGestureHandler
+                      ref={doubleTapRef}
+                      onHandlerStateChange={handleDoubleTapSeed}
+                      numberOfTaps={2}
+                      waitFor={tripleTapRef}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <UserModeMap
+                          ref={mapRef}
+                          mappedNotes={mappedNotes}
+                          activeView={activeView}
+                          theme={theme}
+                          searchQuery={searchQuery}
+                          onNodePress={handleNodePress}
+                          scrollY={scrollOffset}
+                          onScroll={handleScroll}
+                          width={width}
+                          totalHeight={totalHeight}
+                        />
+                      </View>
+                    </TapGestureHandler>
                   </View>
                 </TapGestureHandler>
               </View>

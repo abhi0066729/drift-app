@@ -46,7 +46,7 @@ const TIPS = [
 ];
 
 // ─── STAR FIELD ───────────────────────────────────────────────
-const STARS = Array.from({ length: 120 }, () => ({
+const STARS = Array.from({ length: 60 }, () => ({
   x: Math.random() * W, y: Math.random() * H,
   r: 0.5 + Math.random() * 1.5, o: 0.15 + Math.random() * 0.45,
 }));
@@ -63,7 +63,7 @@ const R = W * 0.032;
 
 // ─── NATURAL THREAD ───────────────────────────────────────────
 const CENTER_Y = H * 0.455;
-const THREAD_POINTS = 150;
+const THREAD_POINTS = 60;
 
 function buildNaturalThread(time: number, phaseOff: number, targetNode: { x: number; y: number } | null): string {
   const parts: string[] = [];
@@ -172,7 +172,7 @@ export const BrandedSplashScreen = ({ phase, status, progress = 0, speed, onCons
 
   // Dynamic color palette (light mode ~10% brighter stars/constellations)
   const C = useMemo(() => ({
-    bg: dark ? '#000' : '#F2F2F2',
+    bg: dark ? '#000' : '#FFFFFF',
     fg: dark ? '#fff' : '#000',
     threadColor: dark ? '#fff' : '#000',
     threadOpacity: dark ? 0.35 : 0.25,
@@ -314,7 +314,7 @@ export const BrandedSplashScreen = ({ phase, status, progress = 0, speed, onCons
   []);
 
   return (
-    <View style={[styles.container, { backgroundColor: C.bg }]}>
+    <View style={[styles.container, { backgroundColor: dark ? '#000000' : '#FFFFFF' }]}>
       {/* ── STAR FIELD ── */}
       {STARS.map((s, i) => (
         <View key={i} style={{ position:'absolute', left:s.x, top:s.y, width:s.r*2, height:s.r*2, borderRadius:s.r, backgroundColor:C.starColor, opacity:s.o * C.starOpacity }} />

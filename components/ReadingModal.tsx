@@ -138,8 +138,8 @@ export default function ReadingModal({ node, onClose, translucent, searchQuery }
                       <Text style={[styles.contextHeader, { color: '#8E44AD', marginBottom: 0 }]}>RESONANCE INSIGHT</Text>
                     </View>
                     <Text style={[styles.contextText, { color: isDark ? NightTheme.textPrimary : '#444' }]}>
-                      This thought is primarily categorized as <Text style={{ fontWeight: '700' }}>{Object.keys(node.resonances || {}).sort((a,b) => node.resonances[b]-node.resonances[a])[0]}</Text>, 
-                      but it also shows a strong resonance with <Text style={{ fontWeight: '700' }}>{Object.keys(node.resonances || {}).sort((a,b) => node.resonances[b]-node.resonances[a])[1]}</Text>.
+                      This thought is primarily categorized as <Text style={{ fontWeight: '700' }}>{Object.keys(node.resonances || {}).sort((a,b) => (node.resonances?.[b] ?? 0) - (node.resonances?.[a] ?? 0))[0]}</Text>, 
+                      but it also shows a strong resonance with <Text style={{ fontWeight: '700' }}>{Object.keys(node.resonances || {}).sort((a,b) => (node.resonances?.[b] ?? 0) - (node.resonances?.[a] ?? 0))[1]}</Text>.
                     </Text>
                   </View>
                 )}

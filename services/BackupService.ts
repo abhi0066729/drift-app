@@ -1,3 +1,4 @@
+// @ts-ignore
 import { documentDirectory, cacheDirectory, copyAsync } from 'expo-file-system/legacy';
 import { DatabaseService } from './DatabaseService';
 import { NoteService } from './NoteService';

@@ -101,6 +101,21 @@ const StellarDot = React.memo(({
             opacity: node.opacity,
           }}
         />
+        {node.pipeline_step && node.pipeline_step !== 'complete' && (
+          <View style={{
+            position: 'absolute',
+            width: node.radius * 3.5,
+            height: node.radius * 3.5,
+            borderRadius: node.radius * 1.75,
+            borderWidth: 1,
+            borderColor: 
+              node.pipeline_step === 'embedding' ? '#FF9F43' : 
+              (node.pipeline_step === 'vectorizing' ? '#3498DB' : 
+              (node.pipeline_step === 'synthesizing' ? '#8E44AD' : '#E74C3C')),
+            borderStyle: 'dashed',
+            opacity: 0.6
+          }} />
+        )}
       </View>
     </GestureDetector>
   );
@@ -122,74 +137,58 @@ const GalacticDust = React.memo(({ node, theme }: { node: NexusNode; theme: stri
   />
 ));
 
-// ─── Inline Node Expand Card (Refined Aesthetic) ─────────────────────────────
-const NodeExpandCard = React.memo(({ node, screenX, screenY, onClose, theme }: {
+const QuickViewCard = React.memo(({ node, pos, onClose, theme }: {
   node: NexusNode;
-  screenX: number;
-  screenY: number;
+  pos: { x: number, y: number };
   onClose: () => void;
   theme: string;
 }) => {
-  const cardH = 220;
-  const topPos = screenY - cardH - 24 > 80 ? screenY - cardH - 24 : screenY + 24;
-  const leftPos = Math.max(16, Math.min(width - 296, screenX - 148));
-  const date = node.created_at
-    ? new Date(node.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-    : '';
+  const cardW = 300;
+  const cardH = 240;
+  
+  // Adaptive positioning: Try to stay above, fallback to below
+  const topPos = pos.y - cardH - 30 > 100 ? pos.y - cardH - 30 : pos.y + 30;
+  const leftPos = Math.max(20, Math.min(width - cardW - 20, pos.x - cardW / 2));
 
-  // Use a consistent Nexus accent color instead of looking up category colors
-  const accentColor = '#8E44AD'; 
+  const dateStr = node.created_at 
+    ? new Date(node.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : 'Unknown Date';
 
-
-  const DropAndBounce = () => {
-    'worklet';
-    return {
-      initialValues: { transform: [{ translateY: -20 }, { scale: 0.95 }], opacity: 0 },
-      animations: {
-        transform: [
-          { translateY: withSpring(0, { damping: 12, stiffness: 100 }) },
-          { scale: withSpring(1) }
-        ],
-        opacity: withSpring(1),
-      },
-    };
-  };
+  const accentColor = CATEGORY_COLORS[node.category || 'Journal'] || '#8E44AD';
 
   return (
     <Animated.View
-      entering={DropAndBounce}
+      entering={FadeIn.duration(200)}
       exiting={FadeOut.duration(150)}
-      style={[styles.expandCard, { top: topPos, left: leftPos, borderColor: theme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }]}
+      style={[styles.quickViewWrapper, { top: topPos, left: leftPos }]}
     >
-      <BlurView intensity={80} tint={theme === 'dark' ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
-      <Pressable style={styles.expandDismiss} onPress={onClose}>
-        <View style={styles.expandInner}>
-          <View style={styles.expandHeader}>
-            <View style={[styles.cardIndicator, { backgroundColor: accentColor }]} />
-
-            <Text style={[styles.expandCategory, { color: theme === 'dark' ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)' }]}>
-              {(node.category || 'NOTE').toUpperCase()}
-            </Text>
-            <Text style={[styles.expandDate, { color: theme === 'dark' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)' }]}>{date}</Text>
+      <BlurView intensity={90} tint={theme === 'dark' ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
+      <View style={[styles.quickViewBorder, { borderColor: theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]} />
+      
+      <Pressable onPress={onClose} style={styles.quickViewInner}>
+        <View style={styles.quickViewHeader}>
+          <View style={[styles.categoryPill, { backgroundColor: `${accentColor}20` }]}>
+            <View style={[styles.pillDot, { backgroundColor: accentColor }]} />
+            <Text style={[styles.pillText, { color: accentColor }]}>{(node.category || 'Note').toUpperCase()}</Text>
           </View>
-          
-          <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 140 }}>
-            <Text style={[styles.expandContent, { color: theme === 'dark' ? 'rgba(255,255,255,0.9)' : '#111111' }]}>{node.content}</Text>
-          </ScrollView>
-
-          {node.emotion && (
-            <View style={styles.emotionTag}>
-              <Text style={styles.expandEmotion}>{node.emotion.toUpperCase()}</Text>
-            </View>
-          )}
-          
-          <Text style={[styles.expandHint, { color: theme === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.3)' }]}>TAP OUTSIDE TO DISMISS</Text>
+          <Text style={[styles.quickViewDate, { color: theme === 'dark' ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)' }]}>{dateStr}</Text>
         </View>
+
+        <ScrollView showsVerticalScrollIndicator={false} style={styles.quickViewScroll}>
+          <Text style={[styles.quickViewContent, { color: theme === 'dark' ? '#FFFFFF' : '#111111' }]}>
+            {node.content}
+          </Text>
+        </ScrollView>
+
+        {node.emotion && (
+          <View style={styles.quickViewFooter}>
+            <Text style={[styles.emotionLabel, { color: accentColor }]}>✧ {node.emotion.toUpperCase()}</Text>
+          </View>
+        )}
       </Pressable>
     </Animated.View>
   );
 });
-
 
 interface NexusSurfaceMatrixProps {
   notes: any[];
@@ -198,8 +197,9 @@ interface NexusSurfaceMatrixProps {
 }
 
 export default function NexusSurfaceMatrix({ notes, theme, onPress }: NexusSurfaceMatrixProps) {
+  const [quickViewNode, setQuickViewNode] = useState<NexusNode | null>(null);
+  const [quickViewPos, setQuickViewPos] = useState({ x: 0, y: 0 });
   const addNote = useNotesStore(state => state.addNote);
-  const [expandState, setExpandState] = useState<{ node: NexusNode; sx: number; sy: number } | null>(null);
 
 
   const tx = useSharedValue(0);
@@ -252,13 +252,9 @@ export default function NexusSurfaceMatrix({ notes, theme, onPress }: NexusSurfa
 
   const handleTap = useCallback((node: NexusNode, absoluteX: number, absoluteY: number) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    setExpandState({ node, sx: absoluteX, sy: absoluteY });
-    
-    // Notify the parent to open the ReadingModal (using 'text' type)
-    if (onPress) {
-      onPress(node, 'text');
-    }
-  }, [onPress]);
+    setQuickViewNode(node);
+    setQuickViewPos({ x: absoluteX, y: absoluteY });
+  }, []);
 
 
   const seed100Thoughts = useCallback(() => {
@@ -301,12 +297,14 @@ export default function NexusSurfaceMatrix({ notes, theme, onPress }: NexusSurfa
     .onUpdate(e => {
       tx.value = savedTx.value + e.translationX;
       ty.value = savedTy.value + e.translationY;
+      if (quickViewNode) runOnJS(setQuickViewNode)(null);
     });
 
   const pinch = Gesture.Pinch()
     .onStart(() => { savedSc.value = sc.value; })
     .onUpdate(e => {
       sc.value = Math.max(0.1, Math.min(5.0, savedSc.value * e.scale));
+      if (quickViewNode) runOnJS(setQuickViewNode)(null);
     });
 
   const doubleTap = Gesture.Tap().numberOfTaps(2).onEnd(() => {
@@ -438,12 +436,11 @@ export default function NexusSurfaceMatrix({ notes, theme, onPress }: NexusSurfa
         </GestureDetector>
       </View>
 
-      {expandState && (
-        <NodeExpandCard
-          node={expandState.node}
-          screenX={expandState.sx}
-          screenY={expandState.sy}
-          onClose={() => setExpandState(null)}
+      {quickViewNode && (
+        <QuickViewCard 
+          node={quickViewNode} 
+          pos={quickViewPos} 
+          onClose={() => setQuickViewNode(null)} 
           theme={theme}
         />
       )}
@@ -492,75 +489,74 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 40,
   },
-  expandCard: {
+  quickViewWrapper: {
     position: 'absolute',
-    width: 296,
+    width: 300,
     borderRadius: 24,
-
     overflow: 'hidden',
-    borderWidth: 0.5,
-    borderColor: 'rgba(255,255,255,0.08)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.4,
-    shadowRadius: 40,
-    elevation: 25,
-    zIndex: 9999,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+    zIndex: 10000,
   },
-
-  expandDismiss: { flex: 1 },
-  expandInner: { padding: 16 },
-  expandHeader: {
+  quickViewBorder: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 24,
+    borderWidth: 1,
+  },
+  quickViewInner: {
+    padding: 20,
+    minHeight: 180,
+  },
+  quickViewHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
-    gap: 12,
+    justifyContent: 'space-between',
+    marginBottom: 16,
   },
-  cardIndicator: {
+  categoryPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 6,
+  },
+  pillDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
   },
-
-  expandCategory: {
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 2,
-    color: 'rgba(255,255,255,0.5)',
-    flex: 1,
-  },
-  expandEmotion: {
-    fontSize: 7,
-    color: '#8E44AD',
-    letterSpacing: 1.5,
+  pillText: {
+    fontSize: 10,
     fontWeight: '800',
-  },
-  emotionTag: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(142, 68, 173, 0.1)',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginTop: 12,
-  },
-
-  expandDate: {
-    fontSize: 9,
-    color: 'rgba(255,255,255,0.3)',
-    letterSpacing: 1,
-  },
-  expandContent: {
-    fontSize: 15,
-    fontWeight: '300',
-    lineHeight: 23,
-    color: 'rgba(255,255,255,0.9)',
-  },
-  expandHint: {
-    marginTop: 12,
-    fontSize: 8,
-    color: 'rgba(255,255,255,0.2)',
     letterSpacing: 1.5,
-    textTransform: 'uppercase',
-    textAlign: 'center',
   },
+  quickViewDate: {
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
+  quickViewScroll: {
+    maxHeight: 140,
+  },
+  quickViewContent: {
+    fontSize: 16,
+    fontWeight: '300',
+    lineHeight: 24,
+  },
+  quickViewFooter: {
+    marginTop: 16,
+    borderTopWidth: 0.5,
+    borderTopColor: 'rgba(124, 58, 237, 0.2)',
+    paddingTop: 12,
+  },
+  emotionLabel: {
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 2,
+  },
+  expandCard: { /* Decommissioned */ },
 });

@@ -24,6 +24,15 @@ export class EmbeddingEngine {
   public async init() {
     if (this.initialized || Platform.OS === 'web') return;
 
+    const initPromise = this.doInit();
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Embedding Engine Init Timeout')), 20000)
+    );
+
+    await Promise.race([initPromise, timeoutPromise]);
+  }
+
+  private async doInit() {
     try {
       console.log('[EmbeddingEngine] Initializing...');
       
@@ -61,12 +70,15 @@ export class EmbeddingEngine {
     const prefix = isQuery ? 'query: ' : 'passage: ';
     const fullText = `${prefix}${text}`;
 
+    console.log(`[EmbeddingEngine] Tokenizing: "${text.substring(0, 30)}..."`);
     const { input_ids, attention_mask } = await this.tokenizer(fullText, {
       padding: true,
       truncation: true,
       maxLength: 512,
     });
 
+    console.log('[EmbeddingEngine] Running ONNX inference...');
+    const inferStart = Date.now();
     const inputTensor = new this.ort.Tensor('int64', BigInt64Array.from(input_ids.data), input_ids.dims);
     const maskTensor = new this.ort.Tensor('int64', BigInt64Array.from(attention_mask.data), attention_mask.dims);
 
@@ -74,6 +86,7 @@ export class EmbeddingEngine {
       input_ids: inputTensor,
       attention_mask: maskTensor,
     });
+    console.log(`[EmbeddingEngine] Inference complete in ${Date.now() - inferStart}ms`);
 
     const pooled = this.meanPool(results.last_hidden_state, attention_mask);
     return this.normalize(pooled);

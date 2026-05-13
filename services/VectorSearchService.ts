@@ -1,4 +1,5 @@
 import { VectorIndex } from 'expo-vector-search';
+// @ts-ignore
 import { documentDirectory, getInfoAsync } from 'expo-file-system/legacy';
 import { DatabaseService } from './DatabaseService';
 import { hashUUIDToNumber } from '../utils/idUtils';

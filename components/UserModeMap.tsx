@@ -158,7 +158,8 @@ interface UserModeMapProps {
   theme: 'light' | 'dark';
 }
 
-export default React.memo(React.forwardRef<Animated.ScrollView, UserModeMapProps>((props, ref) => {
+// Removed React.memo to ensure real-time reactivity to background AI updates
+const UserModeMap = React.forwardRef<Animated.ScrollView, UserModeMapProps>((props, ref) => {
   const { mappedNotes, activeView, searchQuery, onNodePress, onScroll, scrollY, totalHeight, width, theme } = props;
   const isNexus = activeView === 'nexus';
   const db = useSQLiteContext();
@@ -276,9 +277,7 @@ export default React.memo(React.forwardRef<Animated.ScrollView, UserModeMapProps
 
   const { start, end } = useMemo(() => findRangeIndices(windowY), [mappedNotes, windowY]);
 
-  const visibleNotes = useMemo(() => {
-    return mappedNotes.slice(start, end + 1);
-  }, [mappedNotes, start, end]);
+  const visibleNotes = mappedNotes.slice(start, end + 1);
 
   const tileY = useMemo(() => Math.max(0, windowY - (isNexus ? 2500 : WINDOW_BUFFER)), [windowY, isNexus]);
   const tileHeight = SCREEN_HEIGHT + (WINDOW_BUFFER * 2);
@@ -351,7 +350,9 @@ export default React.memo(React.forwardRef<Animated.ScrollView, UserModeMapProps
       )}
     </View>
   );
-}));
+});
+
+export default UserModeMap;
 
 const styles = StyleSheet.create({
   container: {

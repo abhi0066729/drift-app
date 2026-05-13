@@ -32,6 +32,8 @@ export type NexusNode = {
   categories?: string[];
   emotion?: string;
   resonances?: Record<string, number>;
+  pipeline_step?: string;
+  images?: string[];
 };
 
 export type NexusBond = {
@@ -140,6 +142,8 @@ export function computeConstellations(notes: Note[]): NexusLayout {
       category,
       emotion,
       resonances: note.resonances,
+      pipeline_step: note.pipeline_step,
+      images: note.images,
     });
   });
 

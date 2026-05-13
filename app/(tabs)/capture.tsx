@@ -19,7 +19,7 @@ import Animated, {
   useDerivedValue,
   SharedValue
 } from 'react-native-reanimated';
-import { extractRealtime, extractDeep, NoteCategory, SEMANTIC_INTENTS, EMOTION_MAP } from '@/services/ai';
+import { predictIntent, extractDeep, NoteCategory, SEMANTIC_INTENTS, EMOTION_MAP } from '@/services/ai';
 import { LinearGradient } from 'expo-linear-gradient';
 import { NightTheme } from '@/constants/theme';
 import { CATEGORY_COLORS } from '@/constants/Categories';
@@ -174,45 +174,12 @@ export default function CaptureScreen() {
   const inputRef = useRef<TextInput>(null);
   const aiTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const predictLocal = useCallback((text: string): { category: NoteCategory, emotion: string } => {
-    const low = text.toLowerCase();
-    if (!low.trim()) return { category: 'Journal', emotion: 'Neutral' };
-
-    let bestCategory: NoteCategory = 'Journal';
-    let highestScore = 0;
-
-    for (const [cat, patterns] of Object.entries(SEMANTIC_INTENTS)) {
-      let score = 0;
-      patterns.forEach(pattern => {
-        const matches = low.match(pattern);
-        if (matches) score += matches.length;
-      });
-
-      if (score > highestScore) {
-        highestScore = score;
-        bestCategory = cat as NoteCategory;
-      }
-    }
-
-    let bestEmotion = 'Neutral';
-    let highestEmoScore = 0;
-    for (const [emo, patterns] of Object.entries(EMOTION_MAP)) {
-      patterns.forEach(p => {
-        const matches = low.match(p);
-        if (matches) {
-          highestEmoScore += matches.length;
-          bestEmotion = emo;
-        }
-      });
-    }
-
-    return { category: bestCategory, emotion: bestEmotion };
-  }, []);
+  // Logic removed in favor of centralized extractRealtime in services/ai.ts
 
   const runPredictionAI = async (text: string) => {
     setIsTypingSync(true);
     try {
-      const result = await extractRealtime(text);
+      const result = await predictIntent(text);
       if (result && result.category) {
         setPredictedCategory(result.category);
         setEmotionHint(result.emotion || '');
@@ -223,11 +190,17 @@ export default function CaptureScreen() {
   };
 
   useEffect(() => {
-    const { category, emotion } = predictLocal(inputText);
-    setPredictedCategory(category);
-    if (predictionStatus === 'flux') {
-      setEmotionHint(emotion);
-    }
+    const updatePrediction = async () => {
+      const result = await predictIntent(inputText);
+      if (result) {
+        setPredictedCategory(result.category);
+        if (predictionStatus === 'flux') {
+          setEmotionHint(result.emotion);
+        }
+      }
+    };
+    
+    updatePrediction();
     
     // Clear any existing timeout
     if (aiTimeoutRef.current) clearTimeout(aiTimeoutRef.current);
@@ -243,11 +216,10 @@ export default function CaptureScreen() {
       runPredictionAI(inputText);
     }, 800) as any;
 
-
     return () => {
       if (aiTimeoutRef.current) clearTimeout(aiTimeoutRef.current);
     };
-  }, [inputText, predictLocal]);
+  }, [inputText]);
 
   useFocusEffect(
     useCallback(() => {
@@ -268,32 +240,22 @@ export default function CaptureScreen() {
       content: inputText,
       created_at: Date.now(),
       source_type: 'text',
-      is_refining: true,
+      category: 'Journal', 
+      emotion: emotionHint || 'neutral',
+      is_deleted: false,
+      embedding_status: 'pending',
+      synthesis_status: 'pending',
+      pipeline_step: 'queued',
       entities_json: JSON.stringify({ 
-        category: currentCategory, 
+        preliminary_category: currentCategory,
         emotion: emotionHint || 'Neutral',
-        clusterId: -1,
-        resonances: { [currentCategory]: 1.0 }
       }),
     };
 
-    // 1. Save and Process via Service
+    // 1. MAMMOTH SCALE COMMIT
+    // We save to SQLite immediately. The UI re-renders instantly.
+    // The background scheduler (AIJobScheduler) picks up the jobs enqueued by saveNote.
     NoteService.getInstance().saveNote(newNote);
-
-    // 2. Perform Deep Extraction (enrichment)
-    extractDeep(inputText).then(aiResult => {
-      NoteService.getInstance().updateNote(noteId, {
-        entities_json: JSON.stringify({ ...(aiResult || {}), clusterId: -1 })
-      });
-    }).catch(() => {});
-
-    // 3. TRIGGER RECURSIVE EVOLUTION
-    setIsSynthesizingLlama(true);
-    SynthesisService.getInstance().evolveThought(newNote).then(() => {
-      setIsSynthesizingLlama(false);
-    }).catch(() => {
-      setIsSynthesizingLlama(false);
-    });
 
     setLastActionNode({ id: noteId, category: currentCategory });
     
@@ -322,7 +284,7 @@ export default function CaptureScreen() {
 
   return (
     <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
-      <View style={[styles.container, { backgroundColor: isDark ? NightTheme.background : '#FFFFFF' }]}>
+      <View style={[styles.container, { backgroundColor: isDark ? '#000000' : '#FFFFFF' }]}>
         <KeyboardAvoidingView style={StyleSheet.absoluteFill} behavior={undefined}>
           
           <NeuralNebula 
@@ -402,36 +364,7 @@ export default function CaptureScreen() {
               </Animated.View>
             )}
 
-            {/* PHASE 3: SEMANTIC BRIDGE DISPLAY */}
-            {(isSynthesizingLlama || synthesisBridge) && (
-              <Animated.View 
-                entering={FadeInDown.springify()} 
-                style={styles.bridgeCard}
-              >
-                <BlurView intensity={60} tint="dark" style={StyleSheet.absoluteFill} />
-                <View style={styles.bridgeHeader}>
-                   <Ionicons name="infinite" size={16} color={NightTheme.accent} />
-                   <Text style={styles.bridgeLabel}>
-                     {isSynthesizingLlama ? 'WEAVING SEMANTIC BRIDGE...' : 'EVOLVED INSIGHT'}
-                   </Text>
-                </View>
-                
-                {isSynthesizingLlama ? (
-                  <View style={styles.bridgeLoading} />
-                ) : (
-                  <Text style={styles.bridgeText}>{synthesisBridge}</Text>
-                )}
-                
-                {!isSynthesizingLlama && (
-                  <TouchableOpacity 
-                    onPress={() => { setSynthesisBridge(null); router.push('/'); }} 
-                    style={styles.bridgeClose}
-                  >
-                    <Text style={styles.bridgeCloseText}>ENTER THE PALACE</Text>
-                  </TouchableOpacity>
-                )}
-              </Animated.View>
-            )}
+
           </View>
 
         </KeyboardAvoidingView>

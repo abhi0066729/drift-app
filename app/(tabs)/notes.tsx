@@ -191,7 +191,8 @@ export default function NotesScreen() {
   });
 
   const filteredNotes = useMemo(() => {
-    const stabilizedNotes = notes.filter(n => !n.is_refining);
+    // Show all notes, even those refining, to avoid the "hidden note" confusion
+    const stabilizedNotes = [...notes]; 
     if (!searchQuery) return stabilizedNotes;
     const lowerQuery = searchQuery.toLowerCase();
     return stabilizedNotes.filter(note => 
@@ -315,6 +316,7 @@ export default function NotesScreen() {
                 <FlatList
                   ref={flatListRef}
                   data={filteredNotes}
+                  extraData={[theme, searchQuery, notes.map(n => n.pipeline_step).join(',')]} // Force re-render on pipeline changes
                   keyExtractor={(item) => item.id}
                   renderItem={({ item, index }) => (
                     <ArchiveNode 

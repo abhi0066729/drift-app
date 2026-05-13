@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, View, Pressable, TouchableOpacity, Animated as RNAnimated, Platform } from 'react-native';
 import Animated, { 
   FadeInDown, 
@@ -71,14 +71,33 @@ export default function ArchiveNode({
   const isDark = theme === 'dark';
   
   let category = 'Journal';
+  let resonances: Record<string, number> = {};
   const isRefining = note.is_refining;
 
   if (note.entities_json) {
     try {
       const parsed = JSON.parse(note.entities_json);
-      category = parsed.category || parsed.categories?.[0] || 'Journal';
+      if (parsed) {
+        category = parsed.category || parsed.categories?.[0] || 'Journal';
+        resonances = parsed.resonances || {};
+      }
     } catch (e) {}
   }
+
+  const resonanceStr = useMemo(() => {
+    if (!resonances || typeof resonances !== 'object') return '';
+    try {
+      const entries = Object.entries(resonances)
+        .filter(([, v]) => typeof v === 'number' && !isNaN(v))
+        .sort(([, a], [, b]) => (b as number) - (a as number))
+        .slice(0, 2);
+      
+      if (entries.length === 0) return '';
+      return entries.map(([cat, val]) => `${cat}: ${Math.round((val as number) * 100)}%`).join(' | ');
+    } catch (e) {
+      return '';
+    }
+  }, [resonances]);
 
   const lowerQuery = searchQuery?.toLowerCase();
   const isMatch = !!(lowerQuery && (
@@ -86,7 +105,13 @@ export default function ArchiveNode({
     category.toLowerCase().includes(lowerQuery)
   ));
 
-  const nodeColor = isRefining ? '#4A90E2' : (CATEGORY_COLORS[category] || '#8E44AD');
+  const isStudio = useNotesStore(state => state.studioSeeds?.includes(note.id));
+  
+  // Real-time status subscription
+  const liveNote = useNotesStore(state => state.notes.find(n => n.id === note.id));
+  const pipelineStep = liveNote?.pipeline_step || note.pipeline_step || 'complete';
+  const isComplete = pipelineStep === 'complete';
+  const nodeColor = !isComplete ? '#888888' : (CATEGORY_COLORS[category] || '#8E44AD');
   const dateStr = new Date(note.created_at).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
@@ -196,7 +221,8 @@ export default function ArchiveNode({
             <View style={styles.headerRow}>
               <View style={styles.categoryRow}>
                 <Text style={[styles.categoryText, { color: nodeColor }]}>
-                  {isRefining ? 'REFINING...' : category.toUpperCase()}
+                  {note.pipeline_step && note.pipeline_step !== 'complete' ? `SYNTHESIZING...` : (category || 'Journal').toUpperCase()}
+                  {note.pipeline_step === 'complete' && resonanceStr ? ` (${resonanceStr})` : ''}
                 </Text>
                 <TouchableOpacity onPress={handleToggleSeed} hitSlop={8}>
                   <Sprout 
@@ -221,6 +247,16 @@ export default function ArchiveNode({
             >
               {note.content}
             </Text>
+
+            {note.pipeline_step !== 'complete' && note.pipeline_metrics && (
+              <Text style={{ fontSize: 8, color: note.pipeline_step === 'error' ? '#FF5555' : nodeColor, marginTop: 4, fontWeight: '600' }}>
+                {note.pipeline_step === 'error' && note.pipeline_metrics.error_message ? `ERROR: ${note.pipeline_metrics.error_message.toUpperCase()} ` : ''}
+                {note.pipeline_metrics.embedding_ms ? `EMB: ${note.pipeline_metrics.embedding_ms}ms ` : ''}
+                {note.pipeline_metrics.vectorizing_ms ? `| VEC: ${note.pipeline_metrics.vectorizing_ms}ms ` : ''}
+                {note.pipeline_metrics.synthesis_ms ? `| AI: ${note.pipeline_metrics.synthesis_ms}ms` : ''}
+                {!note.pipeline_metrics.total_ms && ` | ELAPSED: ${Date.now() - note.pipeline_metrics.start_time}ms`}
+              </Text>
+            )}
 
             {/* Neural Signal Dot (Inside card) */}
             {isTruncated && <SignalDot color="#8E44AD" />}
@@ -263,7 +299,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingHorizontal: 20,
     paddingVertical: 18,
-    height: 130, // Locked height for consistency
+    minHeight: 130, // Minimum height, grows for metrics
     overflow: 'hidden',
   },
   headerRow: {

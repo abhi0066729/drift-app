@@ -1,5 +1,5 @@
-import * as FileSystem from 'expo-file-system/legacy';
-import { documentDirectory, getInfoAsync } from 'expo-file-system/legacy';
+// @ts-ignore
+import { documentDirectory, getInfoAsync, makeDirectoryAsync, createDownloadResumable } from 'expo-file-system/legacy';
 
 
 export type DownloadProgress = {
@@ -44,20 +44,20 @@ export class ModelDownloadService {
     const totalExpectedSize = 839 * 1024 * 1024; // ~839MB total
     let totalBytesWritten = 0;
 
-    const modelsDir = `${FileSystem.documentDirectory}models/`;
+    const modelsDir = `${documentDirectory}models/`;
     
     // Ensure directory exists
-    const dirInfo = await FileSystem.getInfoAsync(modelsDir);
+    const dirInfo = await getInfoAsync(modelsDir);
     if (!dirInfo.exists) {
-      await FileSystem.makeDirectoryAsync(modelsDir, { intermediates: true });
+      await makeDirectoryAsync(modelsDir, { intermediates: true });
     }
 
     for (const model of this.MODELS) {
       const localPath = `${modelsDir}${model.name}`;
       
       // Check if already exists to skip or update progress
-      const info = await FileSystem.getInfoAsync(localPath);
-      if (info.exists && info.size > 1000000) { // Simple sanity check for real file
+      const info = await getInfoAsync(localPath);
+      if (info.exists && info.size > 1000000) {
         totalBytesWritten += info.size;
         onProgress({
           fileName: model.name,
@@ -69,7 +69,6 @@ export class ModelDownloadService {
       }
 
       await this.downloadFile(model, localPath, (p) => {
-        // Calculate cumulative progress
         const currentTotal = totalBytesWritten + (p.progress * (p.totalBytes || 0));
         onProgress({
           fileName: p.fileName,
@@ -79,7 +78,7 @@ export class ModelDownloadService {
         });
       });
 
-      const finalInfo = await FileSystem.getInfoAsync(localPath);
+      const finalInfo = await getInfoAsync(localPath);
       if (finalInfo.exists) {
         totalBytesWritten += finalInfo.size;
       }
@@ -91,24 +90,21 @@ export class ModelDownloadService {
     const repoUrl = this.HF_REPOS[model.repo as keyof typeof this.HF_REPOS] || this.HF_REPOS.base;
     const url = `${repoUrl}/${model.name}`;
     const startTime = Date.now();
-    let lastBytes = 0;
 
-    const downloadResumable = FileSystem.createDownloadResumable(
+    const downloadResumable = createDownloadResumable(
       url,
       localPath,
       {},
-      (progressData) => {
+      (progressData: any) => {
         const now = Date.now();
         const durationSec = (now - startTime) / 1000;
         
-        // Speed Calculation Guard
         let speedLabel = '...';
         if (durationSec > 0) {
           const speedMbps = (progressData.totalBytesWritten / 1024 / 1024 / durationSec);
           speedLabel = speedMbps > 1 ? `${speedMbps.toFixed(1)} MB/s` : `${(speedMbps * 1024).toFixed(0)} KB/s`;
         }
 
-        // Progress Guard
         const total = progressData.totalBytesExpectedToWrite;
         const written = progressData.totalBytesWritten;
         const progress = (total > 0) ? (written / total) : 0;
@@ -130,24 +126,39 @@ export class ModelDownloadService {
 
 
   /**
-   * Checks if synthesis is ready.
+   * Checks if all required AI assets are fully present and valid.
+   * Includes a safety timeout to prevent hanging on device filesystem.
    */
   public async isModelReady(): Promise<boolean> {
-    // 1. Immediate exit for debug/testing
     if (ModelDownloadService.DEBUG_FORCE_MODAL) return false;
 
-    try {
-      // 2. Safety check for the native module
-      if (!documentDirectory) {
-        console.warn('[ModelDownloadService] documentDirectory not available');
+    // Safety timeout: If filesystem check takes > 5s, something is wrong
+    const timeoutPromise = new Promise<boolean>((_, reject) => 
+      setTimeout(() => reject(new Error('Model Readiness Timeout')), 5000)
+    );
+
+    const checkPromise = (async () => {
+      try {
+        if (!documentDirectory) return false;
+        const modelsDir = `${documentDirectory}models/`;
+
+        for (const model of this.MODELS) {
+          const path = `${modelsDir}${model.name}`;
+          const info = await getInfoAsync(path);
+          // Models must exist and be of meaningful size (not empty markers)
+          if (!info.exists || info.size < 1000) return false;
+        }
+        return true;
+      } catch (e) {
+        console.error('[ModelDownloadService] Ready check failed:', e);
         return false;
       }
+    })();
 
-      const modelPath = `${documentDirectory}models/Llama-3.2-1B-Instruct-Q4_K_M.gguf`;
-      const info = await getInfoAsync(modelPath);
-      return info.exists;
+    try {
+      return await Promise.race([checkPromise, timeoutPromise]);
     } catch (e) {
-      console.error('[ModelDownloadService] Ready check failed:', e);
+      console.warn('[ModelDownloadService] Readiness check stalled, defaulting to NOT_READY');
       return false;
     }
   }
