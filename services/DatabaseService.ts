@@ -15,9 +15,12 @@ export class DatabaseService {
     return DatabaseService.instance;
   }
 
+  /**
+   * MAMMOTH MIGRATION ENGINE
+   * Handles the transition from legacy Drift to the Mammoth Knowledge Base architecture.
+   */
   private async runMigrations(db: SQLite.SQLiteDatabase) {
     try {
-      // 1. Ensure migrations table exists
       await db.execAsync(`CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, applied_at INTEGER);`);
       
       const result = await db.getFirstAsync<{ version: number }>('SELECT MAX(version) as version FROM schema_migrations');
@@ -25,25 +28,39 @@ export class DatabaseService {
 
       console.log(`[DatabaseService] Current schema version: ${currentVersion}`);
 
-      // Future migrations will go here
-      // For now, we are at baseline (version 1)
-      if (currentVersion === 0) {
-        await db.runAsync('INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)', [1, Date.now()]);
-      }
+      // Version 98: Mammoth Architecture (Adding missing is_refining and others)
+      if (currentVersion < 98) {
+        console.log('[DatabaseService] Applying Mammoth Scale Migration (v98)...');
+        
+        const migrations = [
+          "ALTER TABLE notes ADD COLUMN category TEXT DEFAULT 'Journal'",
+          "ALTER TABLE notes ADD COLUMN emotion TEXT DEFAULT 'neutral'",
+          "ALTER TABLE notes ADD COLUMN summary TEXT",
+          "ALTER TABLE notes ADD COLUMN embedding_status TEXT DEFAULT 'pending'",
+          "ALTER TABLE notes ADD COLUMN synthesis_status TEXT DEFAULT 'pending'",
+          "ALTER TABLE notes ADD COLUMN is_refining INTEGER DEFAULT 0",
+          "ALTER TABLE notes ADD COLUMN layout_x REAL",
+          "ALTER TABLE notes ADD COLUMN layout_y REAL",
+          "ALTER TABLE notes ADD COLUMN layout_cluster TEXT",
+          "ALTER TABLE notes ADD COLUMN layout_version INTEGER DEFAULT 1",
+          "ALTER TABLE notes ADD COLUMN pipeline_step TEXT",
+          "ALTER TABLE notes ADD COLUMN pipeline_metrics TEXT"
+        ];
 
-      // Migration v3: Add pipeline columns to notes
-      if (currentVersion < 3) {
-        try {
-          await db.execAsync('ALTER TABLE notes ADD COLUMN pipeline_step TEXT;');
-          await db.execAsync('ALTER TABLE notes ADD COLUMN pipeline_metrics TEXT;');
-          await db.runAsync('INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)', [3, Date.now()]);
-          console.log('[DatabaseService] Migration v3 (pipeline columns) applied.');
-        } catch (e) {
-          console.log('[DatabaseService] Migration v3 failed:', e);
+        for (const sql of migrations) {
+          try {
+            await db.execAsync(sql);
+          } catch (e) {
+            // Column might already exist
+            console.log(`[DatabaseService] Migration step skipped: ${sql.substring(0, 40)}...`);
+          }
         }
+
+        await db.runAsync('INSERT OR REPLACE INTO schema_migrations (version, applied_at) VALUES (?, ?)', [98, Date.now()]);
+        console.log('[DatabaseService] Migration v98 complete.');
       }
     } catch (error) {
-      console.error('[DatabaseService] Migration failed:', error);
+      console.error('[DatabaseService] Migration critical failure:', error);
     }
   }
 
@@ -52,26 +69,31 @@ export class DatabaseService {
     if (this.initPromise) return this.initPromise;
 
     this.initPromise = (async () => {
-      console.log('[DatabaseService] Opening database...');
-      const db = await SQLite.openDatabaseAsync('drift.db');
-      
-      // Force foreign keys for all connections
-      await db.execAsync('PRAGMA foreign_keys = ON;');
-      
-      await initDatabase(db);
-      await this.runMigrations(db);
-      
-      this.db = db;
-      console.log('[DatabaseService] Database ready.');
-      return db;
+      try {
+        console.log('[DatabaseService] Opening database instance...');
+        const db = await SQLite.openDatabaseAsync('drift.db');
+        
+        await db.execAsync('PRAGMA foreign_keys = ON;');
+        await db.execAsync('PRAGMA journal_mode = WAL;');
+        
+        // 1. Ensure baseline tables exist
+        await initDatabase(db);
+        
+        // 2. Run structural migrations
+        await this.runMigrations(db);
+        
+        this.db = db;
+        console.log('[DatabaseService] Database heartbeat active.');
+        return db;
+      } catch (e) {
+        console.error('[DatabaseService] Failed to initialize database:', e);
+        throw e;
+      }
     })();
 
     return this.initPromise;
   }
 
-  /**
-   * Helper to update note metadata (entities_json) directly in SQLite.
-   */
   public static async updateNoteMetadata(db: SQLite.SQLiteDatabase, id: string, entitiesJson: string) {
     await db.runAsync('UPDATE notes SET entities_json = ? WHERE id = ?', [entitiesJson, id]);
   }

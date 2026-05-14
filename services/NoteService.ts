@@ -1,7 +1,7 @@
 import { Note, useNotesStore } from '../store/useNotesStore';
 import { DatabaseService } from './DatabaseService';
 import { hashUUIDToNumber } from '../utils/idUtils';
-import { v4 as uuidv4 } from 'uuid';
+import * as Crypto from 'expo-crypto';
 
 export class NoteService {
   private static instance: NoteService;
@@ -54,10 +54,13 @@ export class NoteService {
    */
   public async saveNote(note: Note) {
     try {
+      // 1. Optimistic UI Update: Show the note instantly in the Drift Palace
+      useNotesStore.getState().addNote(note);
+
       const db = await DatabaseService.getInstance().getDb();
       const numericId = note.numeric_id || hashUUIDToNumber(note.id);
 
-      // 1. Direct SQLite Persistence (Source of Truth)
+      // 2. Direct SQLite Persistence (Source of Truth)
       await db.runAsync(
         `INSERT OR REPLACE INTO notes (
           id, numeric_id, user_id, content, created_at, source_type, 
@@ -87,8 +90,6 @@ export class NoteService {
         ]
       );
 
-      // 2. Update the visible projection in Zustand
-      useNotesStore.getState().addNote(note);
 
       // 3. Enqueue Durable AI Jobs
       if (note.embedding_status === 'pending') {
@@ -107,7 +108,7 @@ export class NoteService {
   private async enqueueAIJob(noteId: string, type: 'embedding' | 'classification' | 'synthesis') {
     try {
       const db = await DatabaseService.getInstance().getDb();
-      const jobId = uuidv4();
+      const jobId = Crypto.randomUUID();
       await db.runAsync(
         `INSERT INTO ai_jobs (id, note_id, type, status, created_at, updated_at)
          VALUES (?, ?, ?, 'pending', ?, ?)`,

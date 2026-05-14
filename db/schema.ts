@@ -1,13 +1,12 @@
 import * as SQLite from 'expo-sqlite';
 
+/**
+ * BASELINE SCHEMA (Mammoth Scale)
+ * This is the "ideal" state of the database for a fresh install.
+ * DatabaseService.runMigrations handles upgrading existing installations.
+ */
 export async function initDatabase(db: SQLite.SQLiteDatabase) {
-  // Step 0: System Config
-  await db.execAsync(`
-    PRAGMA foreign_keys = ON;
-  `);
-
-  // Step 1: Base Table (Mammoth Scale Optimization)
-  // Added direct columns for fast querying instead of parsing JSON
+  // Step 1: Core Note Table
   await db.execAsync(`
     CREATE TABLE IF NOT EXISTS notes (
       id TEXT PRIMARY KEY NOT NULL,
@@ -15,20 +14,21 @@ export async function initDatabase(db: SQLite.SQLiteDatabase) {
       user_id TEXT,
       content TEXT NOT NULL,
       
-      -- Mammoth Scale Optimization: Direct Queryable Columns
+      -- Mammoth Columns (Direct queryable)
       category TEXT DEFAULT 'Journal',
       emotion TEXT DEFAULT 'neutral',
       summary TEXT,
-      embedding_status TEXT DEFAULT 'pending', -- pending, processing, complete, error
-      synthesis_status TEXT DEFAULT 'pending', -- pending, processing, complete, error
+      embedding_status TEXT DEFAULT 'pending',
+      synthesis_status TEXT DEFAULT 'pending',
       
       created_at INTEGER NOT NULL,
-      source_type TEXT NOT NULL, -- user, synthesis, system
+      source_type TEXT NOT NULL,
       audio_url TEXT,
       is_deleted INTEGER DEFAULT 0,
-      entities_json TEXT, -- Still used for flexible metadata
+      is_refining INTEGER DEFAULT 0,
+      entities_json TEXT,
       
-      -- Spatial Layout Cache
+      -- Spatial Cache
       layout_x REAL,
       layout_y REAL,
       layout_cluster TEXT,
@@ -40,14 +40,12 @@ export async function initDatabase(db: SQLite.SQLiteDatabase) {
       pipeline_metrics TEXT
     );
     
-    -- High Performance Indices
     CREATE INDEX IF NOT EXISTS idx_notes_deleted_created ON notes(is_deleted, created_at DESC);
-    CREATE INDEX IF NOT EXISTS idx_notes_source ON notes(source_type);
     CREATE INDEX IF NOT EXISTS idx_notes_category ON notes(category);
     CREATE INDEX IF NOT EXISTS idx_notes_embedding_status ON notes(embedding_status);
   `);
 
-  // Step 2: Semantic Graph & Persistence
+  // Step 2: Semantic & Graph Tables
   await db.execAsync(`
     CREATE TABLE IF NOT EXISTS note_embeddings (
       note_id TEXT PRIMARY KEY NOT NULL,
@@ -68,13 +66,13 @@ export async function initDatabase(db: SQLite.SQLiteDatabase) {
     );
   `);
 
-  // Step 3: AI Job Queue (Durable Pipeline)
+  // Step 3: Intelligence Pipeline
   await db.execAsync(`
     CREATE TABLE IF NOT EXISTS ai_jobs (
       id TEXT PRIMARY KEY NOT NULL,
       note_id TEXT NOT NULL,
-      type TEXT NOT NULL, -- embedding, classification, synthesis
-      status TEXT NOT NULL DEFAULT 'pending', -- pending, processing, completed, failed
+      type TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
       attempts INTEGER DEFAULT 0,
       last_error TEXT,
       created_at INTEGER NOT NULL,
@@ -90,12 +88,12 @@ export async function initDatabase(db: SQLite.SQLiteDatabase) {
       name TEXT PRIMARY KEY NOT NULL,
       path TEXT NOT NULL,
       size INTEGER NOT NULL,
-      status TEXT NOT NULL, -- present, missing, corrupted
+      status TEXT NOT NULL,
       updated_at INTEGER NOT NULL
     );
   `);
 
-  // Step 5: Architecture (Wings & Rooms)
+  // Step 5: Rooms, Wings, & Resonance
   await db.execAsync(`
     CREATE TABLE IF NOT EXISTS thought_wings (
       id TEXT PRIMARY KEY NOT NULL,
@@ -112,10 +110,6 @@ export async function initDatabase(db: SQLite.SQLiteDatabase) {
       created_at INTEGER NOT NULL,
       FOREIGN KEY (wing_id) REFERENCES thought_wings(id) ON DELETE CASCADE
     );
-  `);
-
-  // Step 6: Insights & Resonance
-  await db.execAsync(`
     CREATE TABLE IF NOT EXISTS synthesis_cards (
       id TEXT PRIMARY KEY NOT NULL,
       user_id TEXT,

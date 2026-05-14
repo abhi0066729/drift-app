@@ -40,6 +40,11 @@ export const OpeningTransition = ({ onComplete }: { onComplete: () => void }) =>
     // Kill native splash immediately to show this animation
     SplashScreen.hideAsync().catch(() => {});
 
+    const safetyTimer = setTimeout(() => {
+      console.warn('[OpeningTransition] Safety timeout triggered');
+      onComplete();
+    }, 5000);
+
     // SYNCHRONIZED START
     Animated.timing(main, {
       toValue: 1,

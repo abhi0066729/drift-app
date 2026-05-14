@@ -48,9 +48,9 @@ export default function RootLayout() {
       console.log('[RootLayout] Firing startup guard...');
       initializeSettings();
 
-      // Step 2: Initialize Database (Sequential v91 method)
-      const db = await SQLite.openDatabaseAsync('drift.db');
-      await initDatabase(db);
+      // Step 2: Initialize Database (Mammoth-Scale Optimized)
+      const { DatabaseService } = require('@/services/DatabaseService');
+      await DatabaseService.getInstance().getDb();
       console.log('[RootLayout] Database heartbeat verified.');
       
       // Step 3: Check AI Models with hard safety timeout
