@@ -12,11 +12,15 @@ const withIosModifications = (config) => {
       const podfile = path.join(config.modRequest.projectRoot, 'ios', 'Podfile');
       let contents = await fs.promises.readFile(podfile, 'utf8');
 
-      // Add modular headers fix for Firebase
+      // Add global modular headers fix for Firebase/Swift compatibility
+      if (!contents.includes("use_modular_headers!")) {
+        contents = `use_modular_headers!\n${contents}`;
+      }
+
+      // Also ensure specific Firebase pods have it (redundancy)
       if (!contents.includes("pod 'FirebaseCore', :modular_headers => true")) {
-        // We insert this at the top of the post_install or right after the platform line
         const fix = `
-  # Firebase Xcode 16 Fix
+  # Firebase Static Framework Fix
   pod 'FirebaseCore', :modular_headers => true
   pod 'FirebaseCrashlytics', :modular_headers => true
 `;
