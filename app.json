@@ -65,7 +65,8 @@
           }
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      "./plugins/withIosModifications"
     ],
     "experiments": {
       "typedRoutes": true,
