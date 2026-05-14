@@ -55,7 +55,7 @@ const withIosModifications = (config) => {
         config.build_settings['CLANG_ENABLE_MODULE_DEBUGGING'] = 'NO'
         config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
         # Fix for RNFBCrashlytics and react-native-executorch
-        config.build_settings['HEADER_SEARCH_PATHS'] = '$(inherited) "${PODS_ROOT}/Headers/Public/Firebase" "${PODS_ROOT}/Headers/Public/FirebaseCore" "${PODS_ROOT}/Headers/Public/FirebaseCrashlytics"'
+        config.build_settings['HEADER_SEARCH_PATHS'] = '$(inherited) "$(PODS_ROOT)/Headers/Public/Firebase" "$(PODS_ROOT)/Headers/Public/FirebaseCore" "$(PODS_ROOT)/Headers/Public/FirebaseCrashlytics"'
         config.build_settings['CLANG_MODULES_AUTOLINK'] = 'NO'
       end
     end
