@@ -3,6 +3,7 @@ import { documentDirectory, getInfoAsync } from 'expo-file-system/legacy';
 import { Platform } from 'react-native';
 import { Note } from '../store/useNotesStore';
 import { RetrievalService } from './RetrievalService';
+import { Logger } from './Logger';
 
 export type SynthesisResult = {
   summary: string;
@@ -45,7 +46,9 @@ export class LocalLlamaService {
         this.paths.tokenizer,
         this.paths.config,
         (progress: number) => {
-          console.log(`[LocalLlamaService] Loading: ${Math.round(progress * 100)}%`);
+          if (Math.round(progress * 100) % 25 === 0) {
+             Logger.log(`Neural Engine Loading: ${Math.round(progress * 100)}%`);
+          }
         }
       );
 
@@ -54,8 +57,9 @@ export class LocalLlamaService {
       });
 
       this.isLoaded = true;
+      Logger.log('Neural Engine ignition successful.');
     } catch (error) {
-      console.error('[LocalLlamaService] Ignition failed:', error);
+      Logger.error('Neural Engine ignition failed', error);
     }
   }
 
@@ -91,7 +95,7 @@ export class LocalLlamaService {
         <|eot_id|><|start_header_id|>assistant<|end_header_id|>
       `;
 
-      console.log(`[Neural Engine] Firing deep synthesis for query: "${query.substring(0, 50)}..."`);
+      Logger.log(`Firing deep synthesis for note: ${query.substring(0, 20)}...`);
       const response = await this.model.forward(prompt);
       const text = response.trim();
       
@@ -126,7 +130,7 @@ export class LocalLlamaService {
         resonances
       };
     } catch (error) {
-      console.error(`[LocalLlamaService] Synthesis Failed:`, error);
+      Logger.error('Synthesis inference failed', error, { query: query.substring(0, 100) });
       return { 
         summary: "Neural static.", 
         connections: [], 

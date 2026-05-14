@@ -357,7 +357,7 @@ function DriftNode({ node, onPress, onDragStart, onDragUpdateSharedX, onDragUpda
           })}
         >
           <Text style={[styles.noteCategory, { color: pipelineStep === 'error' ? '#FF5555' : mainColor, marginBottom: 6, opacity: Math.min(1, node.ageFade + 0.4) }]}>
-            {isSynthesis ? '✧ SYNTHESIS ✧' : (pipelineStep === 'error' ? `ERROR: ${node.pipeline_metrics?.error_message?.toUpperCase() || 'FAILED'}` : (!isComplete ? 'SYNTHESIZING...' : (node.category || 'Journal').toUpperCase()))}
+            {isSynthesis ? '✧ SYNTHESIS ✧' : (pipelineStep === 'error' ? `ERROR: ${node.pipeline_metrics?.error_message?.toUpperCase() || 'FAILED'}` : (!isComplete ? 'SYNTHESIZING...' : (node.category || 'THOUGHT').toUpperCase()))}
             {isPinned && ' ✦ IN STUDIO'}
           </Text>
 

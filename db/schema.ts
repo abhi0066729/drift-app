@@ -15,8 +15,8 @@ export async function initDatabase(db: SQLite.SQLiteDatabase) {
       content TEXT NOT NULL,
       
       -- Mammoth Columns (Direct queryable)
-      category TEXT DEFAULT 'Journal',
-      emotion TEXT DEFAULT 'neutral',
+      category TEXT,
+      emotion TEXT,
       summary TEXT,
       embedding_status TEXT DEFAULT 'pending',
       synthesis_status TEXT DEFAULT 'pending',

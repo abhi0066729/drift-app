@@ -7,7 +7,6 @@
     "icon": "./assets/images/icon.png",
     "scheme": "driftapp",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "updates": {
       "url": "https://u.expo.dev/dd37b473-efe5-42fb-a2b5-b2a01f15256e",
       "checkAutomatically": "ON_LOAD",
@@ -18,12 +17,10 @@
     "runtimeVersion": {
       "policy": "appVersion"
     },
-
-
-
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.drift.palace",
+      "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -35,8 +32,6 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false,
       "package": "com.drift.palace"
     },
     "web": {
@@ -58,14 +53,22 @@
         }
       ],
       "expo-sqlite",
-      "expo-updates"
+      "expo-updates",
+      "@react-native-firebase/app",
+      "@react-native-firebase/crashlytics",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
+        }
+      ],
+      "expo-web-browser"
     ],
-
-
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": false
-
     },
     "extra": {
       "router": {},

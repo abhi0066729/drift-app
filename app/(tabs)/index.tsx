@@ -53,13 +53,24 @@ const NeuralHeartbeat = () => {
     transform: [{ scale: isThinking ? withSpring(1.2) : withSpring(1) }],
   }));
 
+  const triggerManualPulse = () => {
+    const scheduler = require('@/services/AIJobScheduler').AIJobScheduler.getInstance();
+    scheduler.processNextBatch();
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); } catch (e) { }
+    Alert.alert("Neural Pulse Sent", "Forcing immediate background processing batch.");
+  };
+
   return (
-    <View style={styles.heartbeatContainer}>
+    <TouchableOpacity 
+      activeOpacity={0.8}
+      onLongPress={triggerManualPulse}
+      style={styles.heartbeatContainer}
+    >
       <Animated.View style={[styles.heartbeatDot, animatedStyle, { backgroundColor: isThinking ? '#2ECC71' : '#8E44AD' }]} />
       <Text style={[styles.heartbeatText, { color: isThinking ? '#2ECC71' : 'rgba(255,255,255,0.2)' }]}>
         {isThinking ? 'NEURAL ENGINE ACTIVE' : 'CORTEX STANDBY'}
       </Text>
-    </View>
+    </TouchableOpacity>
   );
 };
 import { useNotesStore, Note } from '@/store/useNotesStore';
