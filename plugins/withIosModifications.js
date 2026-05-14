@@ -19,29 +19,28 @@ const withIosModifications = (config) => {
     return config;
   });
 
-  // 2. Podfile Stability Fixes
+  // 2. Final Linker & Stability Fixes
   config = withDangerousMod(config, [
     'ios',
     async (config) => {
       const podfile = path.join(config.modRequest.projectRoot, 'ios', 'Podfile');
       let contents = await fs.promises.readFile(podfile, 'utf8');
 
-      // Use modular headers globally but allow libraries to be static (stable)
       if (!contents.includes("use_modular_headers!")) {
         contents = `use_modular_headers!\n${contents}`;
       }
 
-      // Remove the manual pods we added earlier (autolinking is better for static libs)
-      contents = contents.replace(/pod 'FirebaseCore'.*/g, '');
-      contents = contents.replace(/pod 'FirebaseCrashlytics'.*/g, '');
-
-      // Force Xcode 16 Stability Settings
+      // Definitive Xcode 16 / Linker Fix
       if (!contents.includes("CLANG_ENABLE_EXPLICIT_MODULES")) {
         const xcodeFix = `
     installer.aggregate_targets.each do |target|
       target.user_project.build_configurations.each do |config|
         config.build_settings['CLANG_ENABLE_EXPLICIT_MODULES'] = 'NO'
         config.build_settings['CLANG_ENABLE_MODULE_DEBUGGING'] = 'NO'
+        # Manually link the missing frameworks discovered in the last build
+        config.build_settings['OTHER_LDFLAGS'] ||= ['$(inherited)']
+        config.build_settings['OTHER_LDFLAGS'] << '-framework CoreMotion'
+        config.build_settings['OTHER_LDFLAGS'] << '-framework MetricKit'
       end
     end
     
@@ -50,7 +49,8 @@ const withIosModifications = (config) => {
         config.build_settings['CLANG_ENABLE_EXPLICIT_MODULES'] = 'NO'
         config.build_settings['CLANG_ENABLE_MODULE_DEBUGGING'] = 'NO'
         config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
-        config.build_settings['CLANG_MODULES_AUTOLINK'] = 'NO'
+        # Re-enable autolink to let Xcode find system frameworks
+        config.build_settings['CLANG_MODULES_AUTOLINK'] = 'YES'
       end
     end
 `;
