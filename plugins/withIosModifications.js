@@ -1,4 +1,4 @@
-const { withProjectBuildProperties } = require('@expo/config-plugins');
+const { withProjectBuildProperties } = require('expo-build-properties/plugin');
 
 /**
  * Custom Plugin to fix Xcode 16 / Firebase Precompilation Failures
