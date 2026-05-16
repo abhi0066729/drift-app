@@ -1,39 +1,25 @@
-const { withDangerousMod, withAppDelegate } = require('@expo/config-plugins');
+const { withDangerousMod } = require('@expo/config-plugins');
 const fs = require('fs');
 const path = require('path');
 
 /**
- * THE STABLE FIX: Handles AppDelegate and Podfile for Xcode 16.
- * Note: Plist linking is now handled via app.json googleServicesFile.
+ * THE STABLE FIX: Handles Podfile only for Xcode 16.
+ * Note: Plist linking and AppDelegate are now handled by official Firebase plugins.
  */
 const withIosModifications = (config) => {
-  // 1. AppDelegate Injection (Still needed for manual Firebase init)
-  config = withAppDelegate(config, (config) => {
-    let contents = config.modResults.contents;
-    if (!contents.includes('#import <Firebase.h>')) {
-      contents = contents.replace(/#import "AppDelegate.h"/, '#import "AppDelegate.h"\n#import <Firebase.h>');
-    }
-    if (!contents.includes('[FIRApp configure];')) {
-      contents = contents.replace(
-        /(-\s*\(BOOL\)\s*application:\s*\(UIApplication\s*\*\s*\)application\s+didFinishLaunchingWithOptions:\s*\(NSDictionary\s*\*\s*\)launchOptions\s*\{)/,
-        '$1\n  [FIRApp configure];'
-      );
-    }
-    config.modResults.contents = contents;
-    return config;
-  });
-
-  // 2. Podfile & Linker Stability (Still needed for Xcode 16)
+  // 1. Podfile & Linker Stability (Still needed for Xcode 16)
   config = withDangerousMod(config, [
     'ios',
     async (config) => {
       const podfile = path.join(config.modRequest.projectRoot, 'ios', 'Podfile');
       let contents = await fs.promises.readFile(podfile, 'utf8');
 
+      // Use modular headers globally but allow libraries to be static (stable)
       if (!contents.includes("use_modular_headers!")) {
         contents = `use_modular_headers!\n${contents}`;
       }
 
+      // Force Xcode 16 Stability Settings
       if (!contents.includes("CLANG_ENABLE_EXPLICIT_MODULES")) {
         const xcodeFix = `
     installer.aggregate_targets.each do |target|

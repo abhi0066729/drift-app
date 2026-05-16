@@ -54,12 +54,13 @@
       ],
       "expo-sqlite",
       "expo-updates",
+      "@react-native-firebase/app",
+      "@react-native-firebase/crashlytics",
       [
         "expo-build-properties",
         {
           "ios": {
-            "deploymentTarget": "15.1",
-            "googleServicesFile": "./GoogleService-Info.plist"
+            "deploymentTarget": "15.1"
           }
         }
       ],
