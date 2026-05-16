@@ -14,13 +14,20 @@ const withIosModifications = (config) => {
       
       // Add import
       if (!contents.includes('import FirebaseCore')) {
+        if (!contents.match(/import UIKit/)) {
+          throw new Error("CRITICAL: Could not find import UIKit in AppDelegate.swift to inject FirebaseCore!");
+        }
         contents = contents.replace(/import UIKit/, 'import UIKit\nimport FirebaseCore');
       }
       
       // Add FirebaseApp.configure()
       if (!contents.includes('FirebaseApp.configure()')) {
+        const match = contents.match(/(didFinishLaunchingWithOptions[^\{]*\{)/);
+        if (!match) {
+          throw new Error("CRITICAL: Could not find didFinishLaunchingWithOptions in AppDelegate.swift to inject Firebase!");
+        }
         contents = contents.replace(
-          /(func application\(\_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: \[UIApplication\.LaunchOptionsKey: Any\]\?\s*=\s*nil\) -> Bool \{)/,
+          /(didFinishLaunchingWithOptions[^\{]*\{)/,
           '$1\n    FirebaseApp.configure()'
         );
       }
