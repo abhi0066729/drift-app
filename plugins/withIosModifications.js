@@ -14,22 +14,25 @@ const withIosModifications = (config) => {
       
       // Add import
       if (!contents.includes('import FirebaseCore')) {
-        if (!contents.match(/import UIKit/)) {
-          throw new Error("CRITICAL: Could not find import UIKit in AppDelegate.swift to inject FirebaseCore!");
-        }
-        contents = contents.replace(/import UIKit/, 'import UIKit\nimport FirebaseCore');
+        contents = 'import FirebaseCore\n' + contents;
       }
       
       // Add FirebaseApp.configure()
       if (!contents.includes('FirebaseApp.configure()')) {
-        const match = contents.match(/(didFinishLaunchingWithOptions[^\{]*\{)/);
+        // Look for the start of the didFinishLaunchingWithOptions function
+        const match = contents.match(/func application\s*\(\s*_\s*application\s*:\s*UIApplication\s*,\s*didFinishLaunchingWithOptions/);
         if (!match) {
           throw new Error("CRITICAL: Could not find didFinishLaunchingWithOptions in AppDelegate.swift to inject Firebase!");
         }
-        contents = contents.replace(
-          /(didFinishLaunchingWithOptions[^\{]*\{)/,
-          '$1\n    FirebaseApp.configure()'
-        );
+        
+        // Find the first opening brace after the function definition
+        const braceIndex = contents.indexOf('{', match.index);
+        if (braceIndex === -1) {
+          throw new Error("CRITICAL: Could not find opening brace for didFinishLaunchingWithOptions in AppDelegate.swift!");
+        }
+        
+        // Inject FirebaseApp.configure() right after the opening brace
+        contents = contents.slice(0, braceIndex + 1) + '\n    FirebaseApp.configure()' + contents.slice(braceIndex + 1);
       }
       
       config.modResults.contents = contents;
