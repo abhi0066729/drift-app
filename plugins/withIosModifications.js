@@ -1,25 +1,13 @@
-const { withDangerousMod, withAppDelegate, withXcodeProject } = require('@expo/config-plugins');
+const { withDangerousMod, withAppDelegate } = require('@expo/config-plugins');
 const fs = require('fs');
 const path = require('path');
 
 /**
- * THE FINAL STABILITY FIX: Linking the Plist and configuring AppDelegate
+ * THE STABLE FIX: Handles AppDelegate and Podfile for Xcode 16.
+ * Note: Plist linking is now handled via app.json googleServicesFile.
  */
 const withIosModifications = (config) => {
-  // 1. Ensure GoogleService-Info.plist is in the Xcode Project
-  config = withXcodeProject(config, (config) => {
-    const xcodeProject = config.modResults;
-    const projectName = config.modRequest.projectName;
-    const plistPath = 'GoogleService-Info.plist';
-    
-    // Add the file to the project if it's not already there
-    if (!xcodeProject.hasFile(plistPath)) {
-      xcodeProject.addResourceFile(plistPath, { target: xcodeProject.getFirstTarget().uuid });
-    }
-    return config;
-  });
-
-  // 2. AppDelegate Injection
+  // 1. AppDelegate Injection (Still needed for manual Firebase init)
   config = withAppDelegate(config, (config) => {
     let contents = config.modResults.contents;
     if (!contents.includes('#import <Firebase.h>')) {
@@ -35,7 +23,7 @@ const withIosModifications = (config) => {
     return config;
   });
 
-  // 3. Podfile & Linker Stability
+  // 2. Podfile & Linker Stability (Still needed for Xcode 16)
   config = withDangerousMod(config, [
     'ios',
     async (config) => {
