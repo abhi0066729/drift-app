@@ -1,13 +1,36 @@
-const { withDangerousMod } = require('@expo/config-plugins');
+const { withDangerousMod, withAppDelegate } = require('@expo/config-plugins');
 const fs = require('fs');
 const path = require('path');
 
 /**
- * THE STABLE FIX: Handles Podfile only for Xcode 16.
- * Note: Plist linking and AppDelegate are now handled by official Firebase plugins.
+ * THE STABLE FIX: Handles Podfile only for Xcode 16 AND Swift AppDelegate injection.
+ * Note: Plist linking is handled by expo core via googleServicesFile.
  */
 const withIosModifications = (config) => {
-  // 1. Podfile & Linker Stability (Still needed for Xcode 16)
+  // 1. Manual Swift AppDelegate Injection
+  config = withAppDelegate(config, (config) => {
+    if (config.modResults.language === 'swift') {
+      let contents = config.modResults.contents;
+      
+      // Add import
+      if (!contents.includes('import FirebaseCore')) {
+        contents = contents.replace(/import UIKit/, 'import UIKit\nimport FirebaseCore');
+      }
+      
+      // Add FirebaseApp.configure()
+      if (!contents.includes('FirebaseApp.configure()')) {
+        contents = contents.replace(
+          /(func application\(\_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: \[UIApplication\.LaunchOptionsKey: Any\]\?\s*=\s*nil\) -> Bool \{)/,
+          '$1\n    FirebaseApp.configure()'
+        );
+      }
+      
+      config.modResults.contents = contents;
+    }
+    return config;
+  });
+
+  // 2. Podfile & Linker Stability (Still needed for Xcode 16)
   config = withDangerousMod(config, [
     'ios',
     async (config) => {
