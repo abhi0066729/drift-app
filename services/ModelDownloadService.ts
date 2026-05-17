@@ -14,17 +14,49 @@ export class ModelDownloadService {
   private static instance: ModelDownloadService;
   private static readonly DEBUG_FORCE_MODAL = false; // Set to false for production
 
-  // Official Drift Model Repository (drift-labs organization)
+  // Official Drift Model Repository (drift-labs organization & Software Mansion official ExecuTorch)
   private readonly HF_REPOS = {
     base: 'https://huggingface.co/drift-labs/base/resolve/main',
     embedding: 'https://huggingface.co/drift-labs/embedding/resolve/main'
   };
 
   private readonly MODELS = [
-    { name: 'Llama-3.2-1B-Instruct-Q4_K_M.gguf', size: '808MB', repo: 'base' },
-    { name: 'model_quantized.onnx', size: '31MB', repo: 'embedding' },
-    { name: 'tokenizer.json', size: '17.2MB', repo: 'base' },
-    { name: 'tokenizer_config.json', size: '56KB', repo: 'base' }
+    { 
+      name: 'llama3_2_spinquant.pte', 
+      downloadPath: 'llama3_2_spinquant.pte', 
+      size: '1.08GB', 
+      repo: 'base' 
+    },
+    { 
+      name: 'model_quantized.onnx', 
+      downloadPath: 'model_quantized.onnx', 
+      size: '31MB', 
+      repo: 'embedding' 
+    },
+    { 
+      name: 'tokenizer.json', 
+      downloadPath: 'tokenizer.json', 
+      size: '17.2MB', 
+      repo: 'base' 
+    },
+    { 
+      name: 'tokenizer_config.json', 
+      downloadPath: 'tokenizer_config.json', 
+      size: '56KB', 
+      repo: 'base' 
+    },
+    { 
+      name: 'embedding_tokenizer.json', 
+      downloadPath: 'tokenizer.json', 
+      size: '14MB', 
+      repo: 'embedding' 
+    },
+    { 
+      name: 'embedding_tokenizer_config.json', 
+      downloadPath: 'tokenizer_config.json', 
+      size: '1KB', 
+      repo: 'embedding' 
+    }
   ];
 
 
@@ -41,7 +73,7 @@ export class ModelDownloadService {
    * Orchestrates the download of all required AI models with unified progress.
    */
   public async ensureModelsPresent(onProgress: (p: DownloadProgress) => void): Promise<boolean> {
-    const totalExpectedSize = 839 * 1024 * 1024; // ~839MB total
+    const totalExpectedSize = 1131 * 1024 * 1024; // ~1.13GB total (Optimized model size)
     let totalBytesWritten = 0;
 
     const modelsDir = `${documentDirectory}models/`;
@@ -50,6 +82,15 @@ export class ModelDownloadService {
     const dirInfo = await getInfoAsync(modelsDir);
     if (!dirInfo.exists) {
       await makeDirectoryAsync(modelsDir, { intermediates: true });
+    } else {
+      // Cleanup obsolete 808MB GGUF model to free up storage
+      const obsoletePath = `${modelsDir}Llama-3.2-1B-Instruct-Q4_K_M.gguf`;
+      const obsoleteInfo = await getInfoAsync(obsoletePath);
+      if (obsoleteInfo.exists) {
+        const { deleteAsync } = require('expo-file-system/legacy');
+        await deleteAsync(obsoletePath).catch(() => {});
+        console.log('[ModelDownloadService] Cleaned up obsolete GGUF model file.');
+      }
     }
 
     for (const model of this.MODELS) {
@@ -86,9 +127,9 @@ export class ModelDownloadService {
     return true;
   }
 
-  private async downloadFile(model: { name: string, repo: string }, localPath: string, onProgress: (p: DownloadProgress) => void) {
+  private async downloadFile(model: { name: string, downloadPath: string, repo: string }, localPath: string, onProgress: (p: DownloadProgress) => void) {
     const repoUrl = this.HF_REPOS[model.repo as keyof typeof this.HF_REPOS] || this.HF_REPOS.base;
-    const url = `${repoUrl}/${model.name}`;
+    const url = `${repoUrl}/${model.downloadPath}`;
     const startTime = Date.now();
 
     const downloadResumable = createDownloadResumable(

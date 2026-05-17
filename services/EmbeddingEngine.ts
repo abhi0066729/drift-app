@@ -37,16 +37,21 @@ export class EmbeddingEngine {
       console.log('[EmbeddingEngine] Initializing...');
       
       // Dynamic imports to prevent export-time crashes
-      const { documentDirectory } = require('expo-file-system/legacy');
+      const { documentDirectory, readAsStringAsync } = require('expo-file-system/legacy');
       this.ort = require('onnxruntime-react-native');
       
       const modelsDir = `${documentDirectory}models/`;
 
-      // 1. Load Tokenizer
-      this.tokenizer = await AutoTokenizer.from_pretrained(
-        modelsDir,
-        { local_files_only: true }
-      );
+      // 1. Load Tokenizer directly from JSON to bypass React Native fetch() issues with file:// URIs
+      // IMPORTANT: Use the embedding model's OWN tokenizer (BERT/e5), NOT the Llama tokenizer
+      const tokenizerJsonStr = await readAsStringAsync(`${modelsDir}embedding_tokenizer.json`);
+      const tokenizerConfigStr = await readAsStringAsync(`${modelsDir}embedding_tokenizer_config.json`);
+      
+      const tokenizerJSON = JSON.parse(tokenizerJsonStr);
+      const tokenizerConfig = JSON.parse(tokenizerConfigStr);
+
+      const { PreTrainedTokenizer } = require('@xenova/transformers');
+      this.tokenizer = new PreTrainedTokenizer(tokenizerJSON, tokenizerConfig);
 
       // 2. Load ONNX Model
       const modelPath = `${modelsDir}model_quantized.onnx`;
@@ -81,10 +86,14 @@ export class EmbeddingEngine {
     const inferStart = Date.now();
     const inputTensor = new this.ort.Tensor('int64', BigInt64Array.from(input_ids.data), input_ids.dims);
     const maskTensor = new this.ort.Tensor('int64', BigInt64Array.from(attention_mask.data), attention_mask.dims);
+    // BERT models require token_type_ids (all zeros for single-sentence embedding)
+    const tokenTypeIds = new BigInt64Array(input_ids.data.length).fill(0n);
+    const tokenTypeTensor = new this.ort.Tensor('int64', tokenTypeIds, input_ids.dims);
 
     const results = await this.session.run({
       input_ids: inputTensor,
       attention_mask: maskTensor,
+      token_type_ids: tokenTypeTensor,
     });
     console.log(`[EmbeddingEngine] Inference complete in ${Date.now() - inferStart}ms`);
 

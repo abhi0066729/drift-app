@@ -68,7 +68,14 @@ export class VectorSearchService {
     if (!this.index) return [];
 
     try {
-      const results = this.index.search(queryVector, topK);
+      // Guard: USearch crashes with EXC_BAD_ACCESS when searching an empty index
+      const size = this.index.count;
+      if (size === 0) {
+        console.log('[VectorSearchService] Index is empty, skipping search.');
+        return [];
+      }
+
+      const results = this.index.search(queryVector, Math.min(topK, size));
       return results.map(r => ({
         numericId: r.key,
         distance: r.distance
