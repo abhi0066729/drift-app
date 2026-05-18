@@ -196,18 +196,26 @@ export function computeConstellations(notes: Note[]): NexusLayout {
     if (n1.isDust) return;
 
     const targets = nodes
-      .filter(n2 =>
-        n2.id !== n1.id &&
-        !n2.isDust &&
-        n2.clusterId === n1.clusterId
-      )
+      .filter(n2 => n2.id !== n1.id && !n2.isDust)
       .map(n2 => {
         const dx = n2.x - n1.x, dy = n2.y - n1.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        // Extract semantic weight from AI resonances
+        let semanticWeight = 0;
+        if (n1.resonances && n1.resonances[n2.clusterId]) {
+            semanticWeight = n1.resonances[n2.clusterId];
+        } else if (n1.clusterId === n2.clusterId) {
+            semanticWeight = 0.5; // Fallback for same category
+        }
+
         const note1 = noteMap.get(n1.id);
         const note2 = noteMap.get(n2.id);
-        const sim = (note1 && note2) ? computeSimilarity(note1, note2) : 0;
-        return { node: n2, dist, sim, weight: dist / (sim + 0.1) };
+        const wordSim = (note1 && note2) ? computeSimilarity(note1, note2) : 0;
+        
+        const totalSim = Math.max(semanticWeight, wordSim * 2);
+
+        return { node: n2, dist, sim: totalSim, weight: dist / (totalSim + 0.1) };
       })
       .filter(t => t.dist < SPATIAL_LIMIT && (t.sim > SIM_THRESHOLD || t.dist < 120))
       .sort((a, b) => a.weight - b.weight)

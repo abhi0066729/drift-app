@@ -38,6 +38,8 @@ export type Note = {
   resonances?: Record<string, number>;
   room_id?: string;
   wing_id?: string;
+  is_ghost?: boolean;
+  images?: string[];
   pipeline_step?: PipelineStep;
   pipeline_metrics?: {
     embedding_ms?: number;
