@@ -117,29 +117,28 @@ export class LocalLlamaService {
       }
       const thoughtStream = contextNotes.map((n: Note) => `- ${n.content}`).join('\n');
 
+      // Truncate query to prevent KV cache overflow in static ExecuTorch graph
+      const safeQuery = query.length > 300 ? query.substring(0, 300) + '...' : query;
+
       const prompt = `<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+Classify into exactly 1 category and extract emotion.
+Categories:
+- Idea: "I want to build an app", "muje app banana hai", plans
+- Todo: "I need to", "Buy milk", tasks
+- Study: "I learned", "How it works", notes
+- Journal: "Today I felt", diary
+- Dream: "I dreamed", sleep
+- Reflection: "Looking back", life lessons
+- Research: "Studies show", academic
+- Quote: Direct quotes
+- Meeting: "Met with", calls
+- Creative: Poetry, stories
 
-Classify the user's thought into exactly one category and extract the emotion.
-
-Categories with examples:
-- Idea: "I want to build an app", "muje ek translation app banana hai", plans, inventions, projects
-- Todo: "I need to", "Remember to", "Buy groceries", tasks, reminders
-- Study: "I learned that", "How does X work", notes from class, research findings
-- Journal: "Today I felt", "Had a great day", personal diary entries
-- Dream: "I dreamed about", "Last night I saw", sleep dreams
-- Reflection: "Looking back", "I realize now", self-analysis, life lessons
-- Research: "According to the paper", "Studies show", academic or deep investigation
-- Quote: Direct quotes from others, book passages, sayings
-- Meeting: "Met with", "Discussion about", work meetings, calls
-- Creative: Poetry, stories, song lyrics, art descriptions
-
-Respond in EXACTLY this format (nothing else):
-SUMMARY: one sentence describing the thought
-CATEGORY: one word from the list above
-EMOTION: one word emotion<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-${query}<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
+Format:
+SUMMARY: 1 short sentence
+CATEGORY: 1 word
+EMOTION: 1 word<|eot_id|><|start_header_id|>user<|end_header_id|>
+${safeQuery}<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 `;
 
       Logger.log(`Firing deep synthesis for note: ${query.substring(0, 20)}...`);
