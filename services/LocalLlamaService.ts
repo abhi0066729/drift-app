@@ -184,6 +184,17 @@ ${safeQuery}<|eot_id|><|start_header_id|>assistant<|end_header_id|>
       // Auto-derive resonances from the classified category
       const resonances: Record<string, number> = { [category]: 1.0 };
 
+      // Dynamically blend categories of semantically related contextNotes (nearest neighbors)
+      contextNotes.forEach((n: Note) => {
+        if (n.category) {
+          if (!resonances[n.category]) {
+            resonances[n.category] = 0.5; // 50% resonance with connected categories
+          } else {
+            resonances[n.category] = Math.max(resonances[n.category], 0.5);
+          }
+        }
+      });
+
       return {
         summary,
         connections: contextNotes.map((n: Note) => n.id),

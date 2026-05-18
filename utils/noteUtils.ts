@@ -97,7 +97,7 @@ export function processContextualConnections(notes: Note[], width: number, searc
         const parsed = JSON.parse(note.entities_json);
         category = parsed.category || parsed.categories?.[0] || 'Journal';
         clusterId = parsed.clusterId ?? -1;
-        resonances = parsed.resonances || { [category]: 1.0 };
+        resonances = parsed.resonances ? { ...parsed.resonances } : { [category]: 1.0 };
         semantic_links = parsed.semantic_links || [];
       } catch (e) { }
     } else {
@@ -204,6 +204,14 @@ export function processContextualConnections(notes: Note[], width: number, searc
         const targetNote = processedNotes.find(n => n.id === targetId);
         if (targetNote) {
           connections.push({ targetId, category: targetNote.category, weight: 2.0 });
+          // Dynamically blend the target note's category into this note's resonances
+          if (targetNote.category) {
+            if (!note.resonances[targetNote.category]) {
+              note.resonances[targetNote.category] = 0.6; // 60% resonance
+            } else {
+              note.resonances[targetNote.category] = Math.max(note.resonances[targetNote.category], 0.6);
+            }
+          }
         }
       });
     }

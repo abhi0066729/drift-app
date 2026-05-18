@@ -1,7 +1,23 @@
 # Drift Version Log (V-LOG)
 
 **Conversation ID**: `0682bb5e-3018-4c47-a9ac-366ebba0c9af`
-**Current Version**: `v83`
+**Current Version**: `v84`
+
+## [v84] - Resonance Factor & Connection Weight Resolution
+**Prompt ID**: `P58`  
+**Request**: "ok so i don't know some lines are getting ticker and same stays smaller add also the lines are connecting to the first idea they relate to in drift map but doesn't show in our resonace factor percent that which other catergoy its properly align to"  
+**Date**: 2026-05-18  
+**Status**: STABLE (OTA LIVE)  
+**Files Modified**: 
+- `components/DriftNode.tsx`: Rerouted resonance percent text calculation to dynamic, blended `node.resonances` to sync card labels with gradient colors.
+- `utils/noteUtils.ts` & `v1_staging/utils/noteUtils.ts`: Integrated safe cloning and 60% dynamic category blending in multi-category connection passes.
+- `services/LocalLlamaService.ts`: Implemented database-level blending (50% secondary resonance) during AI synthesis, storing relation data persistently in SQLite.
+- `components/UserModeMap.tsx` & `v1_staging/components/UserModeMap.tsx`: Factored rounded line width into the SVG batching groupKey to preserve individual connection line weights.
+
+**Changes**:
+- **Cohesive Resonances**: Unified visual filaments and card text labels by blending target categories on-the-fly and persistently inside the SQLite database.
+- **Batched Width Accuracy**: Solved the SVG connection thickness bug by including the rounded connection width in the batched grouping key, restoring correct individual weights.
+- **Typescript Strict Fixes**: Added explicit types to state selectors and maps to satisfy implicit-any checks in staging components.
 
 ## [v83] - TypeScript Build Fixes & True Logo Bypass
 **Prompt ID**: `P57`  

@@ -73,22 +73,23 @@ const BatchedConnectionLayer = React.memo(({ visibleCurves, nodeMap, tileY, isNe
       const status = calculateSearchMatch(searchQuery, node);
       const dy = Math.abs(targetNode.unfocusedY - node.unfocusedY);
       const isFilament = conn.type === 'filament';
+      const weightMult = conn.weight || 1.0;
+      const width = (node.importance || 1) * (isFilament ? 3.5 : 2.5) * weightMult + 1.2;
+      const roundedWidth = Math.round(width * 10) / 10;
       
       let distBucket = 0;
       if (dy > 800) distBucket = 1;
       if (dy > 1800) distBucket = 2;
       
-      const groupKey = `${conn.category}-${status}-${distBucket}-${conn.type}`;
+      const groupKey = `${conn.category}-${status}-${distBucket}-${conn.type}-${roundedWidth}`;
       
       if (!groups[groupKey]) {
         groups[groupKey] = [];
         const color = isFilament ? '#F1C40F' : (CATEGORY_COLORS[conn.category] || '#8E44AD');
-        const weightMult = conn.weight || 1.0;
         let baseOpacity = (isFilament ? 0.9 : 0.85) * weightMult;
         
         if (distBucket === 1) baseOpacity *= 0.8;
         if (distBucket === 2) baseOpacity *= 0.6;
-        const width = (node.importance || 1) * (isFilament ? 3.5 : 2.5) * weightMult + 1.2;
         
         if (status === 'dim') baseOpacity *= 0.4;
         if (status === 'match') baseOpacity = 0.95 * weightMult;

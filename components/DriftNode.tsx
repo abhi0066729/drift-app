@@ -70,9 +70,9 @@ function DriftNode({ node, onPress, onDragStart, onDragUpdateSharedX, onDragUpda
   }, [node.entities_json]);
 
   const resonanceStr = useMemo(() => {
-    if (!entities || !entities.resonances || typeof entities.resonances !== 'object') return null;
+    if (!resonancesObj || typeof resonancesObj !== 'object') return null;
     try {
-      const entries = Object.entries(entities.resonances)
+      const entries = Object.entries(resonancesObj)
         .sort(([, a], [, b]) => (b as number) - (a as number))
         .slice(0, 2);
       
@@ -81,7 +81,7 @@ function DriftNode({ node, onPress, onDragStart, onDragUpdateSharedX, onDragUpda
     } catch (e) {
       return null;
     }
-  }, [entities]);
+  }, [resonancesObj]);
 
   useEffect(() => {
     if (searchStatus === 'match') {
