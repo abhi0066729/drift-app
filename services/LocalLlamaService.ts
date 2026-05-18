@@ -122,7 +122,7 @@ export class LocalLlamaService {
 Classify the user's thought into exactly one category and extract the emotion.
 
 Categories with examples:
-- Idea: "I want to build an app", "What if we could...", plans, inventions, projects
+- Idea: "I want to build an app", "muje ek translation app banana hai", plans, inventions, projects
 - Todo: "I need to", "Remember to", "Buy groceries", tasks, reminders
 - Study: "I learned that", "How does X work", notes from class, research findings
 - Journal: "Today I felt", "Had a great day", personal diary entries

@@ -40,6 +40,7 @@ export type Note = {
   wing_id?: string;
   is_ghost?: boolean;
   images?: string[];
+  semantic_links?: string[];
   pipeline_step?: PipelineStep;
   pipeline_metrics?: {
     embedding_ms?: number;

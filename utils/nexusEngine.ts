@@ -34,6 +34,7 @@ export type NexusNode = {
   resonances?: Record<string, number>;
   pipeline_step?: string;
   images?: string[];
+  semantic_links?: string[];
 };
 
 export type NexusBond = {
@@ -109,10 +110,12 @@ export function computeConstellations(notes: Note[]): NexusLayout {
     );
 
     let category = 'Journal';
+    let semantic_links: string[] = [];
     if (note.entities_json) {
       try {
         const parsed = JSON.parse(note.entities_json);
         category = parsed.category || parsed.categories?.[0] || 'Journal';
+        if (parsed.semantic_links) semantic_links = parsed.semantic_links;
       } catch (_) {}
     }
 
@@ -144,6 +147,7 @@ export function computeConstellations(notes: Note[]): NexusLayout {
       resonances: note.resonances,
       pipeline_step: note.pipeline_step,
       images: note.images,
+      semantic_links,
     });
   });
 
@@ -201,9 +205,11 @@ export function computeConstellations(notes: Note[]): NexusLayout {
         const dx = n2.x - n1.x, dy = n2.y - n1.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
         
-        // Extract semantic weight from AI resonances
+        // Extract semantic weight from AI resonances & real neural embeddings
         let semanticWeight = 0;
-        if (n1.resonances && n1.resonances[n2.clusterId]) {
+        if (n1.semantic_links && n1.semantic_links.includes(n2.id)) {
+            semanticWeight = 2.0; // Guaranteed neural connection
+        } else if (n1.resonances && n1.resonances[n2.clusterId]) {
             semanticWeight = n1.resonances[n2.clusterId];
         } else if (n1.clusterId === n2.clusterId) {
             semanticWeight = 0.5; // Fallback for same category

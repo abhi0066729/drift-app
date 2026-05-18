@@ -91,12 +91,14 @@ export function processContextualConnections(notes: Note[], width: number, searc
     let category = 'Journal';
     let clusterId = -1;
     let resonances: Record<string, number> = {};
+    let semantic_links: string[] = [];
     if (note.entities_json) {
       try {
         const parsed = JSON.parse(note.entities_json);
         category = parsed.category || parsed.categories?.[0] || 'Journal';
         clusterId = parsed.clusterId ?? -1;
         resonances = parsed.resonances || { [category]: 1.0 };
+        semantic_links = parsed.semantic_links || [];
       } catch (e) { }
     } else {
       resonances = { [category]: 1.0 };
@@ -171,6 +173,7 @@ export function processContextualConnections(notes: Note[], width: number, searc
       category,
       categories: [category],
       resonances,
+      semantic_links,
       clusterId,
       clusterIndex: localIndex,
       displayLines,
@@ -195,11 +198,24 @@ export function processContextualConnections(notes: Note[], width: number, searc
 
     const connections: { targetId: string, category: string, weight: number }[] = [];
     
-    // Connect back sequentially for every active resonance
+    // 1. Prioritize true neural semantic links
+    if (note.semantic_links && note.semantic_links.length > 0) {
+      note.semantic_links.forEach((targetId: string) => {
+        const targetNote = processedNotes.find(n => n.id === targetId);
+        if (targetNote) {
+          connections.push({ targetId, category: targetNote.category, weight: 2.0 });
+        }
+      });
+    }
+
+    // 2. Connect back sequentially for every active resonance as fallback/addition
     Object.entries(note.resonances).forEach(([cat, weight]) => {
       const targetIdx = lastSeenByCategory.get(cat);
       if (targetIdx !== undefined && processedNotes[targetIdx]) {
-         connections.push({ targetId: processedNotes[targetIdx].id, category: cat, weight: weight as number });
+         // Only add if not already added by semantic_links
+         if (!connections.some(c => c.targetId === processedNotes[targetIdx].id)) {
+            connections.push({ targetId: processedNotes[targetIdx].id, category: cat, weight: weight as number });
+         }
       }
       lastSeenByCategory.set(cat, i);
     });

@@ -171,7 +171,8 @@ export class AIJobScheduler {
         entities_json: JSON.stringify({
             category: result.category,
             resonances: result.resonances,
-            summary: result.summary
+            summary: result.summary,
+            semantic_links: result.connections
         })
       });
 
