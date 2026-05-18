@@ -1,6 +1,5 @@
 import { VectorIndex } from 'expo-vector-search';
 // @ts-ignore
-import { documentDirectory, getInfoAsync } from 'expo-file-system/legacy';
 import { DatabaseService } from './DatabaseService';
 import { hashUUIDToNumber } from '../utils/idUtils';
 
@@ -47,20 +46,9 @@ export class VectorSearchService {
 
   private async doInit() {
     try {
-      const indexPath = `${documentDirectory}SQLite/${this.indexName}`;
-      const exists = await getInfoAsync(indexPath);
-
-      // Initialize the native index object
+      console.log('[VectorSearchService] Initializing clean HNSW index from SQLite...');
       this.index = new VectorIndex(this.dimensions, { metric: 'cos' });
-
-      if (exists.exists) {
-        console.log('[VectorSearchService] Loading HNSW index from:', indexPath);
-        this.index.load(indexPath);
-      } else {
-        console.log('[VectorSearchService] Creating new HNSW index...');
-        await this._rebuildFromDatabase();
-      }
-
+      await this._rebuildFromDatabase();
       this.isLoaded = true;
     } catch (error) {
       console.error('[VectorSearchService] Initialization failed:', error);
@@ -78,9 +66,6 @@ export class VectorSearchService {
       if (!this.index) return;
       const numericId = hashUUIDToNumber(noteId);
       this.index.add(numericId, embedding);
-      
-      const indexPath = `${documentDirectory}SQLite/${this.indexName}`;
-      this.index.save(indexPath);
     } catch (error) {
       console.error('[VectorSearchService] Failed to add note:', error);
     } finally {
@@ -134,9 +119,7 @@ export class VectorSearchService {
       this.index.add(numericId, vector);
     }
 
-    const indexPath = `${documentDirectory}SQLite/${this.indexName}`;
-    this.index.save(indexPath);
-    console.log(`[VectorSearchService] Rebuilt index with ${allEmbeddings.length} notes.`);
+    console.log(`[VectorSearchService] Rebuilt index cleanly with ${allEmbeddings.length} notes.`);
   }
 
   public async unload() {
