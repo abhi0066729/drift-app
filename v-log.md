@@ -1,7 +1,20 @@
 # Drift Version Log (V-LOG)
 
 **Conversation ID**: `0682bb5e-3018-4c47-a9ac-366ebba0c9af`
-**Current Version**: `v87`
+**Current Version**: `v88`
+
+## [v88] - Specific Category Preservation & Async Fallback Await Fix
+**Prompt ID**: `P62`  
+**Request**: "again the same note went into journal"  
+**Date**: 2026-05-18  
+**Status**: STABLE (OTA LIVE)  
+**Files Modified**:
+- `services/SynthesisService.ts`: Added safeguard to ensure successful background synthesis never downgrades specific categories like `Idea` or `Todo` to `Journal`. Added missing `await` to recovery `predictIntent` call.
+- `services/AIJobScheduler.ts`: Updated synthesis job query to select `category` from SQLite database and implemented `finalCategory` safeguard to preserve user/real-time intents.
+
+**Changes**:
+- **Demotion Prevention**: If a note starts with a specific category (e.g. `Idea`), background processes will never downgrade it to `Journal`.
+- **Async Recovery Correctness**: Fixed a critical missing `await` that caused the local recovery fallback to execute as a Promise, resolving to `undefined` and defaulting notes to `Journal` during errors or timeouts.
 
 ## [v87] - Note Creation Category Fix & Scheduler Serialization Persistence
 **Prompt ID**: `P61`  

@@ -145,7 +145,7 @@ export class AIJobScheduler {
       console.log(`[AIJobScheduler] Start Synthesis: ${noteId}`);
       await db.runAsync("UPDATE ai_jobs SET status = 'processing', updated_at = ? WHERE id = ?", [Date.now(), jobId]);
       
-      const note = await db.getFirstAsync<{ content: string, pipeline_metrics: string }>("SELECT content, pipeline_metrics FROM notes WHERE id = ?", [noteId]);
+      const note = await db.getFirstAsync<{ content: string, category: string, pipeline_metrics: string }>("SELECT content, category, pipeline_metrics FROM notes WHERE id = ?", [noteId]);
       if (!note) throw new Error('Note missing from database');
 
       const result = await LocalLlamaService.getInstance().synthesise(note.content);
@@ -161,15 +161,20 @@ export class AIJobScheduler {
       metrics.synthesis_ms = duration;
       metrics.total_ms = (metrics.total_ms || 0) + duration;
 
+      let finalCategory = result.category || 'Journal';
+      if (note && note.category && note.category !== 'Journal' && finalCategory === 'Journal') {
+        finalCategory = note.category;
+      }
+
       await NoteService.getInstance().updateNote(noteId, { 
-        category: result.category,
+        category: finalCategory,
         emotion: result.emotion,
         summary: result.summary,
         synthesis_status: 'complete',
         pipeline_step: 'complete',
         pipeline_metrics: metrics,
         entities_json: JSON.stringify({
-            category: result.category,
+            category: finalCategory,
             resonances: result.resonances,
             summary: result.summary,
             semantic_links: result.connections,

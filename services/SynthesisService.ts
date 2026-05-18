@@ -53,7 +53,10 @@ export class SynthesisService {
       }
 
       // 3. Final Categorization & Resonance Hydration
-      const finalCategory = result.category || sourceNote.category || 'Journal';
+      let finalCategory = result.category || sourceNote.category || 'Journal';
+      if (sourceNote.category && sourceNote.category !== 'Journal' && finalCategory === 'Journal') {
+        finalCategory = sourceNote.category;
+      }
       
       const entities = {
         summary: result.summary,
@@ -100,15 +103,32 @@ export class SynthesisService {
       
       // FALLBACK: Use Shadow Engine (Keywords) instead of failing
       const { predictIntent } = require('./ai');
-      const fallbackEntities = predictIntent(sourceNote.content);
+      let fallbackCategory = sourceNote.category || 'Journal';
+      let fallbackEmotion = 'neutral';
+      let fallbackResonances: Record<string, number> = { [fallbackCategory]: 1.0 };
+
+      try {
+        const fallbackEntities = await predictIntent(sourceNote.content);
+        if (fallbackEntities) {
+          fallbackCategory = fallbackEntities.category || fallbackCategory;
+          fallbackEmotion = fallbackEntities.emotion || fallbackEmotion;
+          fallbackResonances = fallbackEntities.resonances || fallbackResonances;
+        }
+      } catch (predictErr) {
+        console.error('[SynthesisService] predictIntent fallback failed:', predictErr);
+      }
+
+      if (sourceNote.category && sourceNote.category !== 'Journal' && fallbackCategory === 'Journal') {
+        fallbackCategory = sourceNote.category;
+      }
       
       const recoveryChanges = {
-        category: fallbackEntities.category || 'Journal',
+        category: fallbackCategory,
         entities_json: JSON.stringify({
           summary: "Synthesis bypassed (Resource limit).",
-          category: fallbackEntities.category || 'Journal',
-          emotion: fallbackEntities.emotion || 'neutral',
-          resonances: fallbackEntities.resonances || { Journal: 1.0 },
+          category: fallbackCategory,
+          emotion: fallbackEmotion,
+          resonances: fallbackResonances,
           is_evolved: false
         }),
         is_refining: false,
