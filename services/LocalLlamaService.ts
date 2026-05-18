@@ -147,7 +147,7 @@ ${safeQuery}<|eot_id|><|start_header_id|>assistant<|end_header_id|>
       
       console.log(`[Neural Engine] Raw Response: ${text}`);
 
-      // Robust Multi-Line Parsing
+      // Robust Multi-Line Case-Insensitive Parsing
       const VALID_CATEGORIES = ['Journal', 'Idea', 'Study', 'Todo', 'Dream', 'Research', 'Quote', 'Meeting', 'Reflection', 'Creative'];
       let category = "Journal";
       let summary = "A thought in the drift.";
@@ -156,15 +156,30 @@ ${safeQuery}<|eot_id|><|start_header_id|>assistant<|end_header_id|>
       const lines = text.split('\n');
       lines.forEach((line: string) => {
         const trimmed = line.trim();
-        if (trimmed.startsWith('SUMMARY:')) summary = trimmed.replace('SUMMARY:', '').trim();
-        if (trimmed.startsWith('CATEGORY:')) {
-          const raw = trimmed.replace('CATEGORY:', '').trim();
-          // Find closest valid category (case-insensitive match)
+        const summaryMatch = trimmed.match(/^summary:\s*(.*)/i);
+        const categoryMatch = trimmed.match(/^category:\s*(.*)/i);
+        const emotionMatch = trimmed.match(/^emotion:\s*(.*)/i);
+
+        if (summaryMatch) summary = summaryMatch[1].trim();
+        if (categoryMatch) {
+          const raw = categoryMatch[1].trim();
           const match = VALID_CATEGORIES.find(c => c.toLowerCase() === raw.toLowerCase());
           category = match || "Journal";
         }
-        if (trimmed.startsWith('EMOTION:')) emotion = trimmed.replace('EMOTION:', '').trim();
+        if (emotionMatch) emotion = emotionMatch[1].trim();
       });
+
+      // Robust Heuristic Override to assist tiny 1B models on obvious intents
+      const lowerQuery = query.toLowerCase();
+      if (
+        category === "Journal" && 
+        (lowerQuery.includes("make a app") || lowerQuery.includes("make an app") || 
+         lowerQuery.includes("build a") || lowerQuery.includes("build an") || 
+         lowerQuery.includes("app banana") || lowerQuery.includes("bot banaye") || 
+         lowerQuery.includes("translation app") || lowerQuery.includes("translate"))
+      ) {
+        category = "Idea";
+      }
 
       // Auto-derive resonances from the classified category
       const resonances: Record<string, number> = { [category]: 1.0 };
