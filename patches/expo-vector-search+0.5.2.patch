@@ -1,0 +1,30 @@
+diff --git a/node_modules/expo-vector-search/cpp/usearch/index_plugins.hpp b/node_modules/expo-vector-search/cpp/usearch/index_plugins.hpp
+index e6e388e..366389c 100644
+--- a/node_modules/expo-vector-search/cpp/usearch/index_plugins.hpp
++++ b/node_modules/expo-vector-search/cpp/usearch/index_plugins.hpp
+@@ -695,22 +695,13 @@ public:
+     std::size_t length_bytes = alignment_ak * divide_round_up<alignment_ak>(
+                                                   length * sizeof(value_type));
+     std::size_t alignment = alignment_ak;
+-    // void* result = nullptr;
+-    // int status = posix_memalign(&result, alignment, length_bytes);
+-    // return status == 0 ? (pointer)result : nullptr;
+-#if defined(USEARCH_DEFINED_WINDOWS)
+-    return (pointer)_aligned_malloc(length_bytes, alignment);
+-#else
+-    return (pointer)aligned_alloc(alignment, length_bytes);
+-#endif
++    void* result = nullptr;
++    int status = posix_memalign(&result, alignment, length_bytes);
++    return status == 0 ? (pointer)result : nullptr;
+   }
+ 
+   void deallocate(pointer begin, size_type) const {
+-#if defined(USEARCH_DEFINED_WINDOWS)
+-    _aligned_free(begin);
+-#else
+     free(begin);
+-#endif
+   }
+ };
+ 

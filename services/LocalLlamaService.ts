@@ -39,7 +39,8 @@ export class LocalLlamaService {
     try {
       // STEP 1: Dynamic imports
       Logger.log('[NeuralInit] Step 1: Importing ExecuTorch modules...');
-      const { LLMModule } = require('react-native-executorch');
+      const { LLMModule, initExecutorch } = require('react-native-executorch');
+      const { ExpoResourceFetcher } = require('react-native-executorch-expo-resource-fetcher');
       Logger.log('[NeuralInit] Step 1: OK - Modules imported.');
       
       // STEP 2: Verify model file exists on disk
@@ -60,20 +61,17 @@ export class LocalLlamaService {
         return;
       }
 
-      // STEP 4: Initialize adapter (Skipped on OTA-compatible branch)
-      Logger.log('[NeuralInit] Step 4: Skipping adapter (using default)');
+      // STEP 4: Initialize ExecuTorch resource fetcher adapter
+      Logger.log('[NeuralInit] Step 4: Initializing ExecuTorch adapter...');
+      initExecutorch({ resourceFetcher: ExpoResourceFetcher });
+      Logger.log('[NeuralInit] Step 4: OK - Adapter registered.');
 
       // STEP 5: Load model via JSI bridge
       Logger.log('[NeuralInit] Step 5: Loading model via LLMModule.fromCustomModel()...');
-      
-      const absoluteModelPath = this.paths.model.replace(/^file:\/\//, '');
-      const absoluteTokenizerPath = this.paths.tokenizer.replace(/^file:\/\//, '');
-      const absoluteConfigPath = this.paths.config.replace(/^file:\/\//, '');
-      
       this.model = await LLMModule.fromCustomModel(
-        absoluteModelPath,
-        absoluteTokenizerPath,
-        absoluteConfigPath,
+        this.paths.model,
+        this.paths.tokenizer,
+        this.paths.config,
         (progress: number) => {
           if (Math.round(progress * 100) % 25 === 0) {
              Logger.log(`[NeuralInit] Step 5: Loading ${Math.round(progress * 100)}%`);

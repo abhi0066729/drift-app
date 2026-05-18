@@ -86,7 +86,6 @@ export class EmbeddingEngine {
     const inferStart = Date.now();
     const inputTensor = new this.ort.Tensor('int64', BigInt64Array.from(input_ids.data), input_ids.dims);
     const maskTensor = new this.ort.Tensor('int64', BigInt64Array.from(attention_mask.data), attention_mask.dims);
-    
     // BERT models require token_type_ids (all zeros for single-sentence embedding)
     const tokenTypeIds = new BigInt64Array(input_ids.data.length).fill(0n);
     const tokenTypeTensor = new this.ort.Tensor('int64', tokenTypeIds, input_ids.dims);
