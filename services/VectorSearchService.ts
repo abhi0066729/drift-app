@@ -94,7 +94,10 @@ export class VectorSearchService {
     const release = await this.lock.acquire();
     try {
       if (!this.index || this.index.count === 0) return [];
-      const results = this.index.search(queryVector, topK);
+      const k = Math.min(topK, this.index.count);
+      if (k <= 0) return [];
+      
+      const results = this.index.search(queryVector, k);
       return results.map(r => ({
         numericId: r.key,
         distance: r.distance

@@ -61,7 +61,14 @@ const BatchedConnectionLayer = React.memo(({ visibleCurves, nodeMap, tileY, isNe
 
     targets.forEach((conn: any) => {
       const targetNode = nodeMap[conn.id];
-      if (!targetNode) return;
+      if (
+        node.unfocusedX === undefined || node.unfocusedY === undefined ||
+        targetNode.unfocusedX === undefined || targetNode.unfocusedY === undefined ||
+        isNaN(node.unfocusedX) || isNaN(node.unfocusedY) ||
+        isNaN(targetNode.unfocusedX) || isNaN(targetNode.unfocusedY)
+      ) {
+        return;
+      }
 
       const status = calculateSearchMatch(searchQuery, node);
       const dy = Math.abs(targetNode.unfocusedY - node.unfocusedY);
@@ -91,9 +98,9 @@ const BatchedConnectionLayer = React.memo(({ visibleCurves, nodeMap, tileY, isNe
 
       // Filaments have less "bowing" to feel more intentional and structural
       const tangent = Math.max(isFilament ? 100 : 160, dy * (isFilament ? 0.3 : 0.42));
-      const curX = node.unfocusedX ?? 0;
+      const curX = node.unfocusedX;
       const curY = node.unfocusedY - tileY;
-      const tgtX = targetNode.unfocusedX ?? 0;
+      const tgtX = targetNode.unfocusedX;
       const tgtY = targetNode.unfocusedY - tileY;
       
       let cp1x = curX;
