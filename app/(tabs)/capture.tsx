@@ -240,7 +240,7 @@ export default function CaptureScreen() {
       content: inputText,
       created_at: Date.now(),
       source_type: 'text',
-      category: 'Journal', 
+      category: currentCategory, 
       emotion: emotionHint || 'neutral',
       is_deleted: false,
       embedding_status: 'pending',

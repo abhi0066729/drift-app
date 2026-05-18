@@ -1,7 +1,20 @@
 # Drift Version Log (V-LOG)
 
 **Conversation ID**: `0682bb5e-3018-4c47-a9ac-366ebba0c9af`
-**Current Version**: `v86`
+**Current Version**: `v87`
+
+## [v87] - Note Creation Category Fix & Scheduler Serialization Persistence
+**Prompt ID**: `P61`  
+**Request**: "it still placed it in journal rather than idea"  
+**Date**: 2026-05-18  
+**Status**: STABLE (OTA LIVE)  
+**Files Modified**:
+- `app/(tabs)/capture.tsx`: Fixed a major initialization bug where the saved note's category was hardcoded to `'Journal'` instead of adopting the active real-time `predictedCategory`.
+- `services/AIJobScheduler.ts`: Expanded background synthesis execution to serialize new cognitive modes and domain tags to SQLite `entities_json` upon Llama completion.
+
+**Changes**:
+- **Instant Intent Mapping**: Notes committed from Drift Lens now instantly inherit their correct detected intent (e.g. `Idea` or `Todo`) on the UI map and database without waiting for Llama synthesis.
+- **Parallel Metadata Preservation**: Guaranteed that cognitive modes and dynamic domain tags persist in SQLite when background Llama jobs finish processing.
 
 ## [v86] - 3-Tier Cognitive Modes & Parallel Classification
 **Prompt ID**: `P60`  

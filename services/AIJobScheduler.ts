@@ -172,7 +172,10 @@ export class AIJobScheduler {
             category: result.category,
             resonances: result.resonances,
             summary: result.summary,
-            semantic_links: result.connections
+            semantic_links: result.connections,
+            cognitive_mode: result.cognitive_mode || 'REFLECTION',
+            domain_tags: result.domain_tags || [],
+            topics: result.domain_tags || []
         })
       });
 
