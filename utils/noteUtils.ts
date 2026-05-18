@@ -198,12 +198,11 @@ export function processContextualConnections(notes: Note[], width: number, searc
 
     const connections: { targetId: string, category: string, weight: number }[] = [];
     
-    // 1. Prioritize true neural semantic links
+    // 1. Prioritize true neural semantic links for resonance blending
     if (note.semantic_links && note.semantic_links.length > 0) {
       note.semantic_links.forEach((targetId: string) => {
         const targetNote = processedNotes.find(n => n.id === targetId);
         if (targetNote) {
-          connections.push({ targetId, category: targetNote.category, weight: 2.0 });
           // Dynamically blend the target note's category into this note's resonances
           if (targetNote.category) {
             if (!note.resonances[targetNote.category]) {

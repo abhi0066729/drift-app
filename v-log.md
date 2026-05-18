@@ -1,7 +1,19 @@
 # Drift Version Log (V-LOG)
 
 **Conversation ID**: `0682bb5e-3018-4c47-a9ac-366ebba0c9af`
-**Current Version**: `v84`
+**Current Version**: `v85`
+
+## [v85] - De-cluttering Chronos Map Filaments
+**Prompt ID**: `P59`  
+**Request**: "ok so we don't want semantic links in drift palace the semantic links are for nexus and studio not for drift palace chronos"  
+**Date**: 2026-05-18  
+**Status**: STABLE (OTA LIVE)  
+**Files Modified**: 
+- `utils/noteUtils.ts`: Removed `connections.push` of target notes in the `semantic_links` iteration while maintaining the dynamic category resonance blending.
+
+**Changes**:
+- **Chronos Map Purity**: Disabled direct semantic diagonal lines on the Drift Palace map. Chronos mode now exclusively displays sequential category lane filaments, preventing overlapping spiderweb clutter.
+- **Resonance Retention**: Kept the dynamic 60% resonance blending block intact so that card labels and colors continue to correctly display blended category percentages on semantic contact.
 
 ## [v84] - Resonance Factor & Connection Weight Resolution
 **Prompt ID**: `P58`  
