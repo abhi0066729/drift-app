@@ -21,10 +21,12 @@ export class ModelDownloadService {
   };
 
   private readonly MODELS = [
-    { name: 'Llama-3.2-1B-Instruct-Q4_K_M.gguf', size: '808MB', repo: 'base' },
+    { name: 'llama3_2_spinquant.pte', size: '185MB', repo: 'base' },
     { name: 'model_quantized.onnx', size: '31MB', repo: 'embedding' },
     { name: 'tokenizer.json', size: '17.2MB', repo: 'base' },
-    { name: 'tokenizer_config.json', size: '56KB', repo: 'base' }
+    { name: 'tokenizer_config.json', size: '56KB', repo: 'base' },
+    { name: 'embedding_tokenizer.json', size: '1.2MB', repo: 'embedding' },
+    { name: 'embedding_tokenizer_config.json', size: '1KB', repo: 'embedding' }
   ];
 
 

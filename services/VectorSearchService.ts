@@ -4,6 +4,20 @@ import { documentDirectory, getInfoAsync } from 'expo-file-system/legacy';
 import { DatabaseService } from './DatabaseService';
 import { hashUUIDToNumber } from '../utils/idUtils';
 
+class AsyncLock {
+  private promise: Promise<any> = Promise.resolve();
+
+  public async acquire(): Promise<() => void> {
+    let release: () => void;
+    const nextPromise = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const currentPromise = this.promise;
+    this.promise = currentPromise.then(() => nextPromise).catch(() => nextPromise);
+    await currentPromise;
+    return release!;
+  }
+}
 
 export class VectorSearchService {
   private static instance: VectorSearchService;
@@ -11,6 +25,8 @@ export class VectorSearchService {
   private indexName = 'drift_hnsw.bin';
   private dimensions = 384; 
   private isLoaded = false;
+  private initPromise: Promise<void> | null = null;
+  private lock = new AsyncLock();
 
   private constructor() {}
 
@@ -23,7 +39,13 @@ export class VectorSearchService {
 
   public async init() {
     if (this.isLoaded) return;
+    if (!this.initPromise) {
+      this.initPromise = this.doInit();
+    }
+    await this.initPromise;
+  }
 
+  private async doInit() {
     try {
       const indexPath = `${documentDirectory}SQLite/${this.indexName}`;
       const exists = await getInfoAsync(indexPath);
@@ -36,7 +58,7 @@ export class VectorSearchService {
         this.index.load(indexPath);
       } else {
         console.log('[VectorSearchService] Creating new HNSW index...');
-        await this.rebuildFromDatabase();
+        await this._rebuildFromDatabase();
       }
 
       this.isLoaded = true;
@@ -50,9 +72,10 @@ export class VectorSearchService {
 
   public async addNote(noteId: string, embedding: Float32Array) {
     if (!this.isLoaded) await this.init();
-    if (!this.index) return;
 
+    const release = await this.lock.acquire();
     try {
+      if (!this.index) return;
       const numericId = hashUUIDToNumber(noteId);
       this.index.add(numericId, embedding);
       
@@ -60,14 +83,17 @@ export class VectorSearchService {
       this.index.save(indexPath);
     } catch (error) {
       console.error('[VectorSearchService] Failed to add note:', error);
+    } finally {
+      release();
     }
   }
 
   public async search(queryVector: Float32Array, topK: number = 20) {
     if (!this.isLoaded) await this.init();
-    if (!this.index) return [];
 
+    const release = await this.lock.acquire();
     try {
+      if (!this.index || this.index.count === 0) return [];
       const results = this.index.search(queryVector, topK);
       return results.map(r => ({
         numericId: r.key,
@@ -76,10 +102,21 @@ export class VectorSearchService {
     } catch (error) {
       console.error('[VectorSearchService] Search failed:', error);
       return [];
+    } finally {
+      release();
     }
   }
 
   public async rebuildFromDatabase() {
+    const release = await this.lock.acquire();
+    try {
+      await this._rebuildFromDatabase();
+    } finally {
+      release();
+    }
+  }
+
+  private async _rebuildFromDatabase() {
     if (!this.index) this.index = new VectorIndex(this.dimensions, { metric: 'cos' });
 
     console.log('[VectorSearchService] Rebuilding HNSW from SQLite...');
@@ -100,10 +137,17 @@ export class VectorSearchService {
   }
 
   public async unload() {
-    if (this.index) {
-      this.index.delete();
-      this.index = null;
+    const release = await this.lock.acquire();
+    try {
+      if (this.index) {
+        this.index.delete();
+        this.index = null;
+      }
+      this.isLoaded = false;
+      this.initPromise = null;
+    } finally {
+      release();
     }
-    this.isLoaded = false;
   }
 }
+
