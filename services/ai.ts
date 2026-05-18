@@ -60,8 +60,23 @@ export async function predictIntent(text: string): Promise<{ category: NoteCateg
   const rawScores: Record<string, number> = {};
   let totalScore = 0;
 
+  // Initialize rawScores
+  const categories: NoteCategory[] = ['Journal', 'Study', 'Idea', 'Todo', 'Dream', 'Research', 'Quote', 'Meeting', 'Reflection', 'Creative'];
+  categories.forEach(c => rawScores[c] = 0);
+
+  // Hybrid Intelligence: Boost Idea score if action + target pattern matches
+  const actionWords = ['make', 'build', 'create', 'develop', 'design', 'planning to', 'plan to', 'banaye', 'banana', 'banane', 'soch raha'];
+  const targetWords = ['app', 'bot', 'website', 'software', 'tool', 'product', 'startup', 'business', 'platform', 'system', 'device', 'game'];
+  const hasAction = actionWords.some(action => low.includes(action));
+  const hasTarget = targetWords.some(target => low.includes(target));
+  const hasDirectIdea = ['what if', 'how about', 'let\'s build', 'let\'s make', 'vichaar', 'concept'].some(k => low.includes(k));
+
+  if (hasDirectIdea || (hasAction && hasTarget)) {
+    rawScores['Idea'] = 10;
+  }
+
   for (const [cat, patterns] of Object.entries(SEMANTIC_INTENTS)) {
-    let score = 0;
+    let score = rawScores[cat] || 0;
     patterns.forEach(pattern => {
       const matches = low.match(pattern);
       if (matches) score += matches.length;
@@ -114,12 +129,21 @@ export async function extractDeep(text: string): Promise<ExtractedEntities | nul
   
   // Currently falls back to real-time local logic to preserve offline status
   const basic = await predictIntent(text);
+  const cat = basic?.category || 'Journal';
   
-  console.log(`[ShadowEngine] Deep classification complete: ${basic?.category}`);
+  let cognitive_mode = 'REFLECTION';
+  if (cat === 'Idea' || cat === 'Todo') cognitive_mode = 'INTENTION';
+  else if (cat === 'Study' || cat === 'Research') cognitive_mode = 'RECORD';
+  else if (cat === 'Quote' || cat === 'Meeting') cognitive_mode = 'RECORD';
+  else if (cat === 'Reflection' || cat === 'Dream' || cat === 'Creative') cognitive_mode = 'REFLECTION';
+
+  console.log(`[ShadowEngine] Deep classification complete: ${cat}`);
   return {
-    category: basic?.category || 'Journal',
+    category: cat,
     emotion: basic?.emotion || 'Neutral',
     resonances: basic?.resonances || { Journal: 1.0 },
+    cognitive_mode,
+    domain_tags: [],
     people: [],
     topics: [],
     sentiment: 'neutral',

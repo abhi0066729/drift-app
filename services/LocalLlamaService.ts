@@ -11,6 +11,8 @@ export type SynthesisResult = {
   category: string;
   emotion: string;
   resonances: Record<string, number>;
+  cognitive_mode?: string;
+  domain_tags?: string[];
 };
 
 export class LocalLlamaService {
@@ -121,23 +123,43 @@ export class LocalLlamaService {
       const safeQuery = query.length > 300 ? query.substring(0, 300) + '...' : query;
 
       const prompt = `<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-Classify into exactly 1 category and extract emotion.
-Categories:
-- Idea: "I want to build an app", "muje app banana hai", plans
-- Todo: "I need to", "Buy milk", tasks
-- Study: "I learned", "How it works", notes
-- Journal: "Today I felt", diary
-- Dream: "I dreamed", sleep
-- Reflection: "Looking back", life lessons
-- Research: "Studies show", academic
-- Quote: Direct quotes
-- Meeting: "Met with", calls
-- Creative: Poetry, stories
+You are the semantic brain of the Drift note-taking app. Analyze the user's thought and extract three tiers of metadata, along with a legacy category.
 
-Format:
-SUMMARY: 1 short sentence
-CATEGORY: 1 word
-EMOTION: 1 word<|eot_id|><|start_header_id|>user<|end_header_id|>
+Tier 1: Cognitive Mode (How the user is thinking):
+- OBSERVATION: Noticing external facts, events, or sensory details.
+- REFLECTION: Processing internal feelings, memories, insights, or diaries.
+- INTENTION: Planning, deciding, setting goals, tasks, or future ideas.
+- QUESTION: Expressing uncertainty, curiosity, or seeking answers.
+- CONNECTION: Explicitly linking or comparing two concepts together.
+- SENSATION: Deeply emotional, physical, or mood-heavy somatic logs.
+- RECORD: Direct, flat logging of a fact (e.g. quote, book citation, meeting minutes).
+
+Tier 2: Domain Tags (What the thought is about):
+Extract 1 to 4 key topic keywords from the content (e.g. "ai, notes, coding", "health, workout", "philosophy, life").
+
+Tier 3: Emotional Register (How it feels):
+Choose exactly ONE: ANXIOUS, CALM, EXCITED, SAD, FRUSTRATED, HOPEFUL, NEUTRAL.
+
+Legacy Category Mapping (For backward compatibility):
+- Idea (INTENTION + creative concepts/plans)
+- Todo (INTENTION + action items/tasks)
+- Study (OBSERVATION/RECORD + educational learnings)
+- Journal (REFLECTION/SENSATION + daily stream)
+- Dream (REFLECTION + sleeping narratives)
+- Reflection (REFLECTION + self-evaluation/lessons)
+- Research (RECORD/OBSERVATION + analysis/science)
+- Quote (RECORD + citations)
+- Meeting (RECORD + syncs/calls)
+- Creative (INTENTION/REFLECTION + poetry/stories)
+
+Format your response EXACTLY as follows:
+REASONING: [Step-by-step thinking explaining the core cognitive mode, domain tags, and legacy category]
+SUMMARY: [1 short sentence]
+COGNITIVE_MODE: [Exactly one Tier 1 mode]
+DOMAIN_TAGS: [Comma-separated list of Tier 2 tags]
+EMOTION: [Exactly one Tier 3 register]
+CATEGORY: [Exactly one legacy Category from list above]
+<|eot_id|><|start_header_id|>user<|end_header_id|>
 ${safeQuery}<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 `;
 
@@ -149,17 +171,26 @@ ${safeQuery}<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
       // Robust Multi-Line Case-Insensitive Parsing
       const VALID_CATEGORIES = ['Journal', 'Idea', 'Study', 'Todo', 'Dream', 'Research', 'Quote', 'Meeting', 'Reflection', 'Creative'];
+      const VALID_MODES = ['OBSERVATION', 'REFLECTION', 'INTENTION', 'QUESTION', 'CONNECTION', 'SENSATION', 'RECORD'];
       let category = "Journal";
       let summary = "A thought in the drift.";
       let emotion = "neutral";
+      let cognitive_mode = "REFLECTION";
+      let domain_tags: string[] = [];
 
       const lines = text.split('\n');
       lines.forEach((line: string) => {
         const trimmed = line.trim();
+        const reasoningMatch = trimmed.match(/^reasoning:\s*(.*)/i);
         const summaryMatch = trimmed.match(/^summary:\s*(.*)/i);
         const categoryMatch = trimmed.match(/^category:\s*(.*)/i);
         const emotionMatch = trimmed.match(/^emotion:\s*(.*)/i);
+        const modeMatch = trimmed.match(/^cognitive_mode:\s*(.*)/i);
+        const tagsMatch = trimmed.match(/^domain_tags:\s*(.*)/i);
 
+        if (reasoningMatch) {
+          console.log(`[Neural Reasoning]: ${reasoningMatch[1].trim()}`);
+        }
         if (summaryMatch) summary = summaryMatch[1].trim();
         if (categoryMatch) {
           const raw = categoryMatch[1].trim();
@@ -167,18 +198,35 @@ ${safeQuery}<|eot_id|><|start_header_id|>assistant<|end_header_id|>
           category = match || "Journal";
         }
         if (emotionMatch) emotion = emotionMatch[1].trim();
+        if (modeMatch) {
+          const raw = modeMatch[1].trim().toUpperCase();
+          const match = VALID_MODES.find(m => m === raw);
+          cognitive_mode = match || "REFLECTION";
+        }
+        if (tagsMatch) {
+          domain_tags = tagsMatch[1].split(',').map(t => t.trim().toLowerCase()).filter(t => t.length > 0);
+        }
       });
 
-      // Robust Heuristic Override to assist tiny 1B models on obvious intents
+      // Failsafe Legacy Category Override based on the extracted Cognitive Mode and Query keywords
       const lowerQuery = query.toLowerCase();
-      if (
-        category === "Journal" && 
-        (lowerQuery.includes("make a app") || lowerQuery.includes("make an app") || 
-         lowerQuery.includes("build a") || lowerQuery.includes("build an") || 
-         lowerQuery.includes("app banana") || lowerQuery.includes("bot banaye") || 
-         lowerQuery.includes("translation app") || lowerQuery.includes("translate"))
-      ) {
-        category = "Idea";
+      if (category === "Journal") {
+        if (cognitive_mode === "INTENTION") {
+          // If intention contains action or build keywords, it's an Idea, otherwise a Todo!
+          if (lowerQuery.includes("app") || lowerQuery.includes("build") || lowerQuery.includes("make") || lowerQuery.includes("create") || lowerQuery.includes("design") || lowerQuery.includes("banana") || lowerQuery.includes("project")) {
+            category = "Idea";
+          } else {
+            category = "Todo";
+          }
+        } else if (cognitive_mode === "QUESTION") {
+          category = "Research"; // Map questions to Research / Study
+        } else if (cognitive_mode === "RECORD") {
+          if (lowerQuery.includes("said") || lowerQuery.includes("quote") || lowerQuery.includes("\"")) {
+            category = "Quote";
+          } else {
+            category = "Study";
+          }
+        }
       }
 
       // Auto-derive resonances from the classified category
@@ -200,7 +248,9 @@ ${safeQuery}<|eot_id|><|start_header_id|>assistant<|end_header_id|>
         connections: contextNotes.map((n: Note) => n.id),
         category,
         emotion,
-        resonances
+        resonances,
+        cognitive_mode,
+        domain_tags
       };
     } catch (error) {
       Logger.error('Synthesis inference failed', error, { query: query.substring(0, 100) });

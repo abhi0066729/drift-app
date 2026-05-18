@@ -1,7 +1,21 @@
 # Drift Version Log (V-LOG)
 
 **Conversation ID**: `0682bb5e-3018-4c47-a9ac-366ebba0c9af`
-**Current Version**: `v85`
+**Current Version**: `v86`
+
+## [v86] - 3-Tier Cognitive Modes & Parallel Classification
+**Prompt ID**: `P60`  
+**Request**: "ok what changes do we need to make this possible and does this make synthesis slower?"  
+**Date**: 2026-05-18  
+**Status**: STABLE (OTA LIVE)  
+**Files Modified**:
+- `services/LocalLlamaService.ts`: Upgraded system prompt to introduce Chain-of-Thought (CoT) reasoning, extracting Tier 1 (7 Cognitive Modes), Tier 2 (dynamic Domain Tags), and Tier 3 (Emotional Registers), with a highly robust fallback mapper for legacy categories.
+- `services/SynthesisService.ts`: Extended metadata entities payload to persist `cognitive_mode` and `domain_tags` dynamically inside the SQLite `entities_json` database column.
+- `services/ai.ts`: Updated Shadow Engine real-time intent classification with a bilingual pairing engine and cognitive mode fallbacks.
+
+**Changes**:
+- **CoT Reasoning Integration**: Implemented Llama-3.2 CoT reasoning, making the 1B local model immensely smarter by forcing it to explain its reasoning step-by-step in natural language before picking categorization parameters.
+- **3-Tier Ingestion**: Configured parallel tracking of Cognitive Modes and dynamic Domain Tags alongside existing categories, laying down the core architecture for Phase 2 launch without database schema changes.
 
 ## [v85] - De-cluttering Chronos Map Filaments
 **Prompt ID**: `P59`  

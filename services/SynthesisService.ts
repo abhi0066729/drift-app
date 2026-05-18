@@ -63,7 +63,10 @@ export class SynthesisService {
         children: result.connections,
         synthesized_at: Date.now(),
         is_evolved: true,
-        original_content: sourceNote.content
+        original_content: sourceNote.content,
+        cognitive_mode: result.cognitive_mode || 'REFLECTION',
+        domain_tags: result.domain_tags || [],
+        topics: result.domain_tags || []
       };
 
       const finalChanges = {
