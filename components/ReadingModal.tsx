@@ -1,6 +1,13 @@
 import React from 'react';
 import { StyleSheet, Text, View, Pressable, ScrollView, Dimensions, Platform } from 'react-native';
-import Animated, { FadeIn, FadeOut, withSpring } from 'react-native-reanimated';
+import Animated, { 
+  FadeIn, 
+  FadeOut, 
+  withSpring, 
+  useSharedValue, 
+  useAnimatedScrollHandler, 
+  useAnimatedStyle 
+} from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { BlurView } from 'expo-blur';
 import { CATEGORY_COLORS } from '@/constants/Categories';
@@ -24,13 +31,14 @@ export default function ReadingModal({ node, onClose, translucent, searchQuery }
 
   let finalCategory = (node.categories && node.categories.length > 0) ? node.categories[0] : (node.category || '');
   let finalEmotion = node.emotion || '';
+  let parsedEntities: any = null;
   
   // Robust parsing for nodes from different sources (Chronicle vs Map)
   if (node.entities_json) {
     try {
-      const parsed = JSON.parse(node.entities_json);
-      if (!finalCategory) finalCategory = parsed.category || (parsed.categories && parsed.categories[0]);
-      if (!finalEmotion) finalEmotion = parsed.emotion;
+      parsedEntities = JSON.parse(node.entities_json);
+      if (!finalCategory) finalCategory = parsedEntities.category || (parsedEntities.categories && parsedEntities.categories[0]);
+      if (!finalEmotion) finalEmotion = parsedEntities.emotion;
     } catch (e) {}
   }
   
@@ -64,6 +72,109 @@ export default function ReadingModal({ node, onClose, translucent, searchQuery }
   };
 
   const isDark = theme === 'dark';
+  const isPage = node.note_type === 'page';
+
+  const scrollY = useSharedValue(0);
+  const contentHeight = useSharedValue(1);
+  const containerHeight = useSharedValue(1);
+
+  const scrollHandler = useAnimatedScrollHandler((event) => {
+    scrollY.value = event.contentOffset.y;
+  });
+
+  const progressStyle = useAnimatedStyle(() => {
+    const scrollable = contentHeight.value - containerHeight.value;
+    const progress = scrollable > 0 ? scrollY.value / scrollable : 0;
+    return {
+      width: `${Math.min(Math.max(progress * 100, 0), 100)}%`,
+    };
+  });
+
+  if (isPage) {
+    const pageImages = node.images || parsedEntities?.images || [];
+    return (
+      <Animated.View 
+        entering={FadeIn.duration(300)} 
+        exiting={FadeOut.duration(200)} 
+        style={[StyleSheet.absoluteFill, { zIndex: 1000, backgroundColor: isDark ? '#0A0A0C' : '#F4F4F6' }]}
+      >
+        {/* Scroll Progress Bar */}
+        <View style={styles.progressBarBg}>
+          <Animated.View style={[styles.progressBarFill, { backgroundColor: color }, progressStyle]} />
+        </View>
+
+        {/* Close Button Header */}
+        <View style={[styles.pageHeader, { borderBottomColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' }]}>
+          <Text style={[styles.pageHeaderTitle, { color: isDark ? 'rgba(255,255,255,0.9)' : '#111' }]}>{headerTitle}</Text>
+          <Pressable style={styles.closeButton} onPress={onClose}>
+            <Text style={[styles.closeButtonText, { color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)' }]}>✕ Close</Text>
+          </Pressable>
+        </View>
+
+        <Animated.ScrollView 
+          onScroll={scrollHandler}
+          scrollEventThrottle={16}
+          onContentSizeChange={(w, h) => { contentHeight.value = h; }}
+          onLayout={(e) => { containerHeight.value = e.nativeEvent.layout.height; }}
+          showsVerticalScrollIndicator={false} 
+          contentContainerStyle={styles.pageScrollContent}
+        >
+          {/* Title */}
+          <Text style={[styles.pageMainTitle, { color: isDark ? '#FFF' : '#000' }]}>
+            {finalCategory}
+          </Text>
+
+          {/* Premium Body Text */}
+          <Text style={[styles.pageBodyContent, { color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.8)' }]}>
+            {content}
+          </Text>
+
+          {/* Image Grid Display */}
+          {pageImages && pageImages.length > 0 && (
+            <View style={styles.imageGrid}>
+              {pageImages.map((imgUri: string, idx: number) => (
+                <Image 
+                  key={imgUri + '-' + idx} 
+                  source={{ uri: imgUri }} 
+                  style={[
+                    styles.gridImage, 
+                    pageImages.length === 1 && styles.gridImageSingle,
+                    pageImages.length === 2 && styles.gridImageDouble,
+                  ]} 
+                  contentFit="cover" 
+                  transition={200}
+                />
+              ))}
+            </View>
+          )}
+
+          {/* Synthesis Card */}
+          {parsedEntities?.summary && (
+            <View style={[styles.synthesisCard, { backgroundColor: isDark ? 'rgba(142, 68, 173, 0.08)' : 'rgba(142, 68, 173, 0.04)', borderColor: isDark ? 'rgba(142, 68, 173, 0.2)' : 'rgba(142, 68, 173, 0.15)' }]}>
+              <View style={styles.synthesisCardHeader}>
+                <View style={[styles.synthesisDot, { backgroundColor: '#8E44AD' }]} />
+                <Text style={styles.synthesisTitle}>INTELLIGENCE SYNTHESIS</Text>
+              </View>
+              <Text style={[styles.synthesisSummary, { color: isDark ? 'rgba(255,255,255,0.9)' : '#333' }]}>
+                {parsedEntities.summary}
+              </Text>
+              {parsedEntities.cognitive_mode && (
+                <View style={styles.synthesisMetaRow}>
+                  <Text style={[styles.synthesisMetaLabel, { color: isDark ? 'rgba(255,255,255,0.4)' : '#666' }]}>COGNITIVE MODE:</Text>
+                  <Text style={styles.synthesisMetaVal}>{parsedEntities.cognitive_mode}</Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* Footer Date */}
+          <Text style={[styles.pageFooterDate, { color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.4)' }]}>
+            Captured on {new Date(node.created_at || Date.now()).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+          </Text>
+        </Animated.ScrollView>
+      </Animated.View>
+    );
+  }
 
   return (
     <Animated.View 
@@ -294,5 +405,129 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     fontWeight: '300',
+  },
+  progressBarBg: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    zIndex: 1100,
+  },
+  progressBarFill: {
+    height: '100%',
+    width: 0,
+  },
+  pageHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: Platform.OS === 'ios' ? 56 : 24,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+  },
+  pageHeaderTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 2,
+  },
+  closeButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.03)',
+  },
+  closeButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  pageScrollContent: {
+    paddingHorizontal: 28,
+    paddingTop: 32,
+    paddingBottom: 80,
+  },
+  pageMainTitle: {
+    fontSize: 32,
+    fontWeight: '800',
+    marginBottom: 24,
+    letterSpacing: -0.5,
+  },
+  pageBodyContent: {
+    fontSize: 18,
+    lineHeight: 32,
+    fontWeight: '350',
+    letterSpacing: 0.2,
+    marginBottom: 32,
+  },
+  imageGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 32,
+  },
+  gridImage: {
+    width: '48%',
+    height: 180,
+    borderRadius: 16,
+  },
+  gridImageSingle: {
+    width: '100%',
+    height: 280,
+  },
+  gridImageDouble: {
+    width: '48%',
+    height: 220,
+  },
+  synthesisCard: {
+    padding: 24,
+    borderRadius: 24,
+    borderWidth: 1,
+    marginBottom: 40,
+  },
+  synthesisCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  synthesisDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  synthesisTitle: {
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 2,
+    color: '#8E44AD',
+  },
+  synthesisSummary: {
+    fontSize: 15,
+    lineHeight: 24,
+    fontWeight: '300',
+    marginBottom: 16,
+  },
+  synthesisMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  synthesisMetaLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginRight: 8,
+  },
+  synthesisMetaVal: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#8E44AD',
+  },
+  pageFooterDate: {
+    fontSize: 12,
+    fontWeight: '400',
+    textAlign: 'center',
+    marginTop: 20,
   },
 });

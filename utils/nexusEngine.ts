@@ -130,13 +130,17 @@ export function computeConstellations(notes: Note[]): NexusLayout {
       } catch (_) {}
     }
 
+    const wordCount = note.word_count || 0;
+    const sizeMultiplier = note.note_type === 'page' || wordCount > 280 ? 1.8 : (wordCount > 100 ? 1.4 : 1.0);
+    const baseRadius = isAnchor ? 5.5 : (energy > 0.8 ? 4.0 : 2.5);
+
     nodes.push({
       id: note.id,
       content: note.content,
       x: center.x + Math.cos(angle) * dist,
       y: center.y + Math.sin(angle) * dist,
       energy,
-      radius: isAnchor ? 5.5 : (energy > 0.8 ? 4.0 : 2.5),
+      radius: baseRadius * sizeMultiplier,
       opacity: Math.max(0.7, energy),
       clusterId: category,
       entities_json: note.entities_json,
@@ -194,10 +198,13 @@ export function computeConstellations(notes: Note[]): NexusLayout {
   const SPATIAL_LIMIT = 280;
   const SIM_THRESHOLD = 0.12;
   const connectionCounts = new Map<string, number>();
-  nodes.forEach(n => connectionCounts.set(n.id, 0));
-
   nodes.forEach((n1) => {
     if (n1.isDust) return;
+
+    const note1 = noteMap.get(n1.id);
+    const isPage1 = note1?.note_type === 'page' || (note1?.word_count && note1.word_count > 280);
+    const currentSpatialLimit = isPage1 ? SPATIAL_LIMIT * 1.5 : SPATIAL_LIMIT;
+    const maxBonds = isPage1 ? 12 : 8;
 
     const targets = nodes
       .filter(n2 => n2.id !== n1.id && !n2.isDust)
@@ -215,7 +222,6 @@ export function computeConstellations(notes: Note[]): NexusLayout {
             semanticWeight = 0.5; // Fallback for same category
         }
 
-        const note1 = noteMap.get(n1.id);
         const note2 = noteMap.get(n2.id);
         const wordSim = (note1 && note2) ? computeSimilarity(note1, note2) : 0;
         
@@ -223,9 +229,9 @@ export function computeConstellations(notes: Note[]): NexusLayout {
 
         return { node: n2, dist, sim: totalSim, weight: dist / (totalSim + 0.1) };
       })
-      .filter(t => t.dist < SPATIAL_LIMIT && (t.sim > SIM_THRESHOLD || t.dist < 120))
+      .filter(t => t.dist < currentSpatialLimit && (t.sim > SIM_THRESHOLD || t.dist < 120))
       .sort((a, b) => a.weight - b.weight)
-      .slice(0, 8);
+      .slice(0, maxBonds);
 
     targets.forEach(t => {
       const tId = t.node.id;

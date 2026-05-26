@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback, Dimensions, ScrollView, Image } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNotesStore } from '@/store/useNotesStore';
@@ -27,6 +27,16 @@ import { Note } from '@/utils/noteUtils';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Alert } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+
+let Voice: any = null;
+if (Platform.OS !== 'web') {
+  try {
+    Voice = require('@react-native-voice/voice').default;
+  } catch (err) {
+    console.warn('[Voice] Failed to load native speech module:', err);
+  }
+}
 import { LocalLlamaService } from '@/services/LocalLlamaService';
 import { CortexService } from '@/services/CortexService';
 import { SynthesisService } from '@/services/SynthesisService';
@@ -160,6 +170,82 @@ export default function CaptureScreen() {
   const [synthesisBridge, setSynthesisBridge] = useState<string | null>(null);
   const [isSynthesizingLlama, setIsSynthesizingLlama] = useState(false);
 
+  // Pages & Attachments State
+  const [images, setImages] = useState<string[]>([]);
+  const [isListening, setIsListening] = useState(false);
+
+  const isPage = inputText.length > 280;
+  const wordCount = useMemo(() => inputText.split(/\s+/).filter(Boolean).length, [inputText]);
+  const readingTime = useMemo(() => Math.max(1, Math.ceil(wordCount / 200)), [wordCount]);
+
+  // Image Picker Logic
+  const pickImage = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Camera roll permissions are required to attach images.');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsMultipleSelection: true,
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets) {
+        const uris = result.assets.map(asset => asset.uri);
+        setImages(prev => [...prev, ...uris]);
+        try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch(e){}
+      }
+    } catch (e) {
+      console.error('[ImagePicker] Error:', e);
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setImages(prev => prev.filter((_, i) => i !== index));
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch(e){}
+  };
+
+  // Voice Transcription Logic
+  useEffect(() => {
+    if (!Voice) return;
+    Voice.onSpeechStart = () => setIsListening(true);
+    Voice.onSpeechEnd = () => setIsListening(false);
+    Voice.onSpeechError = (e: any) => {
+      console.error('[Voice] error:', e);
+      setIsListening(false);
+    };
+    Voice.onSpeechResults = (e: any) => {
+      if (e.value && e.value[0]) {
+        setInputText(prev => prev + (prev.length > 0 ? ' ' : '') + e.value[0]);
+      }
+    };
+    return () => {
+      if (Voice) {
+        Voice.destroy().then(Voice.removeAllListeners);
+      }
+    };
+  }, []);
+
+  const toggleListening = async () => {
+    if (!Voice) {
+      Alert.alert('Dictation Unavailable', 'Voice dictation is only available on native devices.');
+      return;
+    }
+    try {
+      if (isListening) {
+        await Voice.stop();
+        setIsListening(false);
+      } else {
+        await Voice.start('en-US');
+        setIsListening(true);
+        try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch(e){}
+      }
+    } catch (e) {
+      console.error('[Voice] Toggle failed:', e);
+    }
+  };
+
   
   const notes = useNotesStore(state => state.notes);
   const theme = useNotesStore(state => state.theme);
@@ -239,16 +325,20 @@ export default function CaptureScreen() {
       id: noteId,
       content: inputText,
       created_at: Date.now(),
-      source_type: 'text',
+      source_type: isListening ? 'voice' : 'text',
       category: currentCategory, 
       emotion: emotionHint || 'neutral',
       is_deleted: false,
       embedding_status: 'pending',
       synthesis_status: 'pending',
       pipeline_step: 'queued',
+      note_type: isPage ? 'page' : 'note',
+      word_count: wordCount,
+      reading_time: isPage ? readingTime * 60 : 0, // seconds
       entities_json: JSON.stringify({ 
         preliminary_category: currentCategory,
         emotion: emotionHint || 'Neutral',
+        images: images,
       }),
     };
 
@@ -268,7 +358,8 @@ export default function CaptureScreen() {
     }, 2500);
 
     setInputText('');
-  }, [inputText, predictedCategory, emotionHint]);
+    setImages([]);
+  }, [inputText, predictedCategory, emotionHint, isListening, isPage, wordCount, readingTime, images]);
 
   const handleSkipRefinement = () => {
     setPredictionStatus('anchored');
@@ -276,17 +367,20 @@ export default function CaptureScreen() {
     try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch(e){}
   };
 
-  const ribbonColor = CATEGORY_COLORS[predictedCategory] || '#8E44AD';
+  const ribbonColor = isPage ? '#7C3AED' : (CATEGORY_COLORS[predictedCategory] || '#8E44AD');
   const isFlux = predictionStatus === 'flux';
   const labelText = inputText.trim().length > 0 
-    ? (isFlux ? `${predictedCategory.toUpperCase()}?` : predictedCategory.toUpperCase()) 
+    ? `${isPage ? 'PAGE' : predictedCategory.toUpperCase()}${isFlux ? '?' : ''}${isPage ? ` · ${readingTime} min read` : ''}`
     : 'WAITING FOR THOUGHT';
 
   return (
     <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
       <View style={[styles.container, { backgroundColor: isDark ? '#000000' : '#FFFFFF' }]}>
-        <KeyboardAvoidingView style={StyleSheet.absoluteFill} behavior={undefined}>
-          
+        <KeyboardAvoidingView 
+          style={StyleSheet.absoluteFill} 
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        >
           <NeuralNebula 
             baseColor={showSmartAction ? '#2ECC71' : ribbonColor} 
             isTyping={inputText.length > 0} 
@@ -304,13 +398,15 @@ export default function CaptureScreen() {
               </View>
 
               <View style={styles.actionRow}>
-                <TouchableOpacity 
-                  style={[styles.commitButton, { backgroundColor: inputText.trim().length > 0 ? (isDark ? NightTheme.accent : '#8E44AD') : (isDark ? 'rgba(255,255,255,0.05)' : '#F5F5F5') }]} 
-                  onPress={handleCapture}
-                  disabled={inputText.trim().length === 0}
-                >
-                  <Text style={[styles.commitButtonText, { color: inputText.trim().length > 0 ? '#FFFFFF' : (isDark ? NightTheme.textMuted : '#BBBBBB') }]}>COMMIT</Text>
-                </TouchableOpacity>
+                {!isPage && (
+                  <TouchableOpacity 
+                    style={[styles.commitButton, { backgroundColor: inputText.trim().length > 0 ? ribbonColor : (isDark ? 'rgba(255,255,255,0.05)' : '#F5F5F5') }]} 
+                    onPress={handleCapture}
+                    disabled={inputText.trim().length === 0}
+                  >
+                    <Text style={[styles.commitButtonText, { color: inputText.trim().length > 0 ? '#FFFFFF' : (isDark ? NightTheme.textMuted : '#BBBBBB') }]}>COMMIT</Text>
+                  </TouchableOpacity>
+                )}
                 
                 <TouchableOpacity onPress={() => router.back()} style={[styles.closeButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F9F9F9' }]}>
                   <Text style={[styles.closeButtonText, { color: isDark ? NightTheme.textPrimary : '#111111' }]}>✕</Text>
@@ -325,7 +421,7 @@ export default function CaptureScreen() {
                   <Text style={[styles.categoryLabel, { color: inputText.trim().length > 0 ? (isFlux ? (isDark ? '#777' : '#888') : ribbonColor) : '#BBBBBB' }]}>
                     {labelText}
                   </Text>
-                  {isFlux && inputText.length > 10 && (
+                  {isFlux && inputText.length > 10 && !isPage && (
                     <SoftHint label="SKIP AI" onPress={handleSkipRefinement} theme={theme} />
                   )}
                 </View>
@@ -334,20 +430,83 @@ export default function CaptureScreen() {
             </View>
 
             <View style={styles.content}>
-              <TextInput
-                ref={inputRef}
-                style={[styles.input, { color: isDark ? NightTheme.textPrimary : '#111111' }]}
-                placeholder="What's your mind drifting to?"
-                placeholderTextColor={isDark ? 'rgba(232, 230, 224, 0.4)' : "#999999"}
-                multiline
-                value={inputText}
-                onChangeText={setInputText}
-                textAlign="center"
-                selectionColor={isDark ? NightTheme.accent : "#8E44AD"}
-                editable={!showSmartAction}
-              />
-              
-              <MemoryEcho note={resonantNote} theme={theme} />
+              <ScrollView 
+                style={styles.scrollContainer}
+                contentContainerStyle={styles.scrollContent}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+              >
+                <TextInput
+                  ref={inputRef}
+                  style={[
+                    styles.input, 
+                    { 
+                      color: isDark ? NightTheme.textPrimary : '#111111',
+                      fontSize: isPage ? 20 : 28,
+                      lineHeight: isPage ? 32 : 42,
+                      textAlign: isPage ? 'left' : 'center',
+                      paddingHorizontal: isPage ? 24 : 12,
+                    }
+                  ]}
+                  placeholder="What's your mind drifting to?"
+                  placeholderTextColor={isDark ? 'rgba(232, 230, 224, 0.4)' : "#999999"}
+                  multiline
+                  value={inputText}
+                  onChangeText={setInputText}
+                  selectionColor={isDark ? NightTheme.accent : "#8E44AD"}
+                  editable={!showSmartAction}
+                />
+
+                {/* Attached Image Previews */}
+                {images.length > 0 && (
+                  <View style={styles.imagesContainer}>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageScroll} contentContainerStyle={styles.imageScrollContent}>
+                      {images.map((uri, idx) => (
+                        <View key={uri} style={styles.thumbnailWrapper}>
+                          <Image source={{ uri }} style={styles.thumbnailImage} />
+                          <TouchableOpacity style={styles.removeImageBadge} onPress={() => removeImage(idx)}>
+                            <Text style={styles.removeImageText}>✕</Text>
+                          </TouchableOpacity>
+                        </View>
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
+                
+                <MemoryEcho note={resonantNote} theme={theme} />
+              </ScrollView>
+            </View>
+
+            {/* Bottom Dictation Wave & Toolbar Panel */}
+            <View style={[styles.bottomPanel, isPage && styles.bottomPanelPage]}>
+              {isListening && (
+                <View style={styles.waveformContainer}>
+                  <Text style={[styles.waveformText, { color: isDark ? 'rgba(255,255,255,0.4)' : '#666' }]}>DICTATION ACTIVE · SPEAK NOW</Text>
+                </View>
+              )}
+
+              {isPage && (
+                <TouchableOpacity 
+                  style={styles.largeCommitButton} 
+                  onPress={handleCapture}
+                >
+                  <Text style={styles.largeCommitButtonText}>COMMIT PAGE · {readingTime} MIN READ</Text>
+                </TouchableOpacity>
+              )}
+
+              <View style={styles.toolbar}>
+                <TouchableOpacity onPress={pickImage} style={[styles.toolbarButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F2F2F7' }]}>
+                  <Ionicons name="image" size={18} color={isDark ? '#FFF' : '#333'} />
+                </TouchableOpacity>
+                
+                <TouchableOpacity onPress={toggleListening} style={[
+                  styles.toolbarButton, 
+                  isListening && { backgroundColor: '#7C3AED' },
+                  !isListening && { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F2F2F7' }
+                ]}>
+                  <Ionicons name={isListening ? "mic" : "mic-outline"} size={18} color={isListening ? '#FFF' : (isDark ? '#FFF' : '#333')} />
+                </TouchableOpacity>
+              </View>
             </View>
 
             {showSmartAction && (
@@ -363,10 +522,7 @@ export default function CaptureScreen() {
                 </View>
               </Animated.View>
             )}
-
-
           </View>
-
         </KeyboardAvoidingView>
       </View>
     </TouchableWithoutFeedback>
@@ -396,13 +552,13 @@ const styles = StyleSheet.create({
   predictionBadge: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   badgeLine: { height: 1, width: 20 },
   categoryLabel: { fontSize: 9, letterSpacing: 2.0, textTransform: 'uppercase', fontWeight: '700' },
-  content: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingBottom: 120 },
+  content: { flex: 1 },
+  scrollContainer: { flex: 1 },
+  scrollContent: { paddingVertical: 40, alignItems: 'center', paddingBottom: 150 },
   input: {
-    fontSize: 28, fontWeight: '300', lineHeight: 42,
-    width: '100%', minHeight: 200, paddingBottom: 100,
+    fontWeight: '300',
+    width: '100%', minHeight: 200, paddingBottom: 40,
   },
-  footerHint: { position: 'absolute', bottom: 50, left: 0, right: 0, alignItems: 'center', justifyContent: 'center' },
-  hintText: { fontSize: 8, fontWeight: '700', letterSpacing: 2, opacity: 0.6, textAlign: 'center' },
   nebulaRoot: {
     position: 'absolute',
     top: 0, left: 0, right: 0, bottom: 0,
@@ -476,59 +632,99 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 1.5,
   },
-  bridgeCard: {
-    position: 'absolute',
-    bottom: 40,
-    left: 20,
-    right: 20,
-    borderRadius: 24,
-    padding: 24,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.5,
-    shadowRadius: 20,
-    elevation: 10,
+  
+  // --- Pages & Attachments New Styles ---
+  imagesContainer: {
+    width: '100%',
+    paddingHorizontal: 24,
+    marginVertical: 16,
   },
-  bridgeHeader: {
+  imageScroll: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-    gap: 8,
   },
-  bridgeLabel: {
-    color: '#888',
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 2,
-    textTransform: 'uppercase',
+  imageScrollContent: {
+    gap: 10,
   },
-  bridgeText: {
-    color: '#eee',
-    fontSize: 17,
-    lineHeight: 26,
-    fontFamily: 'Inter',
-    fontStyle: 'italic',
-    marginBottom: 20,
+  thumbnailWrapper: {
+    position: 'relative',
+    width: 72,
+    height: 72,
   },
-  bridgeLoading: {
-    height: 80,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  thumbnailImage: {
+    width: 72,
+    height: 72,
     borderRadius: 12,
-    marginBottom: 20,
   },
-  bridgeClose: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    paddingVertical: 12,
-    borderRadius: 12,
+  removeImageBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#FF5555',
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  bridgeCloseText: {
-    color: '#fff',
+  removeImageText: {
+    color: '#FFF',
     fontSize: 10,
     fontWeight: '700',
+  },
+  bottomPanel: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingBottom: 24,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+  },
+  bottomPanelPage: {
+    paddingBottom: 32,
+  },
+  waveformContainer: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: 'rgba(124, 92, 237, 0.08)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(124, 92, 237, 0.25)',
+    marginBottom: 16,
+  },
+  waveformText: {
+    fontSize: 8,
     letterSpacing: 1.5,
+    fontWeight: '800',
+  },
+  largeCommitButton: {
+    width: '100%',
+    paddingVertical: 16,
+    borderRadius: 16,
+    alignItems: 'center',
+    marginBottom: 16,
+    shadowColor: '#7C3AED',
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 5,
+  },
+  largeCommitButtonText: {
+    color: '#FFF',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 2,
+  },
+  toolbar: {
+    flexDirection: 'row',
+    gap: 12,
+    alignSelf: 'center',
+  },
+  toolbarButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
   }
 });

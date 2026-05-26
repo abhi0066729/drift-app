@@ -54,6 +54,24 @@ export async function predictIntent(text: string): Promise<{ category: NoteCateg
   const low = text.toLowerCase();
   if (!low.trim()) return { category: 'Journal', emotion: 'Neutral', resonances: { Journal: 1.0 } };
 
+  // 1. Try Local MLP Self-Attention Classifier (MiniLM based)
+  try {
+    const { EmbeddingEngine } = require('./EmbeddingEngine');
+    const { MLPClassifier } = require('./MLPClassifier');
+    const engine = EmbeddingEngine.getInstance();
+    // Only run if the ONNX session is ready, otherwise fall back to instant regex to prevent UI lag
+    if (engine.initialized && engine.session) {
+      const embedding = await engine.embed(text);
+      const mlpResult = MLPClassifier.predict(embedding);
+      if (mlpResult) {
+        return mlpResult;
+      }
+    }
+  } catch (err) {
+    console.warn('[Neural Classifier] MLP inference failed, falling back to regex:', err);
+  }
+
+  // 2. Legacy Regex Fallback
   let bestCategory: NoteCategory = 'Journal';
   let highestScore = 0;
   const resonances: Record<string, number> = {};

@@ -51,24 +51,108 @@ export class EmbeddingManager {
       });
 
       const pipelineTask = async () => {
-        // PHASE 1: Native Embedding with 15s Hard Timeout
+        const note = useNotesStore.getState().notes.find(n => n.id === noteId);
+        const isPage = note?.note_type === 'page' || content.length > 500; // Auto-promote to Page if > 500 chars
+
         console.log(`[NeuralTrace] Requesting Brain: embedding for ${noteId}`);
         await ResourceCoordinator.getInstance().requestBrain('embedding');
 
-        console.log(`[NeuralTrace] Generating Embedding: ${noteId}`);
-        const embeddingPromise = this.engine.embed(content, false);
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Embedding Engine Timeout')), 15000)
-        );
-        
-        const embedding = await Promise.race([embeddingPromise, timeoutPromise]) as Float32Array;
+        const db = await DatabaseService.getInstance().getDb();
+        let embedding: Float32Array;
+
+        if (isPage) {
+          console.log(`[EmbeddingManager] Processing Drift Page (chunking) for: ${noteId}`);
+          
+          // Split into paragraph-based chunks
+          const paragraphs = content.split('\n\n');
+          const chunks: { index: number; text: string; start: number; end: number }[] = [];
+          let charOffset = 0;
+
+          paragraphs.forEach((pStr, idx) => {
+            const pClean = pStr.trim();
+            if (!pClean) return;
+            const start = content.indexOf(pClean, charOffset);
+            const end = start + pClean.length;
+            charOffset = end;
+            chunks.push({ index: idx, text: pClean, start, end });
+          });
+
+          const chunkCount = chunks.length;
+          const wordCount = content.split(/\s+/).filter(Boolean).length;
+          const readingTime = Math.max(1, Math.ceil(wordCount / 200)) * 60; // seconds
+
+          const chunkEmbeddings: Float32Array[] = [];
+          for (const chunk of chunks) {
+            console.log(`[EmbeddingManager] Vectorizing chunk ${chunk.index + 1}/${chunkCount}`);
+            const chunkEmbedding = await this.engine.embed(chunk.text, false);
+            chunkEmbeddings.push(chunkEmbedding);
+
+            const chunkBlob = new Uint8Array(chunkEmbedding.buffer);
+            const chunkId = `${noteId}_chunk_${chunk.index}`;
+
+            await db.runAsync(
+              'INSERT OR REPLACE INTO note_chunks (id, parent_note_id, chunk_index, text, embedding, char_start, char_end, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+              [chunkId, noteId, chunk.index, chunk.text, chunkBlob, chunk.start, chunk.end, Date.now()]
+            );
+          }
+
+          // Compute average vector representing the whole Page
+          if (chunkEmbeddings.length > 0) {
+            const dim = chunkEmbeddings[0].length;
+            const avg = new Float32Array(dim);
+            for (let d = 0; d < dim; d++) {
+              let sum = 0;
+              for (let i = 0; i < chunkEmbeddings.length; i++) {
+                sum += chunkEmbeddings[i][d];
+              }
+              avg[d] = sum / chunkEmbeddings.length;
+            }
+            
+            // Normalize the average vector
+            let sumSq = 0;
+            for (let i = 0; i < avg.length; i++) {
+              sumSq += avg[i] * avg[i];
+            }
+            const norm = Math.sqrt(sumSq);
+            for (let i = 0; i < avg.length; i++) {
+              avg[i] /= Math.max(norm, 1e-12);
+            }
+            
+            embedding = avg;
+          } else {
+            embedding = await this.engine.embed(content, false);
+          }
+
+          // Update main note structure in database and state
+          await db.runAsync(
+            'UPDATE notes SET note_type = ?, word_count = ?, reading_time = ?, chunk_count = ? WHERE id = ?',
+            ['page', wordCount, readingTime, chunkCount, noteId]
+          );
+
+          useNotesStore.getState().updateNote(noteId, {
+            note_type: 'page',
+            word_count: wordCount,
+            reading_time: readingTime,
+            chunk_count: chunkCount
+          });
+
+        } else {
+          // Standard ambient note embedding
+          console.log(`[NeuralTrace] Generating Embedding: ${noteId}`);
+          const embeddingPromise = this.engine.embed(content, false);
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Embedding Engine Timeout')), 15000)
+          );
+          
+          embedding = await Promise.race([embeddingPromise, timeoutPromise]) as Float32Array;
+        }
+
+        // Release resources and save to DB
         ResourceCoordinator.getInstance().releaseBrain();
         console.log(`[NeuralTrace] Embedding generated successfully: ${noteId}`);
         
-        // PHASE 2: Database Persistence
         console.log(`[NeuralTrace] Persisting to DB: ${noteId}`);
         const blob = new Uint8Array(embedding.buffer);
-        const db = await DatabaseService.getInstance().getDb();
         
         const dbPromise = db.runAsync(
           'INSERT OR REPLACE INTO note_embeddings (note_id, embedding, model_version, updated_at) VALUES (?, ?, ?, ?)',
@@ -94,7 +178,7 @@ export class EmbeddingManager {
           }
         });
 
-        // Now calculate semantic edges for this note
+        // Calculate semantic edges
         await this.calculateEdges(noteId, embedding);
 
         // PHASE 4: Trigger Synthesis

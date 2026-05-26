@@ -31,13 +31,25 @@ export class NoteService {
         [limit, offset]
       );
 
-      const mappedNotes: Note[] = notes.map(n => ({
-        ...n,
-        is_deleted: !!n.is_deleted,
-        is_refining: !!n.is_refining,
-        // Metrics parsing only if needed
-        pipeline_metrics: n.pipeline_metrics ? JSON.parse(n.pipeline_metrics) : undefined
-      }));
+      const mappedNotes: Note[] = notes.map(n => {
+        let parsedEntities: any = {};
+        if (n.entities_json) {
+          try {
+            parsedEntities = JSON.parse(n.entities_json);
+          } catch (e) {
+            console.error('[NoteService] Failed to parse entities_json:', e);
+          }
+        }
+        return {
+          ...n,
+          is_deleted: !!n.is_deleted,
+          is_refining: !!n.is_refining,
+          pipeline_metrics: n.pipeline_metrics ? JSON.parse(n.pipeline_metrics) : undefined,
+          images: parsedEntities.images || [],
+          resonances: parsedEntities.resonances || { [n.category || 'Journal']: 1.0 },
+          semantic_links: parsedEntities.semantic_links || []
+        };
+      });
 
       // In a mammoth app, setNotes only updates the "current view"
       useNotesStore.getState().setNotes(mappedNotes);

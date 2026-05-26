@@ -59,6 +59,40 @@ export class DatabaseService {
         await db.runAsync('INSERT OR REPLACE INTO schema_migrations (version, applied_at) VALUES (?, ?)', [98, Date.now()]);
         console.log('[DatabaseService] Migration v98 complete.');
       }
+
+      // Version 99: Drift Pages & Chunking System
+      if (currentVersion < 99) {
+        console.log('[DatabaseService] Applying Drift Pages Migration (v99)...');
+        
+        const migrations99 = [
+          "ALTER TABLE notes ADD COLUMN note_type TEXT DEFAULT 'note' CHECK (note_type IN ('note', 'page'))",
+          "ALTER TABLE notes ADD COLUMN word_count INTEGER DEFAULT 0",
+          "ALTER TABLE notes ADD COLUMN reading_time INTEGER DEFAULT 0",
+          "ALTER TABLE notes ADD COLUMN chunk_count INTEGER DEFAULT 0",
+          `CREATE TABLE IF NOT EXISTS note_chunks (
+            id TEXT PRIMARY KEY NOT NULL,
+            parent_note_id TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
+            chunk_index INTEGER NOT NULL,
+            text TEXT NOT NULL,
+            embedding BLOB,
+            char_start INTEGER NOT NULL,
+            char_end INTEGER NOT NULL,
+            created_at INTEGER NOT NULL
+          )`,
+          "CREATE INDEX IF NOT EXISTS idx_chunks_parent ON note_chunks(parent_note_id)"
+        ];
+
+        for (const sql of migrations99) {
+          try {
+            await db.execAsync(sql);
+          } catch (e) {
+            console.log(`[DatabaseService] Migration v99 step skipped: ${sql.substring(0, 40)}...`);
+          }
+        }
+
+        await db.runAsync('INSERT OR REPLACE INTO schema_migrations (version, applied_at) VALUES (?, ?)', [99, Date.now()]);
+        console.log('[DatabaseService] Migration v99 complete.');
+      }
     } catch (error) {
       console.error('[DatabaseService] Migration critical failure:', error);
     }

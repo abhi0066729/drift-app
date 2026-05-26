@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { StyleSheet, Text, View, Pressable, TouchableOpacity, Animated as RNAnimated, Platform } from 'react-native';
+import { StyleSheet, Text, View, Pressable, TouchableOpacity, Animated as RNAnimated, Platform, Image } from 'react-native';
 import Animated, { 
   FadeInDown, 
   useSharedValue, 
@@ -72,6 +72,7 @@ export default function ArchiveNode({
   
   let category = 'Journal';
   let resonances: Record<string, number> = {};
+  let images: string[] = note.images || [];
   const isRefining = note.is_refining;
 
   if (note.entities_json) {
@@ -80,6 +81,9 @@ export default function ArchiveNode({
       if (parsed) {
         category = parsed.category || parsed.categories?.[0] || 'Journal';
         resonances = parsed.resonances || {};
+        if (parsed.images && images.length === 0) {
+          images = parsed.images;
+        }
       }
     } catch (e) {}
   }
@@ -184,6 +188,14 @@ export default function ArchiveNode({
         >
           {/* Timeline Node Column */}
           <View style={styles.nodeColumn}>
+            {note.note_type === 'page' && (
+              <View style={[
+                styles.nodeSquare,
+                { 
+                  borderColor: nodeColor,
+                }
+              ]} />
+            )}
             {/* The Node Dot */}
             <View style={[
               styles.nodeDot,
@@ -248,6 +260,34 @@ export default function ArchiveNode({
               {note.content}
             </Text>
 
+            {/* Images collage */}
+            {images && images.length > 0 && (
+              <View style={styles.imageCollageContainer}>
+                {images.slice(0, 3).map((imgUri: string, idx: number) => {
+                  const count = Math.min(images.length, 3);
+                  let imageStyle = {};
+                  if (count === 1) {
+                    imageStyle = { width: '100%', height: 120 };
+                  } else if (count === 2) {
+                    imageStyle = { width: '48%', height: 80 };
+                  } else {
+                    imageStyle = idx === 0 
+                      ? { width: '100%', height: 100, marginBottom: 4 }
+                      : { width: '48%', height: 60 };
+                  }
+
+                  return (
+                    <Image 
+                      key={imgUri + '-' + idx} 
+                      source={{ uri: imgUri }} 
+                      style={[styles.collageImage, imageStyle]} 
+                      resizeMode="cover"
+                    />
+                  );
+                })}
+              </View>
+            )}
+
             {note.pipeline_step !== 'complete' && note.pipeline_metrics && (
               <Text style={{ fontSize: 8, color: note.pipeline_step === 'error' ? '#FF5555' : nodeColor, marginTop: 4, fontWeight: '600' }}>
                 {note.pipeline_step === 'error' && note.pipeline_metrics.error_message ? `ERROR: ${note.pipeline_metrics.error_message.toUpperCase()} ` : ''}
@@ -292,6 +332,28 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     zIndex: 10,
+  },
+  nodeSquare: {
+    position: 'absolute',
+    width: 16,
+    height: 16,
+    borderWidth: 0.8,
+    borderRadius: 2,
+    zIndex: 9,
+    top: 18,
+  },
+  imageCollageContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginTop: 12,
+    borderRadius: 12,
+    overflow: 'hidden',
+    gap: 4,
+  },
+  collageImage: {
+    borderRadius: 8,
+    backgroundColor: 'rgba(0,0,0,0.05)',
   },
   // The floating card
   card: {

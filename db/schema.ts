@@ -37,7 +37,11 @@ export async function initDatabase(db: SQLite.SQLiteDatabase) {
       wing_id TEXT,
       room_id TEXT,
       pipeline_step TEXT,
-      pipeline_metrics TEXT
+      pipeline_metrics TEXT,
+      note_type TEXT DEFAULT 'note' CHECK (note_type IN ('note', 'page')),
+      word_count INTEGER DEFAULT 0,
+      reading_time INTEGER DEFAULT 0,
+      chunk_count INTEGER DEFAULT 0
     );
     
     CREATE INDEX IF NOT EXISTS idx_notes_deleted_created ON notes(is_deleted, created_at DESC);
@@ -54,6 +58,19 @@ export async function initDatabase(db: SQLite.SQLiteDatabase) {
       updated_at INTEGER NOT NULL,
       FOREIGN KEY (note_id) REFERENCES notes(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS note_chunks (
+      id TEXT PRIMARY KEY NOT NULL,
+      parent_note_id TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
+      chunk_index INTEGER NOT NULL,
+      text TEXT NOT NULL,
+      embedding BLOB,
+      char_start INTEGER NOT NULL,
+      char_end INTEGER NOT NULL,
+      created_at INTEGER NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_chunks_parent ON note_chunks(parent_note_id);
 
     CREATE TABLE IF NOT EXISTS semantic_edges (
       source_id TEXT NOT NULL,

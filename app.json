@@ -63,7 +63,8 @@
         }
       ],
       "expo-web-browser",
-      "./plugins/withIosModifications"
+      "./plugins/withIosModifications",
+      "@react-native-voice/voice"
     ],
     "experiments": {
       "typedRoutes": true,

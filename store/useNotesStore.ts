@@ -35,6 +35,10 @@ export type Note = {
   is_refining?: boolean;
   
   // Metadata for UI
+  note_type?: 'note' | 'page';
+  word_count?: number;
+  reading_time?: number;
+  chunk_count?: number;
   resonances?: Record<string, number>;
   room_id?: string;
   wing_id?: string;
