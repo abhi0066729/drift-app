@@ -133,7 +133,7 @@ const UserModeMap = React.forwardRef<any, UserModeMapProps>((props, ref) => {
         <View style={StyleSheet.absoluteFillObject}>
           <Animated.View style={[styles.canvas, animatedCanvasStyle]}>
             
-            {/* Infinite SVG Layer for grid and constellation lines */}
+            {/* Infinite SVG Layer for grid (lines removed to resolve lag) */}
             <View style={StyleSheet.absoluteFillObject}>
               <Svg width={4000} height={4000} style={StyleSheet.absoluteFillObject}>
                 <Defs>
@@ -144,24 +144,6 @@ const UserModeMap = React.forwardRef<any, UserModeMapProps>((props, ref) => {
 
                 {/* Dot Grid */}
                 <Rect width={4000} height={4000} fill="url(#dotGrid)" />
-
-                {/* Orange Constellation Lines (Scale-adaptive stroke width) */}
-                {CARD_CONNECTIONS.map((conn, idx) => {
-                  const src = MOCK_CARDS.find(c => c.id === conn.fromId);
-                  const tgt = MOCK_CARDS.find(c => c.id === conn.toId);
-                  if (!src || !tgt) return null;
-
-                  return (
-                    <AnimatedPath
-                      key={`bond-${idx}`}
-                      d={`M ${src.unfocusedX} ${src.unfocusedY} Q ${(src.unfocusedX + tgt.unfocusedX)/2 + 50} ${(src.unfocusedY + tgt.unfocusedY)/2 - 50} ${tgt.unfocusedX} ${tgt.unfocusedY}`}
-                      stroke="#E8673C"
-                      animatedProps={animatedLineProps}
-                      fill="none"
-                      opacity={0.65}
-                    />
-                  );
-                })}
               </Svg>
             </View>
 

@@ -1,11 +1,11 @@
 # Graph Report - .  (2026-07-19)
 
 ## Corpus Check
-- 98 files · ~2,602,179 words
+- 98 files · ~2,602,186 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 350 nodes · 350 edges · 96 communities detected
+- 351 nodes · 351 edges · 96 communities detected
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
@@ -254,15 +254,15 @@ Cohesion: 0.5
 Nodes (0): 
 
 ### Community 32 - "Community 32"
-Cohesion: 0.67
-Nodes (2): calculateSemanticResonance(), getKeywords()
-
-### Community 33 - "Community 33"
 Cohesion: 0.5
 Nodes (0): 
 
-### Community 34 - "Community 34"
+### Community 33 - "Community 33"
 Cohesion: 0.67
+Nodes (2): calculateSemanticResonance(), getKeywords()
+
+### Community 34 - "Community 34"
+Cohesion: 0.5
 Nodes (0): 
 
 ### Community 35 - "Community 35"

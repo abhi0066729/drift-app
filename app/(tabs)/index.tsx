@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { StyleSheet, Text, View, Pressable, ScrollView, Dimensions, TextInput, Platform, Image, TouchableOpacity, Alert } from 'react-native';
 import Animated, { 
   useAnimatedStyle, 
@@ -6,7 +7,8 @@ import Animated, {
   withRepeat, 
   withTiming, 
   Easing,
-  withSpring
+  withSpring,
+  runOnJS
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -103,6 +105,33 @@ export default function TodayScreen() {
   const isDark = theme === 'dark';
 
   const [sliderVal, setSliderVal] = useState(0);
+  
+  // Gesture-driven slider shared values
+  const sliderX = useSharedValue(0);
+  const startSliderX = useSharedValue(0);
+  const maxSliderX = 280 - 24 - 32; // 224px track
+
+  const handleSliderChange = (val: number) => {
+    setSliderVal(val);
+    const idx = Math.min(19, Math.floor(val * 20));
+    // Center the spatial map on this note index
+  };
+
+  const sliderPan = Gesture.Pan()
+    .onStart(() => {
+      'worklet';
+      startSliderX.value = sliderX.value;
+    })
+    .onUpdate((e) => {
+      'worklet';
+      const nextX = Math.max(0, Math.min(224, startSliderX.value + e.translationX));
+      sliderX.value = nextX;
+      runOnJS(handleSliderChange)(nextX / 224);
+    });
+
+  const animatedThumbStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: sliderX.value }]
+  }));
 
   // Dynamic label for focused card in slider
   const focusedCardLabel = useMemo(() => {
@@ -244,47 +273,28 @@ export default function TodayScreen() {
         </View>
       )}
 
-      {/* Note-Shuffling Glassmorphic Dial Slider */}
+      {/* Note-Shuffling Glassmorphic Dial Slider (Gesture Detector) */}
       <View style={[styles.sliderContainer, { bottom: 94 }]}>
-        <BlurView experimentalBlurMethod="dimezisBlurView" intensity={40} style={StyleSheet.absoluteFillObject} tint="dark" />
-        <View style={[styles.cardBorderOverlay, { borderRadius: 20, borderColor: 'rgba(255, 255, 255, 0.08)', borderWidth: 1 }]} pointerEvents="none" />
+        <BlurView experimentalBlurMethod="dimezisBlurView" intensity={50} style={StyleSheet.absoluteFillObject} tint="dark" />
+        <View style={[styles.cardBorderOverlay, { borderRadius: 20, borderColor: 'rgba(255, 255, 255, 0.06)', borderWidth: 1 }]} pointerEvents="none" />
         
         <View style={styles.sliderHeader}>
           <Text style={styles.sliderLabel}>{focusedCardLabel}</Text>
         </View>
 
-        <View style={styles.sliderTrackContainer}>
-          <View style={styles.sliderTicks}>
-            {Array.from({ length: 25 }).map((_, i) => (
-              <View key={i} style={[styles.sliderTick, i % 5 === 0 && styles.sliderTickMajor]} />
-            ))}
+        <GestureDetector gesture={sliderPan}>
+          <View style={styles.sliderTrackContainer}>
+            {/* Dial Ticks Background */}
+            <View style={styles.sliderTicks}>
+              {Array.from({ length: 25 }).map((_, i) => (
+                <View key={i} style={[styles.sliderTick, i % 5 === 0 && styles.sliderTickMajor]} />
+              ))}
+            </View>
+
+            {/* Floating Glassmorphic Thumb Handle */}
+            <Animated.View style={[styles.sliderThumb, animatedThumbStyle]} />
           </View>
-
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ width: 280 }}
-            scrollEventThrottle={16}
-            onScroll={(e) => {
-              const x = e.nativeEvent.contentOffset.x;
-              const maxScroll = 280 - 40;
-              const ratio = Math.max(0, Math.min(1, x / maxScroll));
-              setSliderVal(ratio);
-            }}
-            style={styles.sliderScroll}
-          >
-            <View style={{ width: 280 + 200, height: 20 }} />
-          </ScrollView>
-
-          <View 
-            style={[
-              styles.sliderThumb, 
-              { 
-                left: 10 + sliderVal * (240 - 32)
-              }
-            ]} 
-          />
-        </View>
+        </GestureDetector>
       </View>
 
       {/* Premium Dock Menu */}
@@ -358,13 +368,14 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     overflow: 'hidden',
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.35,
-    shadowRadius: 18,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 4,
     zIndex: 1000,
     paddingHorizontal: 12,
     justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
   },
   sliderHeader: {
     alignItems: 'center',
