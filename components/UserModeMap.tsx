@@ -1,361 +1,225 @@
-import React, { useState, useMemo, forwardRef, memo, useRef } from 'react';
-import { ScrollView, StyleSheet, View, Dimensions } from 'react-native';
-import Animated, { useAnimatedScrollHandler, type SharedValue, useAnimatedReaction, runOnJS, useSharedValue } from 'react-native-reanimated';
-import Svg, { Path, Line, G } from 'react-native-svg';
-import { CATEGORY_COLORS } from '@/constants/Categories';
+import React, { useEffect } from 'react';
+import { StyleSheet, View, useWindowDimensions, Platform } from 'react-native';
+import Animated, { 
+  useAnimatedStyle, 
+  useSharedValue, 
+  withSpring,
+  useAnimatedProps,
+  withRepeat,
+  withTiming,
+  Easing
+} from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Svg, { Path, Rect, Circle, Defs, Pattern, RadialGradient, Stop } from 'react-native-svg';
 import DriftNode from './DriftNode';
-import { calculateSearchMatch } from '@/utils/noteUtils';
-import ResonanceFeedbackOverlay from './ResonanceFeedbackOverlay';
-import NexusSurfaceMatrix from './NexusSurfaceMatrix';
-import { useNotesStore } from '@/store/useNotesStore';
-import * as Haptics from 'expo-haptics';
-import { useSQLiteContext } from 'expo-sqlite';
-import { IntelligenceService } from '@/services/IntelligenceService';
-import { DatabaseService } from '@/services/DatabaseService';
-import { NoteCategory } from '@/services/ai';
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const WINDOW_BUFFER = 1500; // Baseline buffer
+const AnimatedPath = Animated.createAnimatedComponent(Path);
 
-// High-Performance SVG Optimizer: Render Connection Streams in category batches
-// This consolidates hundreds of draw calls into ~10 per window
-const BatchedConnectionLayer = React.memo(({ visibleCurves, nodeMap, tileY, isNexus, searchQuery, width }: { 
-  visibleCurves: any[], 
-  nodeMap: Record<string, any>, 
-  tileY: number, 
-  isNexus: boolean,
-  searchQuery: string,
-  width: number
-}) => {
-  if (visibleCurves.length === 0 || isNexus) return null;
-
-  // Group by (category + searchStatus) to minimize Path components
-  const groups: Record<string, string[]> = {};
-  const metadata: Record<string, { color: string, opacity: number, width: number }> = {};
-
-  visibleCurves.forEach(node => {
-    const isSynthesis = node.source_type === 'synthesis';
-    let targets: any[] = [];
-
-    // 1. STANDARD CONNECTIONS
-    if (node.connections && node.connections.length > 0) {
-      targets = node.connections.map((c: any) => ({ 
-        id: c.targetId, 
-        category: c.category, 
-        weight: c.weight || 1.0, 
-        type: 'standard' 
-      }));
-    }
-
-    // 2. NEURAL FILAMENTS (Synthesis Parents)
-    if (isSynthesis && node.entities_json) {
-      try {
-        const entities = JSON.parse(node.entities_json);
-        if (entities.children && Array.isArray(entities.children)) {
-          entities.children.forEach((childId: string) => {
-            targets.push({ id: childId, category: 'synthesis', weight: 1.2, type: 'filament' });
-          });
-        }
-      } catch (e) {}
-    }
-
-    targets.forEach((conn: any) => {
-      const targetNode = nodeMap[conn.id];
-      if (
-        node.unfocusedX === undefined || node.unfocusedY === undefined ||
-        targetNode.unfocusedX === undefined || targetNode.unfocusedY === undefined ||
-        isNaN(node.unfocusedX) || isNaN(node.unfocusedY) ||
-        isNaN(targetNode.unfocusedX) || isNaN(targetNode.unfocusedY)
-      ) {
-        return;
-      }
-
-      const status = calculateSearchMatch(searchQuery, node);
-      const dy = Math.abs(targetNode.unfocusedY - node.unfocusedY);
-      const isFilament = conn.type === 'filament';
-      const weightMult = conn.weight || 1.0;
-      const width = (node.importance || 1) * (isFilament ? 3.5 : 2.5) * weightMult + 1.2;
-      const roundedWidth = Math.round(width * 10) / 10;
-      
-      let distBucket = 0;
-      if (dy > 800) distBucket = 1;
-      if (dy > 1800) distBucket = 2;
-      
-      const groupKey = `${conn.category}-${status}-${distBucket}-${conn.type}-${roundedWidth}`;
-      
-      if (!groups[groupKey]) {
-        groups[groupKey] = [];
-        const color = isFilament ? '#F1C40F' : (CATEGORY_COLORS[conn.category] || '#8E44AD');
-        let baseOpacity = (isFilament ? 0.9 : 0.85) * weightMult;
-        
-        if (distBucket === 1) baseOpacity *= 0.8;
-        if (distBucket === 2) baseOpacity *= 0.6;
-        
-        if (status === 'dim') baseOpacity *= 0.4;
-        if (status === 'match') baseOpacity = 0.95 * weightMult;
-        
-        metadata[groupKey] = { color, opacity: baseOpacity, width };
-      }
-
-      // Filaments have less "bowing" to feel more intentional and structural
-      const tangent = Math.max(isFilament ? 100 : 160, dy * (isFilament ? 0.3 : 0.42));
-      const curX = node.unfocusedX;
-      const curY = node.unfocusedY - tileY;
-      const tgtX = targetNode.unfocusedX;
-      const tgtY = targetNode.unfocusedY - tileY;
-      
-      let cp1x = curX;
-      let cp2x = tgtX;
-      if (Math.abs(tgtX - curX) < 10) {
-        const bowDir = (node.id.length % 2 === 0) ? 1 : -1;
-        const bowMag = Math.min(60, dy * 0.15);
-        cp1x = curX + (bowMag * bowDir);
-        cp2x = tgtX + (bowMag * bowDir);
-      }
-
-      const pathD = `M ${curX} ${curY} C ${cp1x} ${curY + tangent}, ${cp2x} ${tgtY - tangent}, ${tgtX} ${tgtY}`;
-      groups[groupKey].push(pathD);
-    });
-  });
-
-
-  return (
-    <>
-      {Object.entries(groups).map(([key, paths]) => {
-        const { color, opacity, width } = metadata[key];
-        const isFilament = key.endsWith('-filament');
-        
-        return (
-          <React.Fragment key={key}>
-            <Path 
-              d={paths.join(' ')} 
-              stroke={color} 
-              strokeWidth={width} 
-              fill="none" 
-              opacity={opacity * 0.4} 
-            />
-            {isFilament && (
-               <Path 
-                 d={paths.join(' ')} 
-                 stroke={color} 
-                 strokeWidth={width * 1.5} 
-                 fill="none" 
-                 opacity={0.8}
-                 strokeDasharray="10, 40"
-                 // This would be animated in a real production Skia layer, 
-                 // but for SVG we use a subtle glow.
-               />
-            )}
-          </React.Fragment>
-        );
-      })}
-    </>
-  );
-
-});
+// 10 Mock Datasets reflecting various rich media formats
+const MOCK_CARDS = [
+  {
+    id: 'card-1',
+    source_type: 'image',
+    content: 'Sunset in Manali',
+    content_image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400&q=80',
+    tags: ['Travel', 'Mountains'],
+    unfocusedX: 2000 - 220,
+    unfocusedY: 2000 - 280,
+    date: 'May 12 · 7:45 PM'
+  },
+  {
+    id: 'card-2',
+    source_type: 'voice',
+    duration: '1:30',
+    unfocusedX: 2000 + 80,
+    unfocusedY: 2000 - 320,
+    date: 'May 12'
+  },
+  {
+    id: 'card-3',
+    source_type: 'text',
+    category: 'Idea',
+    content: 'Kinetic typography scaling dynamically based on user motion acceleration.',
+    unfocusedX: 2000 + 200,
+    unfocusedY: 2000 - 180,
+    date: 'May 12'
+  },
+  {
+    id: 'card-4',
+    source_type: 'todo',
+    content: 'Rebuild Tasks',
+    items: [
+      { text: 'Design infinite canvas layout', completed: true },
+      { text: 'Neighbor reacts magnetic avoidance', completed: true },
+      { text: 'SVG curved line connectors', completed: false }
+    ],
+    unfocusedX: 2000 - 80,
+    unfocusedY: 2000 - 40
+  },
+  {
+    id: 'card-5',
+    source_type: 'image',
+    content: 'Bali Coastline',
+    content_image: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=400&q=80',
+    tags: ['Travel', 'Ocean'],
+    unfocusedX: 2000 + 180,
+    unfocusedY: 2000 + 30,
+    date: 'May 13 · 9:15 AM'
+  },
+  {
+    id: 'card-6',
+    source_type: 'document',
+    content: 'Project Brief.pdf',
+    meta: 'dribbble.com · 2.4MB',
+    unfocusedX: 2000 - 260,
+    unfocusedY: 2000 - 20
+  },
+  {
+    id: 'card-7',
+    source_type: 'map',
+    content: 'Bali Topographies',
+    unfocusedX: 2000 - 120,
+    unfocusedY: 2000 + 160,
+    date: 'May 14'
+  },
+  {
+    id: 'card-8',
+    source_type: 'moodboard',
+    content: 'Sea Textures Moodboard',
+    images: [
+      'https://images.unsplash.com/photo-1505118380757-91f5f5632de0?w=200&q=80',
+      'https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=200&q=80',
+      'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=200&q=80',
+      'https://images.unsplash.com/photo-1473116763269-25541579ffbe?w=200&q=80'
+    ],
+    itemsCount: '12 items',
+    unfocusedX: 2000 - 360,
+    unfocusedY: 2000 + 180
+  },
+  {
+    id: 'card-9',
+    source_type: 'text',
+    category: 'Journal',
+    content: 'Synchronized visual layout specifications. Moving entirely to a 2D spatial canvas feed.',
+    unfocusedX: 2000 + 120,
+    unfocusedY: 2000 + 280,
+    date: 'Today'
+  },
+  {
+    id: 'card-10',
+    source_type: 'link',
+    content: 'imdb.com/title/tt0111161',
+    title: 'The Shawshank Redemption',
+    unfocusedX: 2000 + 300,
+    unfocusedY: 2000 - 100,
+    date: 'Yesterday'
+  }
+];
 
 interface UserModeMapProps {
-  mappedNotes: any[];
-  activeView: 'chronos' | 'nexus';
-  searchQuery: string;
-  onNodePress: (node: any, type: 'dot' | 'text') => void;
-  onScroll?: (y: number) => void;
-  scrollY: SharedValue<number>;
-  width: number;
-  totalHeight: number;
-  theme: 'light' | 'dark';
+  onNodePress: (node: any, type: string) => void;
+  theme?: 'light' | 'dark';
 }
 
-// Removed React.memo to ensure real-time reactivity to background AI updates
-const UserModeMap = React.forwardRef<Animated.ScrollView, UserModeMapProps>((props, ref) => {
-  const { mappedNotes, activeView, searchQuery, onNodePress, onScroll, scrollY, totalHeight, width, theme } = props;
-  const isNexus = activeView === 'nexus';
-  const db = useSQLiteContext();
+const UserModeMap = React.forwardRef<any, UserModeMapProps>((props, ref) => {
+  const { onNodePress, theme = 'light' } = props;
+
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+
+  // Shared values for 2D Panning
+  const canvasX = useSharedValue(0);
+  const canvasY = useSharedValue(0);
   
-  // --- TEMPORAL WINDOWING STATE ---
-  const [windowY, setWindowY] = useState(0);
+  // Shared values for Zoom
+  const canvasScale = useSharedValue(1.0);
 
-  // Speed Optimization: Map for O(1) curve target lookups
-  const nodeMap = useMemo(() => {
-    const map: Record<string, any> = {};
-    mappedNotes.forEach(n => { map[n.id] = n; });
-    return map;
-  }, [mappedNotes]);
+  // Temporary gesture state caches
+  const startX = useSharedValue(0);
+  const startY = useSharedValue(0);
+  const startScale = useSharedValue(1.0);
 
-  const draggingNodeRef = useRef<any>(null);
-  const [draggingNode, setDraggingNode] = useState<any>(null);
-  const [dragOrigin, setDragOrigin] = useState({ x: 0, y: 0 });
+  // Real-time tracking of active drag node (avoidance physics helper)
   const activeDragX = useSharedValue(0);
   const activeDragY = useSharedValue(0);
-  const activeDragCategory = useSharedValue<string | undefined>(undefined);
+  const draggedNodeId = useSharedValue<string | null>(null);
 
-  const updateNote = useNotesStore(state => state.updateNote);
+  // Canvas Pan & Zoom gesture handler
+  const panGesture = Gesture.Pan()
+    .onStart(() => {
+      'worklet';
+      startX.value = canvasX.value;
+      startY.value = canvasY.value;
+    })
+    .onUpdate((event) => {
+      'worklet';
+      canvasX.value = startX.value + event.translationX;
+      canvasY.value = startY.value + event.translationY;
+    });
 
-  useAnimatedReaction(
-    () => activeDragCategory.value,
-    (curr, prev) => {
-        if (curr !== prev && curr !== undefined) {
-            runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Light);
-        }
-    }
-  );
+  const pinchGesture = Gesture.Pinch()
+    .onStart(() => {
+      'worklet';
+      startScale.value = canvasScale.value;
+    })
+    .onUpdate((event) => {
+      'worklet';
+      canvasScale.value = Math.max(0.4, Math.min(1.5, startScale.value * event.scale));
+    });
 
-  const handleDragStart = (node: any, startX: number, startY: number) => {
-    setDragOrigin({ x: startX, y: startY });
-    draggingNodeRef.current = node;
-    setDraggingNode(node);
-  };
+  const combinedGesture = Gesture.Simultaneous(panGesture, pinchGesture);
 
-  const handleDragEnd = async (absX: number, absY: number, committedCategory?: string) => {
-    const node = draggingNodeRef.current;
-    const finalCat = (committedCategory || node?.category) as NoteCategory;
-    
-    if (node && committedCategory && finalCat !== node.category) {
-        let originalEntities: Record<string, any> = {};
-        try {
-            originalEntities = JSON.parse(node.entities_json || '{}');
-        } catch(e) {}
+  const animatedCanvasStyle = useAnimatedStyle(() => ({
+    left: -2000 + windowWidth / 2,
+    top: -2000 + windowHeight / 2,
+    transform: [
+      { translateX: canvasX.value },
+      { translateY: canvasY.value },
+      { scale: canvasScale.value }
+    ],
+  }));
 
-        const oldCat = originalEntities.category;
-
-        const newEntitiesStr = JSON.stringify({
-            ...originalEntities,
-            category: finalCat,
-            resonances: { [finalCat]: 1.0 }
-        });
-
-        updateNote(node.id, { 
-            entities_json: newEntitiesStr,
-            resonances: { [finalCat]: 1.0 } 
-        });
-
-        DatabaseService.updateNoteMetadata(db, node.id, newEntitiesStr);
-        IntelligenceService.logResonanceEvent(db, {
-            noteId: node.id,
-            oldCategory: oldCat,
-            newCategory: finalCat,
-            content: node.content
-        });
-
-        try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); } catch(e){}
-    }
-    
-    draggingNodeRef.current = null;
-    setDraggingNode(null);
-  };
-
-  const scrollHandler = useAnimatedScrollHandler({
-    onScroll: (event) => {
-      const y = event.contentOffset.y;
-      scrollY.value = y;
-      if (onScroll) runOnJS(onScroll)(y);
-      
-      if (Math.abs(y - windowY) > 900) {
-        runOnJS(setWindowY)(y);
-      }
-    },
-  }, [windowY, onScroll, scrollY]);
-
-  const findRangeIndices = (y: number) => {
-    const currentBuffer = isNexus ? 2500 : WINDOW_BUFFER;
-    const minY = y - currentBuffer;
-    const maxY = y + SCREEN_HEIGHT + currentBuffer;
-    
-    let low = 0, high = mappedNotes.length - 1, start = 0;
-    while (low <= high) {
-      let mid = Math.floor((low + high) / 2);
-      if (mappedNotes[mid].unfocusedY >= minY) {
-        start = mid;
-        high = mid - 1;
-      } else low = mid + 1;
-    }
-    
-    low = start, high = mappedNotes.length - 1;
-    let end = high;
-    while (low <= high) {
-      let mid = Math.floor((low + high) / 2);
-      if (mappedNotes[mid].unfocusedY <= maxY) {
-        end = mid;
-        low = mid + 1;
-      } else high = mid - 1;
-    }
-    
-    return { start, end };
-  };
-
-  const { start, end } = useMemo(() => findRangeIndices(windowY), [mappedNotes, windowY]);
-
-  const visibleNotes = mappedNotes.slice(start, end + 1);
-
-  const tileY = useMemo(() => Math.max(0, windowY - (isNexus ? 2500 : WINDOW_BUFFER)), [windowY, isNexus]);
-  const tileHeight = SCREEN_HEIGHT + (WINDOW_BUFFER * 2);
+  // Visual variants mapping for Light vs Dark themes
+  const isDark = true;
+  const bgColor = isDark ? '#09090A' : '#FAF9F6';
+  const gridDotColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)';
 
   return (
     <View style={styles.container}>
-      {/* Chronos scroll map — hidden when Nexus is active */}
-      {!isNexus && (
-        <Animated.ScrollView
-          ref={ref}
-          contentContainerStyle={{ height: totalHeight }}
-          onScroll={scrollHandler}
-          scrollEventThrottle={16}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={[styles.svgContainer, { top: tileY, height: tileHeight }]}>
-            <Svg width={width} height={tileHeight}>
-              <BatchedConnectionLayer
-                visibleCurves={visibleNotes}
-                nodeMap={nodeMap}
-                tileY={tileY}
-                isNexus={false}
-                searchQuery={searchQuery}
-                width={width}
-              />
-            </Svg>
-          </View>
+      <GestureDetector gesture={combinedGesture}>
+        <View style={StyleSheet.absoluteFillObject}>
+          {/* Canvas Wrapper */}
+          <Animated.View style={[styles.canvas, animatedCanvasStyle]}>
+            
+            {/* Infinite SVG Dot Grid */}
+            <View style={StyleSheet.absoluteFillObject}>
+              <Svg width={4000} height={4000} style={StyleSheet.absoluteFillObject}>
+                <Defs>
+                  {/* Dynamic Repeating Dot Grid */}
+                  <Pattern id="dotGrid" width="32" height="32" patternUnits="userSpaceOnUse">
+                    <Circle cx="2" cy="2" r="1.2" fill={gridDotColor} />
+                  </Pattern>
+                </Defs>
 
-          {visibleNotes.map((node) => {
-            const status = calculateSearchMatch(searchQuery, node);
-            const isFirst = mappedNotes.length > 0 && node.id === mappedNotes[0].id;
-            return (
+                {/* Dot Grid Layer */}
+                <Rect width={4000} height={4000} fill="url(#dotGrid)" />
+              </Svg>
+            </View>
+
+            {/* Float cards in 2D coordinate positions */}
+            {MOCK_CARDS.map((node) => (
               <DriftNode
-                key={`chronos-${node.id}`}
+                key={node.id}
                 node={node}
-                isFirst={isFirst}
-                activeView={activeView}
-                searchStatus={status}
                 onPress={onNodePress}
-                onDragStart={handleDragStart}
-                onDragUpdateSharedX={activeDragX}
-                onDragUpdateSharedY={activeDragY}
-                onDragUpdateSharedCategory={activeDragCategory}
-                onDragEnd={handleDragEnd}
-                scrollY={scrollY}
-                isInHull={false}
+                activeDragX={activeDragX}
+                activeDragY={activeDragY}
+                draggedNodeId={draggedNodeId}
+                theme={theme}
               />
-            );
-          })}
-        </Animated.ScrollView>
-      )}
-
-      {/* Nexus — full-screen absolute overlay with its own gesture system */}
-      {isNexus && (
-        <View style={StyleSheet.absoluteFill}>
-          <NexusSurfaceMatrix
-            notes={mappedNotes}
-            theme={theme}
-            onPress={onNodePress}
-          />
+            ))}
+          </Animated.View>
         </View>
-      )}
-
-      {draggingNode && (
-        <ResonanceFeedbackOverlay
-          activeNodePos={{ x: activeDragX, y: activeDragY }}
-          activeCategory={activeDragCategory}
-          originPos={dragOrigin}
-        />
-      )}
+      </GestureDetector>
     </View>
   );
 });
@@ -365,11 +229,13 @@ export default UserModeMap;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    overflow: 'hidden',
   },
-  svgContainer: {
+  canvas: {
+    width: 4000,
+    height: 4000,
     position: 'absolute',
-    left: 0,
-    right: 0,
-    zIndex: -1,
-  }
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });

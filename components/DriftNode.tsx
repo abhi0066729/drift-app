@@ -1,404 +1,726 @@
 import React, { useEffect, memo, useMemo } from 'react';
-import { StyleSheet, Text, View, Pressable, Dimensions } from 'react-native';
+import { StyleSheet, Text, View, Pressable, Dimensions, Image, Platform, TouchableOpacity } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming, withSpring, runOnJS, type SharedValue } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
-import { CATEGORY_COLORS } from '@/constants/Categories';
-import { NightTheme } from '@/constants/theme';
+import { BlurView } from 'expo-blur';
+import { Ionicons } from '@expo/vector-icons';
 import { useNotesStore } from '@/store/useNotesStore';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface DriftNodeProps {
   node: any;
   onPress: (node: any, type: 'dot' | 'text') => void;
-  onDragStart?: (node: any, startX: number, startY: number) => void;
-  onDragUpdateSharedX?: SharedValue<number>;
-  onDragUpdateSharedY?: SharedValue<number>;
-  onDragUpdateSharedCategory?: SharedValue<string | undefined>;
-  onDragEnd?: (x: number, y: number, category: string | undefined) => void;
-  scrollY?: SharedValue<number>;
-  activeView?: 'chronos' | 'nexus';
-  searchStatus?: 'match' | 'dim' | 'none';
+  activeDragX?: SharedValue<number>;
+  activeDragY?: SharedValue<number>;
+  draggedNodeId?: SharedValue<string | null>;
+  theme?: 'light' | 'dark';
+  activeView?: string;
+  searchStatus?: string;
   isFirst?: boolean;
-  isInHull?: boolean;
 }
 
-const CATEGORIES = Object.keys(CATEGORY_COLORS);
-const RING_SPACING = 16;
-const START_RADIUS = 30;
-const MAX_RADIUS = START_RADIUS + (CATEGORIES.length - 1) * RING_SPACING;
-const PADDING = 20;
-const PORTAL_CENTER_X = SCREEN_WIDTH / 2;
-const PORTAL_CENTER_Y = SCREEN_HEIGHT / 2.3;
-
-function DriftNode({ node, onPress, onDragStart, onDragUpdateSharedX, onDragUpdateSharedY, onDragUpdateSharedCategory, onDragEnd, scrollY, activeView, searchStatus = 'none', isFirst, isInHull }: DriftNodeProps) {
-  const theme = useNotesStore(state => state.theme);
-  const localYBase = node.unfocusedY - 60;
-  const isRefining = node.is_refining;
-  const resonancesObj = node.resonances || { [node.category]: 1.0 };
-  const sortedResonances = Object.entries(resonancesObj).sort((a: any, b: any) => (b[1] as number) - (a[1] as number));
-  const primaryCat = sortedResonances[0]?.[0] || node.category;
-  const secondaryCat = sortedResonances.length > 1 && (sortedResonances[1][1] as number) > 0.2 ? sortedResonances[1][0] : primaryCat;
-  
-  const isPinned = useNotesStore(state => state.studioSeeds?.includes(node.id));
-  const isSynthesis = node.source_type === 'synthesis';
-  
-  // Real-time status subscription
-  const liveNote = useNotesStore(state => state.notes.find(n => n.id === node.id));
-  const pipelineStep = liveNote?.pipeline_step || node.pipeline_step || 'complete';
-  const isComplete = pipelineStep === 'complete';
-
-  const mainColor = isSynthesis ? '#9B59B6' : (!isComplete ? '#8E44AD' : (CATEGORY_COLORS[primaryCat] || '#8E44AD'));
-  const color1 = mainColor;
-  const color2 = isSynthesis ? '#F1C40F' : (!isComplete ? '#8E44AD' : (CATEGORY_COLORS[secondaryCat] || color1));
-  const isDual = isSynthesis || (isComplete && sortedResonances.length > 1 && primaryCat !== secondaryCat);
-
-  
-  const pulseScale = useSharedValue(1);
-  const pulseOpacity = useSharedValue(0.6);
-  const outerPulseScale = useSharedValue(1);
-  const outerPulseOpacity = useSharedValue(0.1);
-  
-  const searchPulseScale = useSharedValue(1);
-  const searchPulseOpacity = useSharedValue(0);
-
-  const entities = useMemo(() => {
-    if (!node.entities_json) return null;
-    try { return JSON.parse(node.entities_json); } catch (e) { return null; }
-  }, [node.entities_json]);
-
-  const resonanceStr = useMemo(() => {
-    if (!resonancesObj || typeof resonancesObj !== 'object') return null;
-    try {
-      const entries = Object.entries(resonancesObj)
-        .sort(([, a], [, b]) => (b as number) - (a as number))
-        .slice(0, 2);
-      
-      if (entries.length === 0) return null;
-      return entries.map(([cat, val]) => `${cat}: ${Math.round((val as number) * 100)}%`).join(' | ');
-    } catch (e) {
-      return null;
-    }
-  }, [resonancesObj]);
-
-  useEffect(() => {
-    if (searchStatus === 'match') {
-      searchPulseScale.value = withRepeat(
-        withTiming(1.6, { duration: 1000, easing: Easing.out(Easing.ease) }),
-        -1, false
-      );
-      searchPulseOpacity.value = withRepeat(
-        withTiming(0, { duration: 1000, easing: Easing.out(Easing.ease) }),
-        -1, false
-      );
-    } else {
-      searchPulseScale.value = withTiming(1);
-      searchPulseOpacity.value = withTiming(0);
-    }
-  }, [searchStatus]);
-
-
-  const pipelineRotation = useSharedValue(0);
-
-  useEffect(() => {
-    if (pipelineStep !== 'complete' && pipelineStep !== 'idle' && pipelineStep !== 'error') {
-      pipelineRotation.value = withRepeat(
-        withTiming(360, { duration: 2000, easing: Easing.linear }),
-        -1,
-        false
-      );
-    } else {
-      pipelineRotation.value = 0;
-    }
-  }, [pipelineStep]);
-
-  const pipelineRingStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${pipelineRotation.value}deg` }],
-    opacity: pipelineStep === 'complete' ? withTiming(0) : withTiming(1),
-  }));
-
-  const getPipelineColor = (step: string) => {
-    switch (step) {
-      case 'embedding': return '#FF9F43';
-      case 'vectorizing': return '#3498DB';
-      case 'synthesizing': return '#8E44AD';
-      case 'error': return '#E74C3C';
-      default: return 'transparent';
-    }
-  };
-
-  useEffect(() => {
-    if (node.is_ghost || isFirst || isRefining || isSynthesis) {
-      const duration = isSynthesis ? 2000 : 1200;
-      const scale = isSynthesis ? 2.2 : 1.6;
-      
-      pulseScale.value = withRepeat(
-        withTiming(scale, { duration, easing: Easing.inOut(Easing.ease) }),
-        -1, true
-      );
-      pulseOpacity.value = withRepeat(
-        withTiming(isSynthesis ? 0.2 : 0.4, { duration, easing: Easing.inOut(Easing.ease) }),
-        -1, true
-      );
-      
-      if (!isRefining) {
-        outerPulseScale.value = withRepeat(
-          withTiming(isSynthesis ? 4.5 : 3.0, { duration: isSynthesis ? 3000 : 2000, easing: Easing.out(Easing.ease) }),
-          -1, false
-        );
-        outerPulseOpacity.value = withRepeat(
-          withTiming(0, { duration: isSynthesis ? 3000 : 2000, easing: Easing.out(Easing.ease) }),
-          -1, false
-        );
-      }
- else {
-        outerPulseScale.value = 1;
-        outerPulseOpacity.value = 0;
-      }
-    } else {
-      pulseScale.value = withTiming(1.1); pulseOpacity.value = 0.15;
-      outerPulseScale.value = 1; outerPulseOpacity.value = 0.05;
-    }
-  }, [node.is_ghost, isFirst, isRefining]);
-
-  const pulseStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pulseScale.value }],
-    opacity: pulseOpacity.value,
-  }));
-
-  const searchPulseStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: searchPulseScale.value }],
-    opacity: searchPulseOpacity.value,
-  }));
-
-  const outerPulseStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: outerPulseScale.value }],
-    opacity: outerPulseOpacity.value,
-  }));
-
-  const importanceScore = Math.min(1, Math.max(0, (node.content.length - 15) / 150));
-  
+function DriftNode({ 
+  node, 
+  onPress, 
+  activeDragX, 
+  activeDragY, 
+  draggedNodeId, 
+  theme = 'light',
+  activeView,
+  searchStatus = 'none',
+  isFirst 
+}: DriftNodeProps) {
+  const isDraggingLocal = useSharedValue(false);
   const dragX = useSharedValue(0);
   const dragY = useSharedValue(0);
-  const isDragging = useSharedValue(false);
-  const startViewportX = useSharedValue(0);
-  const startViewportY = useSharedValue(0);
+  
+  // Position setup
+  const initialX = node.unfocusedX || 0;
+  const initialY = node.unfocusedY || 0;
+  
+  // Custom organic rotations and shapes per card to create scattered aesthetic
+  const rotationAngle = useMemo(() => {
+    let hash = 0;
+    for (let i = 0; i < node.id.length; i++) {
+      hash = node.id.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return (hash % 40) / 10 - 2.0; // returns value between -2.0deg and +2.0deg
+  }, [node.id]);
 
-  const containerStyle = useAnimatedStyle(() => {
-    let targetOpacity = 0.9;
-    if (searchStatus === 'dim') targetOpacity = 0.05;
-    else if (searchStatus === 'match') targetOpacity = 1.0;
+  const cardBorderRadius = useMemo(() => {
+    let hash = 0;
+    for (let i = 0; i < node.id.length; i++) {
+      hash = node.id.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return 16 + (Math.abs(hash) % 3) * 4; // returns 16, 20, or 24
+  }, [node.id]);
 
-    const currentBaseX = node.unfocusedX;
-    const currentBaseY = node.unfocusedY;
-    const dragOpacity = isDragging.value ? withTiming(0.12, { duration: 200 }) : withTiming(targetOpacity, { duration: 300 });
-
-    return {
-      top: isDragging.value ? localYBase + dragY.value : withSpring(currentBaseY - 60 + dragY.value, { damping: 25, stiffness: 60 }),
-      left: withSpring(currentBaseX + dragX.value, { damping: 28, stiffness: 80 }),
-      zIndex: isDragging.value ? 5000 : (searchStatus === 'match' ? 100 : 2),
-      transform: [{ scale: withSpring(isDragging.value ? 1.25 : 1.0) }],
-      opacity: dragOpacity,
-    };
-  }, [importanceScore, searchStatus, localYBase, mainColor, node.unfocusedX, node.unfocusedY, isInHull]);
-
-  const innerContentStyle = useAnimatedStyle(() => {
-    let targetScale = 0.85;
-    if (searchStatus === 'dim') targetScale = targetScale * 0.8;
-    else if (searchStatus === 'match') targetScale = targetScale * 1.15;
-
-    let targetOpacity = 1.0;
-    if (searchStatus === 'dim') targetOpacity = 0.4;
-    else if (searchStatus === 'match') targetOpacity = 1.0;
-
-    return {
-      transform: [
-        { scale: withSpring(targetScale, { damping: 20, stiffness: 90 }) },
-        { rotateX: '0deg' },
-        { perspective: 1000 }
-      ],
-      opacity: withTiming(targetOpacity, { duration: 400 })
-    };
-  }, [importanceScore, searchStatus, mainColor, isInHull]);
-
-  const longPressGesture = Gesture.Pan()
-    .activateAfterLongPress(400)
-    .onStart((event) => {
-        'worklet';
-        isDragging.value = true;
-        startViewportX.value = node.unfocusedX;
-        startViewportY.value = localYBase + 60 - (scrollY?.value || 0);
-        
-        if (onDragStart) runOnJS(onDragStart)(node, startViewportX.value, startViewportY.value);
-        runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Medium);
+  // Gestures definition
+  const dragGesture = Gesture.Pan()
+    .onStart(() => {
+      'worklet';
+      isDraggingLocal.value = true;
+      if (draggedNodeId) draggedNodeId.value = node.id;
+      runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Medium);
     })
     .onUpdate((event) => {
       'worklet';
       dragX.value = event.translationX;
       dragY.value = event.translationY;
-      
-      const absX = node.unfocusedX + event.translationX;
-      const absY = localYBase + 60 + event.translationY;
-      const viewportY = absY - (scrollY?.value || 0);
-      
-      if (onDragUpdateSharedX) onDragUpdateSharedX.value = absX;
-      if (onDragUpdateSharedY) onDragUpdateSharedY.value = viewportY; // Viewport-relative for Overlay
-
-      if (onDragUpdateSharedCategory) {
-          // ADAPTIVE HALO MATH: The Halo center is sticky to the screen boundaries
-          const haloCenterX = Math.min(Math.max(startViewportX.value, MAX_RADIUS + PADDING), SCREEN_WIDTH - MAX_RADIUS - PADDING);
-          const haloCenterY = Math.min(Math.max(startViewportY.value, MAX_RADIUS + PADDING), SCREEN_HEIGHT - MAX_RADIUS - PADDING);
-
-          const dx = absX - haloCenterX;
-          const dy = viewportY - haloCenterY;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          
-          let newCat: string | undefined = undefined;
-          if (dist > START_RADIUS - 10) {
-              const idx = Math.floor((dist - START_RADIUS + RING_SPACING/2) / RING_SPACING);
-              if (idx >= 0 && idx < CATEGORIES.length) {
-                  newCat = CATEGORIES[idx];
-              }
-          }
-          if (onDragUpdateSharedCategory.value !== newCat) {
-              onDragUpdateSharedCategory.value = newCat;
-          }
-      }
+      if (activeDragX) activeDragX.value = initialX + event.translationX;
+      if (activeDragY) activeDragY.value = initialY + event.translationY;
     })
-    .onEnd((event) => {
+    .onEnd(() => {
       'worklet';
-      // CRITICAL: Capture category HERE on the UI thread before clearing it.
-      // If we clear first, the JS thread reads undefined.
-      const committedCategory = onDragUpdateSharedCategory?.value;
-      if (onDragEnd) runOnJS(onDragEnd)(
-        node.unfocusedX + event.translationX, 
-        localYBase + 60 + event.translationY,
-        committedCategory
-      );
-      isDragging.value = false;
+      isDraggingLocal.value = false;
+      if (draggedNodeId) draggedNodeId.value = null;
+      // Spring back or persist position relative to origin
       dragX.value = withSpring(0);
       dragY.value = withSpring(0);
-      if (onDragUpdateSharedCategory) onDragUpdateSharedCategory.value = undefined;
     });
 
   const tapGesture = Gesture.Tap()
     .onEnd(() => {
       'worklet';
-      runOnJS(onPress)(node, 'dot');
+      runOnJS(onPress)(node, 'text');
     });
 
-  const composedGesture = Gesture.Exclusive(longPressGesture, tapGesture);
+  const composedGesture = Gesture.Exclusive(dragGesture, tapGesture);
+
+  const cardStyle = useAnimatedStyle(() => {
+    let offsetX = 0;
+    let offsetY = 0;
+    // Avoidance physics math: push away if another node is being dragged close to us
+    if (draggedNodeId && draggedNodeId.value && draggedNodeId.value !== node.id) {
+      if (activeDragX && activeDragY) {
+        const dx = initialX - activeDragX.value;
+        const dy = initialY - activeDragY.value;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const PUSH_RADIUS = 160;
+        const MAX_PUSH = 45;
+        if (dist < PUSH_RADIUS && dist > 0) {
+          const pushStrength = (1 - dist / PUSH_RADIUS) * MAX_PUSH;
+          const angle = Math.atan2(dy, dx);
+          offsetX = Math.cos(angle) * pushStrength;
+          offsetY = Math.sin(angle) * pushStrength;
+        }
+      }
+    }
+    const currentX = initialX + dragX.value + offsetX;
+    const currentY = initialY + dragY.value + offsetY;
+    return {
+      transform: [
+        { translateX: currentX },
+        { translateY: currentY },
+        { rotate: `${rotationAngle}deg` },
+        { scale: withSpring(isDraggingLocal.value ? 1.05 : 1.0, { damping: 15, stiffness: 150 }) }
+      ],
+      zIndex: isDraggingLocal.value ? 999 : 10,
+      shadowOpacity: withSpring(isDraggingLocal.value ? 0.18 : 0.08, { damping: 15 }),
+      shadowRadius: withSpring(isDraggingLocal.value ? 28 : 18),
+      shadowOffset: {
+        width: 0,
+        height: isDraggingLocal.value ? 16 : 8,
+      }
+    };
+  });
+
+  // Render different visual templates based on node source type
+  const renderCardContent = () => {
+    switch (node.id) {
+      // 1. Tall Portrait Image Card ("Samurai" / "Messages" style inspiration)
+      case 'card-1':
+        return (
+          <View style={styles.samuraiCard}>
+            <Image 
+              source={{ uri: 'https://images.unsplash.com/photo-1540959733332-eab4deceeaf7?w=500&q=80' }} // Premium Tokyo/Samurai silhouette vibe
+              style={[styles.samuraiImage, { borderRadius: cardBorderRadius }]} 
+              resizeMode="cover" 
+            />
+            {/* Dark glass overlay at the bottom */}
+            <View style={styles.samuraiOverlay}>
+              <BlurView experimentalBlurMethod="dimezisBlurView" intensity={15} style={StyleSheet.absoluteFillObject} tint="dark" />
+              <View style={styles.samuraiHeader}>
+                <Text style={styles.samuraiTitle}>Tokyo Drift</Text>
+                <Ionicons name="arrow-forward-circle" size={20} color="#E8673C" />
+              </View>
+              <Text style={styles.samuraiMeta}>Tensei 天聖 · 82%</Text>
+            </View>
+          </View>
+        );
+      // 2. Vibrant Orange Card ("Efficiency" Style in Reference Image)
+      case 'card-2':
+        return (
+          <View style={styles.efficiencyCard}>
+            <View style={styles.efficiencyHeader}>
+              <Text style={styles.efficiencyTitle}>Efficiency</Text>
+              <Ionicons name="arrow-forward" size={14} color="#FFFFFF" />
+            </View>
+            <View style={styles.efficiencyWaveform}>
+              {[12, 18, 26, 32, 28, 20, 14, 22, 38, 44, 30, 16, 12, 24, 34, 28, 18, 10].map((h, i) => (
+                <View 
+                  key={i} 
+                  style={[
+                    styles.efficiencyWaveBar, 
+                    { height: h * 0.8, backgroundColor: i < 8 ? '#FFFFFF' : 'rgba(255, 255, 255, 0.4)' }
+                  ]} 
+                />
+              ))}
+            </View>
+            <View style={styles.efficiencyFooter}>
+              <View style={styles.efficiencyAvatar}>
+                <Ionicons name="person" size={10} color="#E8673C" />
+              </View>
+              <View>
+                <Text style={styles.efficiencyUser}>Tensei 天聖</Text>
+                <Text style={styles.efficiencyProgress}>90% complete</Text>
+              </View>
+            </View>
+          </View>
+        );
+      // 3. Deep Glassmorphic Card ("Knowledge" Style in Reference Image)
+      case 'card-3':
+        return (
+          <View style={styles.knowledgeCard}>
+            <View style={styles.knowledgeHeader}>
+              <Text style={styles.knowledgeTitle}>Knowledge</Text>
+              <Ionicons name="arrow-forward" size={14} color="rgba(255,255,255,0.7)" />
+            </View>
+            <Text style={styles.knowledgeGlyph}>侍</Text>
+            <View style={styles.knowledgeFooter}>
+              <View style={styles.knowledgeAvatar}>
+                <Ionicons name="person" size={10} color="#FFFFFF" />
+              </View>
+              <View>
+                <Text style={styles.knowledgeUser}>Tensei 天聖</Text>
+                <Text style={styles.knowledgeProgress}>76% match</Text>
+              </View>
+            </View>
+          </View>
+        );
+      default:
+        // Render general cards in sleek premium dark glass style
+        switch (node.source_type) {
+          case 'todo':
+            return (
+              <View style={styles.todoCard}>
+                <Text style={styles.todoTitle}>{node.content || 'Tasks'}</Text>
+                {node.items && node.items.map((item: any, idx: number) => (
+                  <View key={idx} style={styles.todoRow}>
+                    <View style={[styles.todoCheck, item.completed && styles.todoCheckActive]}>
+                      {item.completed && <Ionicons name="checkmark" size={8} color="#FFFFFF" />}
+                    </View>
+                    <Text style={[styles.todoItemText, item.completed && styles.todoItemTextCompleted]}>
+                      {item.text}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            );
+          case 'document':
+            return (
+              <View style={styles.docCard}>
+                <View style={styles.docPill}>
+                  <Text style={styles.docPillText}>PDF</Text>
+                </View>
+                <View style={styles.docHeader}>
+                  <Ionicons name="document-text-outline" size={16} color="#E8673C" style={{ marginRight: 6 }} />
+                  <Text style={styles.docTitle} numberOfLines={1}>{node.content}</Text>
+                </View>
+                <Text style={styles.docMeta}>{node.meta || 'dribbble.com · 2.4MB'}</Text>
+              </View>
+            );
+          case 'map':
+            return (
+              <View style={styles.mapCard}>
+                <View style={styles.mapPreview}>
+                  <Image 
+                    source={{ uri: 'https://images.unsplash.com/photo-1524661135-423995f22d0b?w=400&q=80' }} 
+                    style={StyleSheet.absoluteFillObject} 
+                    resizeMode="cover" 
+                  />
+                  <View style={styles.mapPin}>
+                    <Ionicons name="location" size={14} color="#E8673C" />
+                  </View>
+                </View>
+                <View style={styles.mapMeta}>
+                  <Text style={styles.mapTitle} numberOfLines={1}>{node.content}</Text>
+                  <Text style={styles.mapTime}>{node.date || 'May 14'}</Text>
+                </View>
+              </View>
+            );
+          case 'moodboard':
+            return (
+              <View style={styles.moodboardCard}>
+                <Text style={styles.moodboardTitle}>{node.content}</Text>
+                <View style={styles.moodboardGrid}>
+                  {node.images && node.images.slice(0, 4).map((img: string, idx: number) => (
+                    <Image key={idx} source={{ uri: img }} style={styles.moodboardThumb} resizeMode="cover" />
+                  ))}
+                </View>
+                <Text style={styles.moodboardMeta}>{node.itemsCount || '12 items'}</Text>
+              </View>
+            );
+          case 'link':
+            return (
+              <View style={styles.linkCard}>
+                <View style={styles.linkHeader}>
+                  <Ionicons name="link" size={12} color="#E8673C" style={{ marginRight: 6 }} />
+                  <Text style={styles.linkUrl} numberOfLines={1}>{node.content}</Text>
+                </View>
+                <Text style={styles.linkTitle} numberOfLines={1}>{node.title || 'IMDb: Ratings & Reviews'}</Text>
+                <Text style={styles.linkTime}>{node.date || 'May 15'}</Text>
+              </View>
+            );
+          case 'image':
+            return (
+              <View style={styles.photoCard}>
+                <Image 
+                  source={{ uri: node.content_image }} 
+                  style={[styles.photoImage, { borderTopLeftRadius: cardBorderRadius, borderTopRightRadius: cardBorderRadius }]} 
+                  resizeMode="cover" 
+                />
+                <View style={styles.photoMeta}>
+                  <View style={styles.photoHeader}>
+                    <Ionicons name="heart" size={12} color="#E8673C" style={{ marginRight: 6 }} />
+                    <Text style={styles.photoTitle}>{node.content}</Text>
+                  </View>
+                  <Text style={styles.photoTime}>{node.date || 'May 12'}</Text>
+                </View>
+              </View>
+            );
+          default:
+            return (
+              <View style={styles.textCard}>
+                <Text style={styles.textCategory}>{node.category || 'Journal'}</Text>
+                <Text style={styles.textContent}>{node.content}</Text>
+                <Text style={styles.textDate}>{node.date || 'Today'}</Text>
+              </View>
+            );
+        }
+    }
+  };
+
+  const isOrangeCard = node.id === 'card-2';
+  const isDark = theme === 'dark';
 
   return (
-    <Animated.View style={[{ position: 'absolute', width: '100%', height: 120 }, containerStyle]}>
-      <Animated.View style={[{ 
-        position: 'absolute', 
-        top: 60 - node.nodeRadius * 4, 
-        left: -node.nodeRadius * 4, 
-        width: node.nodeRadius * 8, 
-        height: node.nodeRadius * 8, 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        zIndex: 20 
-      }, innerContentStyle]}>
-        <GestureDetector gesture={composedGesture}>
-          <Animated.View style={{ width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' }}>
-            <View style={{ position: 'absolute', width: node.nodeRadius * 6, height: node.nodeRadius * 6, borderRadius: node.nodeRadius * 3, backgroundColor: theme === 'dark' ? NightTheme.background : '#FFFFFF' }} />
-            <Animated.View style={[{ position: 'absolute', width: node.nodeRadius * 3.8, height: node.nodeRadius * 3.8, borderRadius: node.nodeRadius * 1.9, borderWidth: 1.2, borderColor: color1, backgroundColor: 'transparent' }, pulseStyle]} />
-            <View style={{ position: 'absolute', width: node.nodeRadius * 3.2, height: node.nodeRadius * 3.2, borderRadius: node.nodeRadius * 1.6, borderWidth: 0.8, borderColor: color1, opacity: 0.2 }} />
-            <Animated.View style={[{ position: 'absolute', width: node.nodeRadius * 5, height: node.nodeRadius * 5, borderRadius: node.nodeRadius * 2.5, backgroundColor: isRefining ? 'transparent' : color1, opacity: searchStatus === 'match' ? 0 : (isRefining ? 1 : 0.05), borderWidth: 0.8, borderColor: color1, borderStyle: isRefining ? 'dashed' : 'solid' }, searchPulseStyle]} />
-            {isDual && !isRefining && (
-               <Animated.View style={[{ position: 'absolute', width: node.nodeRadius * 3.5, height: node.nodeRadius * 3.5, borderRadius: node.nodeRadius * 1.75, backgroundColor: color2, opacity: 0.4 }, outerPulseStyle]} />
-            )}
-            {pipelineStep !== 'complete' && (
-              <Animated.View style={[{ 
-                position: 'absolute', 
-                width: node.nodeRadius * 6.5, 
-                height: node.nodeRadius * 6.5, 
-                borderRadius: node.nodeRadius * 3.25, 
-                borderWidth: 1.5, 
-                borderColor: getPipelineColor(pipelineStep),
-                borderStyle: 'dashed',
-              }, pipelineRingStyle]} />
-            )}
-            <View style={{ position: 'absolute', width: node.nodeRadius * 2, height: node.nodeRadius * 2, borderRadius: node.nodeRadius, backgroundColor: color1, opacity: node.is_refining ? 0.5 : 1.0 }} />
-          </Animated.View>
-        </GestureDetector>
-      </Animated.View>
-        
-      <Animated.View 
-        style={[{ 
-          zIndex: 10, 
-          position: 'absolute', 
-          top: 30, 
-          left: (node.isRight ? -node.dynamicWidth - PADDING : PADDING), 
-          width: node.dynamicWidth, 
-          minHeight: 60, 
-          justifyContent: 'center' 
-        }, innerContentStyle]}
-      >
-        <Pressable 
-          onPress={() => {
-            try { Haptics.selectionAsync(); } catch (e) {}
-            onPress(node, 'text');
-          }}
-          onLongPress={() => {
-            try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch (e) {}
-            useNotesStore.getState().toggleStudioSeed(node.id);
-          }}
-          delayLongPress={400}
-          style={({ pressed }) => ({ 
-            width: '100%', 
-            height: '100%', 
-            justifyContent: 'center',
-            opacity: pressed ? 0.7 : 1.0
-          })}
-        >
-          <Text style={[styles.noteCategory, { color: pipelineStep === 'error' ? '#FF5555' : mainColor, marginBottom: 6, opacity: Math.min(1, node.ageFade + 0.4) }]}>
-            {isSynthesis ? '✧ SYNTHESIS ✧' : (pipelineStep === 'error' ? `ERROR: ${node.pipeline_metrics?.error_message?.toUpperCase() || 'FAILED'}` : (!isComplete ? 'SYNTHESIZING...' : (node.category || 'THOUGHT').toUpperCase()))}
-            {isPinned && ' ✦ IN STUDIO'}
-          </Text>
-
-          {node.pipeline_step === 'complete' && resonanceStr && (
-            <Text style={{ fontSize: 8, color: mainColor, marginBottom: 4, opacity: 0.6, fontWeight: '500' }}>
-              {resonanceStr}
-            </Text>
+    <Animated.View style={[styles.cardWrapper, cardStyle]}>
+      <GestureDetector gesture={composedGesture}>
+        <View style={[
+          styles.cardInner, 
+          { 
+            borderRadius: cardBorderRadius,
+            backgroundColor: isOrangeCard 
+              ? '#E8673C' 
+              : isDark 
+                ? 'rgba(15, 15, 18, 0.42)' 
+                : 'rgba(255, 255, 255, 0.58)'
+          }
+        ]}>
+          {/* Glass background overlay (skipped for solid orange or light mode to avoid BlurView tint crashes) */}
+          {!isOrangeCard && isDark && (
+            <BlurView 
+              experimentalBlurMethod="dimezisBlurView" 
+              intensity={45} 
+              style={StyleSheet.absoluteFillObject} 
+              tint="dark" 
+            />
+          )}
+          
+          {/* Diagonal Glass Reflection Shine Overlay */}
+          {!isOrangeCard && (
+            <LinearGradient
+              colors={
+                isDark 
+                  ? ['rgba(255, 255, 255, 0.15)', 'rgba(255, 255, 255, 0.03)', 'rgba(255, 255, 255, 0)']
+                  : ['rgba(255, 255, 255, 0.65)', 'rgba(255, 255, 255, 0.15)', 'rgba(255, 255, 255, 0)']
+              }
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFillObject}
+            />
           )}
 
-          <View style={{ maxHeight: 60, overflow: 'hidden' }}>
-            <Text numberOfLines={3} style={[styles.noteContent, { color: theme === 'dark' ? NightTheme.textPrimary : '#111111' }, pipelineStep !== 'complete' && { color: theme === 'dark' ? NightTheme.textMuted : '#888888', fontStyle: 'italic' }]}>
-              {node.content}
-            </Text>
-          </View>
-
-          {pipelineStep !== 'complete' && node.pipeline_metrics && (
-            <Text style={{ fontSize: 7, color: mainColor, marginTop: 4, fontWeight: '600', letterSpacing: 0.5 }}>
-              {node.pipeline_metrics.embedding_ms ? `EMB: ${node.pipeline_metrics.embedding_ms}ms ` : ''}
-              {node.pipeline_metrics.vectorizing_ms ? `| VEC: ${node.pipeline_metrics.vectorizing_ms}ms ` : ''}
-              {node.pipeline_metrics.synthesis_ms ? `| AI: ${node.pipeline_metrics.synthesis_ms}ms` : ''}
-              {!node.pipeline_metrics.total_ms && ` | ELAPSED: ${Date.now() - node.pipeline_metrics.start_time}ms`}
-            </Text>
-          )}
-        </Pressable>
-      </Animated.View>
+          {/* Border Overlay */}
+          <View 
+            pointerEvents="none"
+            style={[
+              styles.cardBorderOverlay, 
+              { 
+                borderRadius: cardBorderRadius, 
+                borderColor: isOrangeCard 
+                  ? 'rgba(255, 255, 255, 0.15)' 
+                  : isDark 
+                    ? 'rgba(255, 255, 255, 0.08)' 
+                    : 'rgba(0, 0, 0, 0.07)', 
+                borderWidth: 1.0 
+              }
+            ]} 
+          />
+          {renderCardContent()}
+        </View>
+      </GestureDetector>
     </Animated.View>
   );
 }
 
-export default memo(DriftNode, (prev, next) => {
-  return (
-    prev.node.id === next.node.id &&
-    prev.node.unfocusedY === next.node.unfocusedY &&
-    prev.node.unfocusedX === next.node.unfocusedX &&
-    prev.isInHull === next.isInHull &&
-    prev.searchStatus === next.searchStatus &&
-    prev.isFirst === next.isFirst
-  );
-});
+export default memo(DriftNode);
 
 const styles = StyleSheet.create({
-  noteCategory: { fontSize: 9, fontWeight: '700', letterSpacing: 2, textTransform: 'uppercase' },
-  noteContent: { fontSize: 17, fontWeight: '300', lineHeight: 26, color: '#111111' },
+  cardWrapper: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    borderRadius: 24,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  cardInner: {
+    overflow: 'hidden',
+    backgroundColor: 'rgba(15, 15, 18, 0.42)',
+  },
+  cardBorderOverlay: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  
+  // 1. Samurai Tall Image Card
+  samuraiCard: {
+    width: 200,
+    height: 250,
+  },
+  samuraiImage: {
+    width: '100%',
+    height: '100%',
+  },
+  samuraiOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 12,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    overflow: 'hidden',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  samuraiHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  samuraiTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  samuraiMeta: {
+    fontSize: 9,
+    color: 'rgba(255, 255, 255, 0.5)',
+    marginTop: 2,
+  },
+  // 2. Vibrant Orange "Efficiency" Card
+  efficiencyCard: {
+    width: 160,
+    padding: 14,
+  },
+  efficiencyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  efficiencyTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  efficiencyWaveform: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    height: 38,
+    gap: 2,
+    marginVertical: 10,
+  },
+  efficiencyWaveBar: {
+    width: 2.2,
+    borderRadius: 1,
+  },
+  efficiencyFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 6,
+  },
+  efficiencyAvatar: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  efficiencyUser: {
+    fontSize: 9,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  efficiencyProgress: {
+    fontSize: 8,
+    color: 'rgba(255, 255, 255, 0.75)',
+  },
+  // 3. Glassmorphic "Knowledge" Card
+  knowledgeCard: {
+    width: 150,
+    padding: 14,
+  },
+  knowledgeHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  knowledgeTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    opacity: 0.8,
+  },
+  knowledgeGlyph: {
+    fontSize: 42,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    alignSelf: 'center',
+    marginVertical: 8,
+  },
+  knowledgeFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 4,
+  },
+  knowledgeAvatar: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  knowledgeUser: {
+    fontSize: 9,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  knowledgeProgress: {
+    fontSize: 8,
+    color: 'rgba(255, 255, 255, 0.45)',
+  },
+  // Generic Card Styles in Dark Theme
+  todoCard: {
+    width: 160,
+    padding: 14,
+  },
+  todoTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 10,
+  },
+  todoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  todoCheck: {
+    width: 13,
+    height: 13,
+    borderRadius: 3.5,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  todoCheckActive: {
+    borderColor: '#E8673C',
+    backgroundColor: '#E8673C',
+  },
+  todoItemText: {
+    fontSize: 11,
+    color: 'rgba(255, 255, 255, 0.85)',
+  },
+  todoItemTextCompleted: {
+    color: 'rgba(255, 255, 255, 0.35)',
+    textDecorationLine: 'line-through',
+  },
+  docCard: {
+    width: 160,
+    padding: 14,
+  },
+  docPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(232, 103, 60, 0.15)',
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginBottom: 8,
+  },
+  docPillText: {
+    fontSize: 8,
+    color: '#E8673C',
+    fontWeight: '700',
+  },
+  docHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  docTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    flex: 1,
+  },
+  docMeta: {
+    fontSize: 9,
+    color: 'rgba(255, 255, 255, 0.45)',
+  },
+  mapCard: {
+    width: 160,
+  },
+  mapPreview: {
+    height: 95,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    backgroundColor: '#1E1E24',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  mapPin: {
+    backgroundColor: '#1A1A1E',
+    padding: 6,
+    borderRadius: 100,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  mapMeta: {
+    padding: 10,
+  },
+  mapTitle: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  mapTime: {
+    fontSize: 8,
+    color: 'rgba(255, 255, 255, 0.4)',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
+  moodboardCard: {
+    width: 180,
+    padding: 12,
+  },
+  moodboardTitle: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 6,
+  },
+  moodboardGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 3,
+    marginBottom: 6,
+  },
+  moodboardThumb: {
+    width: '48%',
+    height: 44,
+    borderRadius: 6,
+  },
+  moodboardMeta: {
+    fontSize: 9,
+    color: 'rgba(255, 255, 255, 0.4)',
+  },
+  linkCard: {
+    width: 170,
+    padding: 12,
+  },
+  linkHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  linkUrl: {
+    fontSize: 8,
+    color: '#E8673C',
+    flex: 1,
+  },
+  linkTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  linkTime: {
+    fontSize: 8,
+    color: 'rgba(255, 255, 255, 0.4)',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
+  photoCard: {
+    width: 180,
+  },
+  photoImage: {
+    width: '100%',
+    height: 100,
+  },
+  photoMeta: {
+    padding: 10,
+  },
+  photoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  photoTitle: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    flex: 1,
+  },
+  photoTime: {
+    fontSize: 8,
+    color: 'rgba(255, 255, 255, 0.4)',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
+  textCard: {
+    width: 150,
+    padding: 12,
+  },
+  textCategory: {
+    fontSize: 9,
+    color: '#E8673C',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  textContent: {
+    fontSize: 11,
+    lineHeight: 16,
+    color: '#FFFFFF',
+    marginBottom: 6,
+  },
+  textDate: {
+    fontSize: 8,
+    color: 'rgba(255, 255, 255, 0.4)',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
 });

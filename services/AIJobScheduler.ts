@@ -5,6 +5,8 @@ import { LocalLlamaService } from './LocalLlamaService';
 import { NoteService } from './NoteService';
 import { Note } from '../store/useNotesStore';
 import { Logger } from './Logger';
+import { extractDeep } from './ai';
+
 
 /**
  * AI JOB SCHEDULER (Mammoth Scale - Debug Mode)
@@ -148,40 +150,55 @@ export class AIJobScheduler {
       const note = await db.getFirstAsync<{ content: string, category: string, pipeline_metrics: string }>("SELECT content, category, pipeline_metrics FROM notes WHERE id = ?", [noteId]);
       if (!note) throw new Error('Note missing from database');
 
-      const result = await LocalLlamaService.getInstance().synthesise(note.content);
-      const duration = Date.now() - startTime;
-
-      // Robust result verification
-      if (result.summary === "Synthesis offline." || result.summary === "Neural static.") {
-          throw new Error(`Neural Engine failure: ${result.summary}`);
+      // Fetch note embedding if it exists to perform deep semantic classification
+      const embeddingRow = await db.getFirstAsync<{ embedding: Uint8Array }>(
+        "SELECT embedding FROM note_embeddings WHERE note_id = ?",
+        [noteId]
+      );
+      
+      let embedding: Float32Array | undefined;
+      if (embeddingRow?.embedding) {
+        // Safe conversion of SQLite BLOB to Float32Array
+        const buffer = embeddingRow.embedding.buffer;
+        embedding = new Float32Array(buffer, embeddingRow.embedding.byteOffset, embeddingRow.embedding.byteLength / 4);
       }
+
+      // Run deep semantic tags & resonance classification
+      const semanticMeta = await extractDeep(note.content, embedding);
+
+      // Synthesis from Local Llama if available
+      let llamaResult;
+      try {
+        llamaResult = await LocalLlamaService.getInstance().synthesise(note.content);
+      } catch (llamaErr) {
+        console.warn('[AIJobScheduler] Local Llama synthesis failed/offline, using provisional heuristic synthesis');
+      }
+
+      const duration = Date.now() - startTime;
       
       // Update note with rich metadata
       const metrics = note.pipeline_metrics ? JSON.parse(note.pipeline_metrics) : {};
       metrics.synthesis_ms = duration;
       metrics.total_ms = (metrics.total_ms || 0) + duration;
 
-      let finalCategory = result.category || 'Journal';
-      if (note && note.category && note.category !== 'Journal' && finalCategory === 'Journal') {
-        finalCategory = note.category;
-      }
+      const finalCategory = semanticMeta.primaryCategory || note.category || 'Journal';
+      
+      const mergedMetadata = {
+        ...semanticMeta,
+        category: finalCategory,
+        summary: llamaResult?.summary || 'A thought in the drift.',
+        sentiment: (llamaResult?.emotion ? 'neutral' : 'neutral') as any, // Simple mapping
+        emotion: llamaResult?.emotion || semanticMeta.emotion,
+      };
 
       await NoteService.getInstance().updateNote(noteId, { 
         category: finalCategory,
-        emotion: result.emotion,
-        summary: result.summary,
+        emotion: mergedMetadata.emotion,
+        summary: mergedMetadata.summary,
         synthesis_status: 'complete',
         pipeline_step: 'complete',
         pipeline_metrics: metrics,
-        entities_json: JSON.stringify({
-            category: finalCategory,
-            resonances: result.resonances,
-            summary: result.summary,
-            semantic_links: result.connections,
-            cognitive_mode: result.cognitive_mode || 'REFLECTION',
-            domain_tags: result.domain_tags || [],
-            topics: result.domain_tags || []
-        })
+        entities_json: JSON.stringify(mergedMetadata)
       });
 
       await db.runAsync("UPDATE ai_jobs SET status = 'completed', updated_at = ? WHERE id = ?", [Date.now(), jobId]);

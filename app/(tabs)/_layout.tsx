@@ -18,7 +18,7 @@ export default function TabLayout() {
 
   return (
     <Tabs
-      tabBar={(props) => <KineticTabBar {...props} />}
+      tabBar={() => null}
       screenOptions={{
         headerShown: false,
       }}>

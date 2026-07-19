@@ -93,6 +93,34 @@ export class DatabaseService {
         await db.runAsync('INSERT OR REPLACE INTO schema_migrations (version, applied_at) VALUES (?, ?)', [99, Date.now()]);
         console.log('[DatabaseService] Migration v99 complete.');
       }
+
+      // Version 100: Semantic Reasoning & Graph Alignment
+      if (currentVersion < 100) {
+        console.log('[DatabaseService] Applying Semantic Reasoning Migration (v100)...');
+        const migrations100 = [
+          `CREATE TABLE IF NOT EXISTS semantic_edges (
+            source_id TEXT NOT NULL,
+            target_id TEXT NOT NULL,
+            strength REAL NOT NULL,
+            created_at INTEGER NOT NULL,
+            PRIMARY KEY (source_id, target_id),
+            FOREIGN KEY (source_id) REFERENCES notes(id) ON DELETE CASCADE,
+            FOREIGN KEY (target_id) REFERENCES notes(id) ON DELETE CASCADE
+          )`,
+          "CREATE INDEX IF NOT EXISTS idx_semantic_edges_strength ON semantic_edges(source_id, strength DESC)"
+        ];
+
+        for (const sql of migrations100) {
+          try {
+            await db.execAsync(sql);
+          } catch (e) {
+            console.log(`[DatabaseService] Migration v100 step skipped: ${sql.substring(0, 40)}...`);
+          }
+        }
+
+        await db.runAsync('INSERT OR REPLACE INTO schema_migrations (version, applied_at) VALUES (?, ?)', [100, Date.now()]);
+        console.log('[DatabaseService] Migration v100 complete.');
+      }
     } catch (error) {
       console.error('[DatabaseService] Migration critical failure:', error);
     }

@@ -16,7 +16,7 @@ import { useNotesStore } from '@/store/useNotesStore';
 
 import { NexusNode } from '@/utils/nexusEngine';
 
-const { width } = Dimensions.get('window');
+
 
 interface ReadingModalProps {
   node: NexusNode;
@@ -457,7 +457,7 @@ const styles = StyleSheet.create({
   pageBodyContent: {
     fontSize: 18,
     lineHeight: 32,
-    fontWeight: '350',
+    fontWeight: '300',
     letterSpacing: 0.2,
     marginBottom: 32,
   },

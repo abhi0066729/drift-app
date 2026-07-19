@@ -146,5 +146,11 @@ export async function initDatabase(db: SQLite.SQLiteDatabase) {
       timestamp INTEGER NOT NULL,
       FOREIGN KEY (note_id) REFERENCES notes(id)
     );
+
+    CREATE TABLE IF NOT EXISTS custom_anchors (
+      keyword TEXT PRIMARY KEY NOT NULL,
+      embedding BLOB NOT NULL,
+      created_at INTEGER NOT NULL
+    );
   `);
 }

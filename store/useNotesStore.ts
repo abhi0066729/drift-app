@@ -85,7 +85,7 @@ export const useNotesStore = create<NotesState>()(
       lastUpdate: Date.now(),
       studioSeeds: [],
       activeFilters: {},
-      theme: 'light',
+      theme: 'dark',
       
       addNote: (note) => set((state) => ({ 
         notes: [note, ...state.notes],
@@ -115,7 +115,7 @@ export const useNotesStore = create<NotesState>()(
           : [...state.studioSeeds, id]
       })),
       
-      toggleTheme: () => set((state) => ({ theme: state.theme === 'light' ? 'dark' : 'light' })),
+      toggleTheme: () => set({ theme: 'dark' }),
     }),
     {
       name: 'drift-notes-storage',

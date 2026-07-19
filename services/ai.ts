@@ -1,88 +1,127 @@
 // Neural Bridge: Lazy-load Llama to avoid circular imports
 export const getLlama = () => require('./LocalLlamaService').LocalLlamaService.getInstance();
 
-export type NoteCategory =
-  | 'Journal'
-  | 'Study'
-  | 'Idea'
-  | 'Todo'
-  | 'Dream'
-  | 'Research'
-  | 'Quote'
-  | 'Meeting'
-  | 'Reflection'
-  | 'Creative';
+export type NoteCategory = string;
 
-export interface ExtractedEntities {
-  category: NoteCategory;
+import { SEMANTIC_INTENTS, EMOTION_MAP } from './regexMaps';
+import { SemanticAnchorService } from './SemanticAnchorService';
+
+export type SemanticMetadata = {
+  category: string; // Legacy/Display category
+  primaryCategory: string; // The dynamically resolved category from anchors
+  surfaceTags: string[]; // Fast keyword/surface tags
+  deepTags: Record<string, number>; // Deep psychological resonance anchors
+  resonances: Record<string, number>; // All resonance maps
   emotion: string;
+  intent?: string;
   people: string[];
   topics: string[];
   sentiment: 'positive' | 'neutral' | 'negative' | 'mixed';
   urgency: 'high' | 'medium' | 'low';
   dates: string[];
-  resonances?: Record<string, number>;
+  clusterId?: string | number;
+};
+
+/**
+ * Normalizes legacy entities_json notes to the new SemanticMetadata contract
+ */
+export function normalizeMetadata(entitiesJsonStr: string | null | undefined, content?: string): SemanticMetadata {
+  const defaultMetadata: SemanticMetadata = {
+    category: 'Journal',
+    primaryCategory: 'Journal',
+    surfaceTags: [],
+    deepTags: {},
+    resonances: { Journal: 1.0 },
+    emotion: 'Neutral',
+    people: [],
+    topics: [],
+    sentiment: 'neutral',
+    urgency: 'low',
+    dates: [],
+  };
+
+  if (!entitiesJsonStr) {
+    if (content) {
+      // Heuristic fallback if we have content but no JSON
+      const provisional = extractRealtime(content);
+      return provisional;
+    }
+    return defaultMetadata;
+  }
+
+  try {
+    const parsed = JSON.parse(entitiesJsonStr);
+    
+    // Support legacy structures
+    const category = parsed.category || 'Journal';
+    const emotion = parsed.emotion || 'Neutral';
+    const resonances = parsed.resonances || { [category]: 1.0 };
+    const deepTags = parsed.deepTags || parsed.resonances || {};
+    const surfaceTags = parsed.surfaceTags || parsed.domain_tags || parsed.topics || [];
+    const topics = parsed.topics || parsed.domain_tags || [];
+    const people = parsed.people || [];
+    const sentiment = parsed.sentiment || 'neutral';
+    const urgency = parsed.urgency || 'low';
+    const dates = parsed.dates || [];
+
+    return {
+      category,
+      primaryCategory: parsed.primaryCategory || category,
+      surfaceTags,
+      deepTags,
+      resonances,
+      emotion,
+      intent: parsed.intent || undefined,
+      people,
+      topics,
+      sentiment,
+      urgency,
+      dates,
+      clusterId: parsed.clusterId,
+    };
+  } catch (e) {
+    console.error('[ai.ts] Failed to parse entities_json, falling back to heuristics:', e);
+    if (content) {
+      return extractRealtime(content);
+    }
+    return defaultMetadata;
+  }
 }
-
-export const SEMANTIC_INTENTS: Partial<Record<NoteCategory, RegExp[]>> = {
-  Todo: [/task/i, /todo/i, /buy/i, /remind/i, /finish/i, /action/i, /check/i, /urgent/i, /must/i, /checklist/i, /\[ \]/, /need to/i, /should/i, /appointment/i, /schedule/i],
-  Idea: [/idea/i, /concept/i, /brainstorm/i, /maybe/i, /what if/i, /project/i, /vision/i, /bulb/i, /innov/i, /potential/i, /spark/i, /insight/i, /think/i, /thought/i, /consider/i],
-  Meeting: [/meet/i, /sync/i, /huddl/i, /call/i, /agend/i, /discuss/i, /participant/i, /zoom/i, /teams/i, /skype/i, /invite/i, /calend/i, /huddle/i, /interview/i, /standup/i],
-  Dream: [/dream/i, /nightm/i, /vivid/i, /vision/i, /last night/i, /slept/i, /woke up/i, /unconsc/i, /dreaming/i, /lucid/i, /astral/i, /slumber/i],
-  Study: [/learn/i, /read/i, /study/i, /course/i, /lesson/i, /exam/i, /test/i, /acad/i, /grad/i, /chapter/i, /book/i, /lectur/i, /tutorial/i, /homework/i, /class/i],
-  Research: [/data/i, /analy/i, /expe/i, /scien/i, /hypo/i, /evidence/i, /stats/i, /finding/i, /investig/i, /discov/i, /paper/i, /source/i, /article/i, /wiki/i],
-  Quote: [/said/i, /stated/i, /mention/i, /wrote/i, /author/i, /remark/i, /"|'|“|”/, /quoted/i, /cite/i, /quote/i, /philosophy/i],
-  Reflection: [/feel/i, /wonder/i, /realiz/i, /honestly/i, /insight/i, /believe/i, /gratit/i, /reflex/i, /ponder/i, /meditat/i, /journal/i, /dear diary/i, /morning/i, /evening/i, /today/i],
-  Creative: [/poem/i, /lyrics/i, /story/i, /novel/i, /sketch/i, /design/i, /art/i, /doodle/i, /paint/i, /compo/i, /melody/i, /prototyp/i, /fiction/i, /script/i, /creative/i, /write/i, /draw/i]
-};
-
-export const EMOTION_MAP: Record<string, RegExp[]> = {
-  'Happy': [/happy/i, /great/i, /good/i, /awesome/i, /excited/i, /love/i, /fun/i, /joy/i, /grin/i, /\:\)/, /blessed/i, /glad/i, /cheerful/i],
-  'Sad': [/sad/i, /bad/i, /blue/i, /unhappy/i, /cry/i, /alone/i, /miss/i, /down/i, /\:\(/, /lonely/i, /depress/i, /sorrow/i, /hurt/i],
-  'Angry': [/angry/i, /mad/i, /hate/i, /annoy/i, /frustrat/i, /piss/i, /stop/i, /ugh/i, /furious/i, /rage/i, /irritated/i],
-  'Focused': [/focus/i, /work/i, /study/i, /deep/i, /concentrat/i, /flow/i, /product/i, /grind/i, /hustle/i, /busy/i],
-  'Curious': [/wonder/i, /why/i, /how/i, /curious/i, /ask/i, /question/i, /mystery/i, /ponder/i, /seek/i, /explore/i],
-  'Inspired': [/wow/i, /inspirational/i, /bright/i, /light/i, /spark/i, /new/i, /amazing/i, /eureka/i, /vision/i, /motivated/i]
-};
 
 /**
  * PRELIMINARY INTENT PREDICTION (100% Local Heuristics)
  * Used only for real-time UI feedback during capture.
  * DO NOT use this for final database categorization.
  */
-export async function predictIntent(text: string): Promise<{ category: NoteCategory; emotion: string; resonances: Record<string, number> } | null> {
+export function extractRealtime(text: string): SemanticMetadata {
   const low = text.toLowerCase();
-  if (!low.trim()) return { category: 'Journal', emotion: 'Neutral', resonances: { Journal: 1.0 } };
+  
+  const defaultMeta: SemanticMetadata = {
+    category: 'Journal',
+    primaryCategory: 'Journal',
+    surfaceTags: [],
+    deepTags: {},
+    resonances: { Journal: 1.0 },
+    emotion: 'Neutral',
+    people: [],
+    topics: [],
+    sentiment: 'neutral',
+    urgency: 'low',
+    dates: [],
+  };
 
-  // 1. Try Local MLP Self-Attention Classifier (MiniLM based)
-  try {
-    const { EmbeddingEngine } = require('./EmbeddingEngine');
-    const { MLPClassifier } = require('./MLPClassifier');
-    const engine = EmbeddingEngine.getInstance();
-    // Only run if the ONNX session is ready, otherwise fall back to instant regex to prevent UI lag
-    if (engine.initialized && engine.session) {
-      const embedding = await engine.embed(text);
-      const mlpResult = MLPClassifier.predict(embedding);
-      if (mlpResult) {
-        return mlpResult;
-      }
-    }
-  } catch (err) {
-    console.warn('[Neural Classifier] MLP inference failed, falling back to regex:', err);
-  }
+  if (!low.trim()) return defaultMeta;
 
-  // 2. Legacy Regex Fallback
-  let bestCategory: NoteCategory = 'Journal';
+  let bestCategory = 'Journal';
   let highestScore = 0;
   const resonances: Record<string, number> = {};
   const rawScores: Record<string, number> = {};
   let totalScore = 0;
 
-  // Initialize rawScores
-  const categories: NoteCategory[] = ['Journal', 'Study', 'Idea', 'Todo', 'Dream', 'Research', 'Quote', 'Meeting', 'Reflection', 'Creative'];
+  const categories = ['Journal', 'Study', 'Idea', 'Todo', 'Dream', 'Research', 'Quote', 'Meeting', 'Reflection', 'Creative'];
   categories.forEach(c => rawScores[c] = 0);
 
-  // Hybrid Intelligence: Boost Idea score if action + target pattern matches
+  // Heuristic boosts
   const actionWords = ['make', 'build', 'create', 'develop', 'design', 'planning to', 'plan to', 'banaye', 'banana', 'banane', 'soch raha'];
   const targetWords = ['app', 'bot', 'website', 'software', 'tool', 'product', 'startup', 'business', 'platform', 'system', 'device', 'game'];
   const hasAction = actionWords.some(action => low.includes(action));
@@ -105,12 +144,10 @@ export async function predictIntent(text: string): Promise<{ category: NoteCateg
 
     if (score > highestScore) {
       highestScore = score;
-      bestCategory = cat as NoteCategory;
+      bestCategory = cat;
     }
   }
 
-  // Normalize scores into resonances (0.0 to 1.0)
-  // If no patterns match, Journal gets 1.0
   if (totalScore === 0) {
     resonances['Journal'] = 1.0;
   } else {
@@ -133,39 +170,63 @@ export async function predictIntent(text: string): Promise<{ category: NoteCateg
     });
   }
 
-  console.log(`[ShadowEngine] Analyzing: "${text.substring(0, 50)}..."`);
-  console.log(`[ShadowEngine] Predicted -> ${bestCategory} | ${bestEmotion}`);
-  
-  return { category: bestCategory, emotion: bestEmotion, resonances };
+  // Quick extract topic keywords
+  const words = low.split(/\s+/).filter(w => w.length > 4);
+  const topics = Array.from(new Set(words)).slice(0, 3);
+
+  return {
+    category: bestCategory,
+    primaryCategory: bestCategory,
+    surfaceTags: topics,
+    deepTags: {},
+    resonances,
+    emotion: bestEmotion,
+    people: [],
+    topics,
+    sentiment: 'neutral',
+    urgency: low.includes('urgent') || low.includes('asap') || low.includes('important') ? 'high' : 'low',
+    dates: []
+  };
 }
 
 /**
- * DEEP SYNTHESIS (Future Local Llama-based background task)
+ * DEEP SYNTHESIS
+ * Integrates embedding anchors for dynamic tags and resonances.
  */
-export async function extractDeep(text: string): Promise<ExtractedEntities | null> {
-  console.log(`[ShadowEngine] Deep synthesis requested`);
+export async function extractDeep(text: string, embedding?: Float32Array): Promise<SemanticMetadata> {
+  console.log(`[ai.ts] Deep synthesis requested`);
   
-  // Currently falls back to real-time local logic to preserve offline status
-  const basic = await predictIntent(text);
-  const cat = basic?.category || 'Journal';
+  const realtime = extractRealtime(text);
   
-  let cognitive_mode = 'REFLECTION';
-  if (cat === 'Idea' || cat === 'Todo') cognitive_mode = 'INTENTION';
-  else if (cat === 'Study' || cat === 'Research') cognitive_mode = 'RECORD';
-  else if (cat === 'Quote' || cat === 'Meeting') cognitive_mode = 'RECORD';
-  else if (cat === 'Reflection' || cat === 'Dream' || cat === 'Creative') cognitive_mode = 'REFLECTION';
+  // Calculate dynamic semantic resonances if we have an embedding
+  let deepTags: Record<string, number> = {};
+  let primaryCategory = realtime.category;
+  let highestScore = 0;
 
-  console.log(`[ShadowEngine] Deep classification complete: ${cat}`);
+  if (embedding) {
+    try {
+      const anchorService = SemanticAnchorService.getInstance();
+      deepTags = anchorService.calculateResonances(embedding);
+      
+      // Determine primary category from strongest anchor resonance
+      for (const [anchor, score] of Object.entries(deepTags)) {
+        if (score > highestScore) {
+          highestScore = score;
+          primaryCategory = anchor;
+        }
+      }
+    } catch (e) {
+      console.warn('[ai.ts] Failed to calculate anchor resonances:', e);
+    }
+  }
+
   return {
-    category: cat,
-    emotion: basic?.emotion || 'Neutral',
-    resonances: basic?.resonances || { Journal: 1.0 },
-    cognitive_mode,
-    domain_tags: [],
-    people: [],
-    topics: [],
-    sentiment: 'neutral',
-    urgency: 'low',
-    dates: []
+    ...realtime,
+    primaryCategory: highestScore > 0.6 ? primaryCategory : realtime.category,
+    deepTags,
+    resonances: {
+      ...realtime.resonances,
+      ...deepTags
+    }
   };
 }

@@ -9,7 +9,7 @@
       "source_file": "babel.config.js",
       "source_location": "L1",
       "id": "babel_config_js",
-      "community": 68
+      "community": 67
     },
     {
       "label": "eslint.config.js",
@@ -17,7 +17,7 @@
       "source_file": "eslint.config.js",
       "source_location": "L1",
       "id": "eslint_config_js",
-      "community": 69
+      "community": 68
     },
     {
       "label": "expo-env.d.ts",
@@ -25,7 +25,7 @@
       "source_file": "expo-env.d.ts",
       "source_location": "L1",
       "id": "expo_env_d_ts",
-      "community": 70
+      "community": 69
     },
     {
       "label": "metro.config.js",
@@ -33,7 +33,7 @@
       "source_file": "metro.config.js",
       "source_location": "L1",
       "id": "metro_config_js",
-      "community": 71
+      "community": 70
     },
     {
       "label": "scratch_ModelDownloadService_fixed.ts",
@@ -41,7 +41,7 @@
       "source_file": "scratch_ModelDownloadService_fixed.ts",
       "source_location": "L1",
       "id": "scratch_modeldownloadservice_fixed_ts",
-      "community": 72
+      "community": 71
     },
     {
       "label": "test_ai.js",
@@ -201,31 +201,7 @@
       "source_file": "app\\_layout.tsx",
       "source_location": "L1",
       "id": "app_layout_tsx",
-      "community": 30
-    },
-    {
-      "label": "handleOpeningComplete()",
-      "file_type": "code",
-      "source_file": "app\\_layout.tsx",
-      "source_location": "L36",
-      "id": "layout_handleopeningcomplete",
-      "community": 30
-    },
-    {
-      "label": "checkDeployment()",
-      "file_type": "code",
-      "source_file": "app\\_layout.tsx",
-      "source_location": "L46",
-      "id": "layout_checkdeployment",
-      "community": 30
-    },
-    {
-      "label": "handleConsent()",
-      "file_type": "code",
-      "source_file": "app\\_layout.tsx",
-      "source_location": "L81",
-      "id": "layout_handleconsent",
-      "community": 30
+      "community": 72
     },
     {
       "label": "capture.tsx",
@@ -233,7 +209,7 @@
       "source_file": "app\\(tabs)\\capture.tsx",
       "source_location": "L1",
       "id": "app_tabs_capture_tsx",
-      "community": 6
+      "community": 5
     },
     {
       "label": "Particle()",
@@ -241,7 +217,7 @@
       "source_file": "app\\(tabs)\\capture.tsx",
       "source_location": "L49",
       "id": "capture_particle",
-      "community": 6
+      "community": 5
     },
     {
       "label": "NebulaBlob()",
@@ -249,7 +225,7 @@
       "source_file": "app\\(tabs)\\capture.tsx",
       "source_location": "L71",
       "id": "capture_nebulablob",
-      "community": 6
+      "community": 5
     },
     {
       "label": "pickImage()",
@@ -257,7 +233,7 @@
       "source_file": "app\\(tabs)\\capture.tsx",
       "source_location": "L182",
       "id": "capture_pickimage",
-      "community": 6
+      "community": 5
     },
     {
       "label": "removeImage()",
@@ -265,7 +241,7 @@
       "source_file": "app\\(tabs)\\capture.tsx",
       "source_location": "L204",
       "id": "capture_removeimage",
-      "community": 6
+      "community": 5
     },
     {
       "label": "toggleListening()",
@@ -273,7 +249,7 @@
       "source_file": "app\\(tabs)\\capture.tsx",
       "source_location": "L230",
       "id": "capture_togglelistening",
-      "community": 6
+      "community": 5
     },
     {
       "label": "runPredictionAI()",
@@ -281,7 +257,7 @@
       "source_file": "app\\(tabs)\\capture.tsx",
       "source_location": "L265",
       "id": "capture_runpredictionai",
-      "community": 6
+      "community": 5
     },
     {
       "label": "updatePrediction()",
@@ -289,7 +265,7 @@
       "source_file": "app\\(tabs)\\capture.tsx",
       "source_location": "L279",
       "id": "capture_updateprediction",
-      "community": 6
+      "community": 5
     },
     {
       "label": "handleSkipRefinement()",
@@ -297,7 +273,7 @@
       "source_file": "app\\(tabs)\\capture.tsx",
       "source_location": "L364",
       "id": "capture_handleskiprefinement",
-      "community": 6
+      "community": 5
     },
     {
       "label": "index.tsx",
@@ -305,87 +281,23 @@
       "source_file": "app\\(tabs)\\index.tsx",
       "source_location": "L1",
       "id": "app_tabs_index_tsx",
-      "community": 3
+      "community": 34
     },
     {
-      "label": "triggerManualPulse()",
+      "label": "handleCreateProject()",
       "file_type": "code",
       "source_file": "app\\(tabs)\\index.tsx",
-      "source_location": "L56",
-      "id": "index_triggermanualpulse",
-      "community": 3
-    },
-    {
-      "label": "handleDoubleTapSeed()",
-      "file_type": "code",
-      "source_file": "app\\(tabs)\\index.tsx",
-      "source_location": "L189",
-      "id": "index_handledoubletapseed",
-      "community": 3
-    },
-    {
-      "label": "handleTripleTapSeed()",
-      "file_type": "code",
-      "source_file": "app\\(tabs)\\index.tsx",
-      "source_location": "L209",
-      "id": "index_handletripletapseed",
-      "community": 3
-    },
-    {
-      "label": "triggerHaptic()",
-      "file_type": "code",
-      "source_file": "app\\(tabs)\\index.tsx",
-      "source_location": "L233",
-      "id": "index_triggerhaptic",
-      "community": 3
-    },
-    {
-      "label": "onGestureEvent()",
-      "file_type": "code",
-      "source_file": "app\\(tabs)\\index.tsx",
-      "source_location": "L263",
-      "id": "index_ongestureevent",
-      "community": 3
-    },
-    {
-      "label": "onHandlerStateChange()",
-      "file_type": "code",
-      "source_file": "app\\(tabs)\\index.tsx",
-      "source_location": "L270",
-      "id": "index_onhandlerstatechange",
-      "community": 3
+      "source_location": "L41",
+      "id": "index_handlecreateproject",
+      "community": 34
     },
     {
       "label": "handleNodePress()",
       "file_type": "code",
       "source_file": "app\\(tabs)\\index.tsx",
-      "source_location": "L307",
+      "source_location": "L105",
       "id": "index_handlenodepress",
-      "community": 3
-    },
-    {
-      "label": "handleScroll()",
-      "file_type": "code",
-      "source_file": "app\\(tabs)\\index.tsx",
-      "source_location": "L319",
-      "id": "index_handlescroll",
-      "community": 3
-    },
-    {
-      "label": "toggleSearch()",
-      "file_type": "code",
-      "source_file": "app\\(tabs)\\index.tsx",
-      "source_location": "L324",
-      "id": "index_togglesearch",
-      "community": 3
-    },
-    {
-      "label": "scrollToTop()",
-      "file_type": "code",
-      "source_file": "app\\(tabs)\\index.tsx",
-      "source_location": "L331",
-      "id": "index_scrolltotop",
-      "community": 3
+      "community": 34
     },
     {
       "label": "notes.tsx",
@@ -489,7 +401,7 @@
       "source_file": "app\\(tabs)\\pulse.tsx",
       "source_location": "L1",
       "id": "app_tabs_pulse_tsx",
-      "community": 4
+      "community": 3
     },
     {
       "label": "BlinkingStar()",
@@ -497,7 +409,7 @@
       "source_file": "app\\(tabs)\\pulse.tsx",
       "source_location": "L34",
       "id": "pulse_blinkingstar",
-      "community": 4
+      "community": 3
     },
     {
       "label": "getNoteMetadata()",
@@ -505,7 +417,7 @@
       "source_file": "app\\(tabs)\\pulse.tsx",
       "source_location": "L73",
       "id": "pulse_getnotemetadata",
-      "community": 4
+      "community": 3
     },
     {
       "label": "hashCode()",
@@ -513,7 +425,7 @@
       "source_file": "app\\(tabs)\\pulse.tsx",
       "source_location": "L87",
       "id": "pulse_hashcode",
-      "community": 4
+      "community": 3
     },
     {
       "label": "seededRandom()",
@@ -521,7 +433,7 @@
       "source_file": "app\\(tabs)\\pulse.tsx",
       "source_location": "L97",
       "id": "pulse_seededrandom",
-      "community": 4
+      "community": 3
     },
     {
       "label": "generateConstellation()",
@@ -529,7 +441,7 @@
       "source_file": "app\\(tabs)\\pulse.tsx",
       "source_location": "L105",
       "id": "pulse_generateconstellation",
-      "community": 4
+      "community": 3
     },
     {
       "label": "getSecondaryFilaments()",
@@ -537,7 +449,7 @@
       "source_file": "app\\(tabs)\\pulse.tsx",
       "source_location": "L159",
       "id": "pulse_getsecondaryfilaments",
-      "community": 4
+      "community": 3
     },
     {
       "label": "clampPan()",
@@ -545,7 +457,7 @@
       "source_file": "app\\(tabs)\\pulse.tsx",
       "source_location": "L215",
       "id": "pulse_clamppan",
-      "community": 4
+      "community": 3
     },
     {
       "label": "accentRgba()",
@@ -553,7 +465,7 @@
       "source_file": "app\\(tabs)\\pulse.tsx",
       "source_location": "L434",
       "id": "pulse_accentrgba",
-      "community": 4
+      "community": 3
     },
     {
       "label": "toggleMode()",
@@ -561,7 +473,7 @@
       "source_file": "app\\(tabs)\\pulse.tsx",
       "source_location": "L776",
       "id": "pulse_togglemode",
-      "community": 4
+      "community": 3
     },
     {
       "label": "_layout.tsx",
@@ -609,39 +521,31 @@
       "source_file": "components\\BrandedSplashScreen.tsx",
       "source_location": "L1",
       "id": "components_brandedsplashscreen_tsx",
-      "community": 25
+      "community": 29
     },
     {
-      "label": "buildNaturalThread()",
+      "label": "getProjectedPoint()",
       "file_type": "code",
       "source_file": "components\\BrandedSplashScreen.tsx",
-      "source_location": "L68",
-      "id": "brandedsplashscreen_buildnaturalthread",
-      "community": 25
+      "source_location": "L59",
+      "id": "brandedsplashscreen_getprojectedpoint",
+      "community": 29
     },
     {
-      "label": "pickRandom()",
+      "label": "BrandedSplashScreen()",
       "file_type": "code",
       "source_file": "components\\BrandedSplashScreen.tsx",
-      "source_location": "L204",
-      "id": "brandedsplashscreen_pickrandom",
-      "community": 25
-    },
-    {
-      "label": "tick()",
-      "file_type": "code",
-      "source_file": "components\\BrandedSplashScreen.tsx",
-      "source_location": "L256",
-      "id": "brandedsplashscreen_tick",
-      "community": 25
+      "source_location": "L179",
+      "id": "brandedsplashscreen_brandedsplashscreen",
+      "community": 29
     },
     {
       "label": "spawn()",
       "file_type": "code",
       "source_file": "components\\BrandedSplashScreen.tsx",
-      "source_location": "L274",
+      "source_location": "L306",
       "id": "brandedsplashscreen_spawn",
-      "community": 25
+      "community": 29
     },
     {
       "label": "CelestialPortal.tsx",
@@ -673,15 +577,7 @@
       "source_file": "components\\DriftNode.tsx",
       "source_location": "L1",
       "id": "components_driftnode_tsx",
-      "community": 44
-    },
-    {
-      "label": "getPipelineColor()",
-      "file_type": "code",
-      "source_file": "components\\DriftNode.tsx",
-      "source_location": "L122",
-      "id": "driftnode_getpipelinecolor",
-      "community": 44
+      "community": 76
     },
     {
       "label": "external-link.tsx",
@@ -737,7 +633,7 @@
       "source_file": "components\\GhostModeMap.tsx",
       "source_location": "L1",
       "id": "components_ghostmodemap_tsx",
-      "community": 76
+      "community": 77
     },
     {
       "label": "GhostOverlay.tsx",
@@ -745,7 +641,7 @@
       "source_file": "components\\GhostOverlay.tsx",
       "source_location": "L1",
       "id": "components_ghostoverlay_tsx",
-      "community": 45
+      "community": 44
     },
     {
       "label": "GhostOverlay()",
@@ -753,7 +649,7 @@
       "source_file": "components\\GhostOverlay.tsx",
       "source_location": "L21",
       "id": "ghostoverlay_ghostoverlay",
-      "community": 45
+      "community": 44
     },
     {
       "label": "haptic-tab.tsx",
@@ -761,7 +657,7 @@
       "source_file": "components\\haptic-tab.tsx",
       "source_location": "L1",
       "id": "components_haptic_tab_tsx",
-      "community": 46
+      "community": 45
     },
     {
       "label": "HapticTab()",
@@ -769,7 +665,7 @@
       "source_file": "components\\haptic-tab.tsx",
       "source_location": "L5",
       "id": "haptic_tab_haptictab",
-      "community": 46
+      "community": 45
     },
     {
       "label": "hello-wave.tsx",
@@ -777,7 +673,7 @@
       "source_file": "components\\hello-wave.tsx",
       "source_location": "L1",
       "id": "components_hello_wave_tsx",
-      "community": 47
+      "community": 46
     },
     {
       "label": "HelloWave()",
@@ -785,7 +681,7 @@
       "source_file": "components\\hello-wave.tsx",
       "source_location": "L3",
       "id": "hello_wave_hellowave",
-      "community": 47
+      "community": 46
     },
     {
       "label": "KineticFocusMap.tsx",
@@ -793,7 +689,7 @@
       "source_file": "components\\KineticFocusMap.tsx",
       "source_location": "L1",
       "id": "components_kineticfocusmap_tsx",
-      "community": 77
+      "community": 78
     },
     {
       "label": "KineticTabBar.tsx",
@@ -801,7 +697,7 @@
       "source_file": "components\\KineticTabBar.tsx",
       "source_location": "L1",
       "id": "components_kinetictabbar_tsx",
-      "community": 26
+      "community": 25
     },
     {
       "label": "getLabel()",
@@ -809,7 +705,7 @@
       "source_file": "components\\KineticTabBar.tsx",
       "source_location": "L18",
       "id": "kinetictabbar_getlabel",
-      "community": 26
+      "community": 25
     },
     {
       "label": "KineticTabItem()",
@@ -817,7 +713,7 @@
       "source_file": "components\\KineticTabBar.tsx",
       "source_location": "L28",
       "id": "kinetictabbar_kinetictabitem",
-      "community": 26
+      "community": 25
     },
     {
       "label": "onPress()",
@@ -825,7 +721,7 @@
       "source_file": "components\\KineticTabBar.tsx",
       "source_location": "L112",
       "id": "kinetictabbar_onpress",
-      "community": 26
+      "community": 25
     },
     {
       "label": "onLongPress()",
@@ -833,7 +729,7 @@
       "source_file": "components\\KineticTabBar.tsx",
       "source_location": "L116",
       "id": "kinetictabbar_onlongpress",
-      "community": 26
+      "community": 25
     },
     {
       "label": "NebulaHub.tsx",
@@ -841,7 +737,7 @@
       "source_file": "components\\NebulaHub.tsx",
       "source_location": "L1",
       "id": "components_nebulahub_tsx",
-      "community": 48
+      "community": 47
     },
     {
       "label": "renderNarrativeIcon()",
@@ -849,7 +745,7 @@
       "source_file": "components\\NebulaHub.tsx",
       "source_location": "L38",
       "id": "nebulahub_rendernarrativeicon",
-      "community": 48
+      "community": 47
     },
     {
       "label": "NexusHullLayer.tsx",
@@ -857,7 +753,7 @@
       "source_file": "components\\NexusHullLayer.tsx",
       "source_location": "L1",
       "id": "components_nexushulllayer_tsx",
-      "community": 78
+      "community": 79
     },
     {
       "label": "NexusSummaryGlass.tsx",
@@ -865,7 +761,7 @@
       "source_file": "components\\NexusSummaryGlass.tsx",
       "source_location": "L1",
       "id": "components_nexussummaryglass_tsx",
-      "community": 79
+      "community": 80
     },
     {
       "label": "NexusSurfaceMatrix.tsx",
@@ -873,7 +769,7 @@
       "source_file": "components\\NexusSurfaceMatrix.tsx",
       "source_location": "L1",
       "id": "components_nexussurfacematrix_tsx",
-      "community": 49
+      "community": 48
     },
     {
       "label": "BlinkingStar()",
@@ -881,7 +777,7 @@
       "source_file": "components\\NexusSurfaceMatrix.tsx",
       "source_location": "L42",
       "id": "nexussurfacematrix_blinkingstar",
-      "community": 49
+      "community": 48
     },
     {
       "label": "OpeningTransition.tsx",
@@ -889,7 +785,7 @@
       "source_file": "components\\OpeningTransition.tsx",
       "source_location": "L1",
       "id": "components_openingtransition_tsx",
-      "community": 80
+      "community": 81
     },
     {
       "label": "parallax-scroll-view.tsx",
@@ -897,7 +793,7 @@
       "source_file": "components\\parallax-scroll-view.tsx",
       "source_location": "L1",
       "id": "components_parallax_scroll_view_tsx",
-      "community": 50
+      "community": 49
     },
     {
       "label": "ParallaxScrollView()",
@@ -905,7 +801,7 @@
       "source_file": "components\\parallax-scroll-view.tsx",
       "source_location": "L21",
       "id": "parallax_scroll_view_parallaxscrollview",
-      "community": 50
+      "community": 49
     },
     {
       "label": "ReadingModal.tsx",
@@ -913,7 +809,7 @@
       "source_file": "components\\ReadingModal.tsx",
       "source_location": "L1",
       "id": "components_readingmodal_tsx",
-      "community": 51
+      "community": 50
     },
     {
       "label": "DropAndBounce()",
@@ -921,7 +817,7 @@
       "source_file": "components\\ReadingModal.tsx",
       "source_location": "L60",
       "id": "readingmodal_dropandbounce",
-      "community": 51
+      "community": 50
     },
     {
       "label": "ResonanceFeedbackOverlay.tsx",
@@ -929,7 +825,7 @@
       "source_file": "components\\ResonanceFeedbackOverlay.tsx",
       "source_location": "L1",
       "id": "components_resonancefeedbackoverlay_tsx",
-      "community": 81
+      "community": 82
     },
     {
       "label": "ScrollToTopButton.tsx",
@@ -937,7 +833,7 @@
       "source_file": "components\\ScrollToTopButton.tsx",
       "source_location": "L1",
       "id": "components_scrolltotopbutton_tsx",
-      "community": 52
+      "community": 51
     },
     {
       "label": "ScrollToTopButton()",
@@ -945,7 +841,7 @@
       "source_file": "components\\ScrollToTopButton.tsx",
       "source_location": "L19",
       "id": "scrolltotopbutton_scrolltotopbutton",
-      "community": 52
+      "community": 51
     },
     {
       "label": "SocialMatrix.tsx",
@@ -953,7 +849,7 @@
       "source_file": "components\\SocialMatrix.tsx",
       "source_location": "L1",
       "id": "components_socialmatrix_tsx",
-      "community": 31
+      "community": 30
     },
     {
       "label": "ConnectionLine()",
@@ -961,7 +857,7 @@
       "source_file": "components\\SocialMatrix.tsx",
       "source_location": "L45",
       "id": "socialmatrix_connectionline",
-      "community": 31
+      "community": 30
     },
     {
       "label": "onPinchGestureEvent()",
@@ -969,7 +865,7 @@
       "source_file": "components\\SocialMatrix.tsx",
       "source_location": "L173",
       "id": "socialmatrix_onpinchgestureevent",
-      "community": 31
+      "community": 30
     },
     {
       "label": "onPinchGestureEnd()",
@@ -977,7 +873,7 @@
       "source_file": "components\\SocialMatrix.tsx",
       "source_location": "L177",
       "id": "socialmatrix_onpinchgestureend",
-      "community": 31
+      "community": 30
     },
     {
       "label": "SyncOverlay.tsx",
@@ -985,7 +881,7 @@
       "source_file": "components\\SyncOverlay.tsx",
       "source_location": "L1",
       "id": "components_syncoverlay_tsx",
-      "community": 53
+      "community": 52
     },
     {
       "label": "SyncOverlay()",
@@ -993,7 +889,7 @@
       "source_file": "components\\SyncOverlay.tsx",
       "source_location": "L19",
       "id": "syncoverlay_syncoverlay",
-      "community": 53
+      "community": 52
     },
     {
       "label": "themed-text.tsx",
@@ -1001,7 +897,7 @@
       "source_file": "components\\themed-text.tsx",
       "source_location": "L1",
       "id": "components_themed_text_tsx",
-      "community": 54
+      "community": 53
     },
     {
       "label": "ThemedText()",
@@ -1009,7 +905,7 @@
       "source_file": "components\\themed-text.tsx",
       "source_location": "L11",
       "id": "themed_text_themedtext",
-      "community": 54
+      "community": 53
     },
     {
       "label": "themed-view.tsx",
@@ -1017,7 +913,7 @@
       "source_file": "components\\themed-view.tsx",
       "source_location": "L1",
       "id": "components_themed_view_tsx",
-      "community": 55
+      "community": 54
     },
     {
       "label": "ThemedView()",
@@ -1025,7 +921,7 @@
       "source_file": "components\\themed-view.tsx",
       "source_location": "L10",
       "id": "themed_view_themedview",
-      "community": 55
+      "community": 54
     },
     {
       "label": "ThoughtCloud.tsx",
@@ -1033,7 +929,7 @@
       "source_file": "components\\ThoughtCloud.tsx",
       "source_location": "L1",
       "id": "components_thoughtcloud_tsx",
-      "community": 82
+      "community": 83
     },
     {
       "label": "UserModeMap.tsx",
@@ -1041,31 +937,7 @@
       "source_file": "components\\UserModeMap.tsx",
       "source_location": "L1",
       "id": "components_usermodemap_tsx",
-      "community": 27
-    },
-    {
-      "label": "handleDragStart()",
-      "file_type": "code",
-      "source_file": "v1_staging\\components\\UserModeMap.tsx",
-      "source_location": "L211",
-      "id": "usermodemap_handledragstart",
-      "community": 27
-    },
-    {
-      "label": "handleDragEnd()",
-      "file_type": "code",
-      "source_file": "v1_staging\\components\\UserModeMap.tsx",
-      "source_location": "L217",
-      "id": "usermodemap_handledragend",
-      "community": 27
-    },
-    {
-      "label": "findRangeIndices()",
-      "file_type": "code",
-      "source_file": "v1_staging\\components\\UserModeMap.tsx",
-      "source_location": "L278",
-      "id": "usermodemap_findrangeindices",
-      "community": 27
+      "community": 84
     },
     {
       "label": "collapsible.tsx",
@@ -1073,7 +945,7 @@
       "source_file": "components\\ui\\collapsible.tsx",
       "source_location": "L1",
       "id": "components_ui_collapsible_tsx",
-      "community": 83
+      "community": 85
     },
     {
       "label": "icon-symbol.ios.tsx",
@@ -1081,7 +953,7 @@
       "source_file": "components\\ui\\icon-symbol.ios.tsx",
       "source_location": "L1",
       "id": "components_ui_icon_symbol_ios_tsx",
-      "community": 56
+      "community": 55
     },
     {
       "label": "IconSymbol()",
@@ -1089,7 +961,7 @@
       "source_file": "components\\ui\\icon-symbol.ios.tsx",
       "source_location": "L4",
       "id": "icon_symbol_ios_iconsymbol",
-      "community": 56
+      "community": 55
     },
     {
       "label": "icon-symbol.tsx",
@@ -1097,7 +969,7 @@
       "source_file": "components\\ui\\icon-symbol.tsx",
       "source_location": "L1",
       "id": "components_ui_icon_symbol_tsx",
-      "community": 57
+      "community": 56
     },
     {
       "label": "IconSymbol()",
@@ -1105,7 +977,7 @@
       "source_file": "components\\ui\\icon-symbol.tsx",
       "source_location": "L28",
       "id": "icon_symbol_iconsymbol",
-      "community": 57
+      "community": 56
     },
     {
       "label": "Categories.ts",
@@ -1113,7 +985,7 @@
       "source_file": "constants\\Categories.ts",
       "source_location": "L1",
       "id": "constants_categories_ts",
-      "community": 84
+      "community": 86
     },
     {
       "label": "theme.ts",
@@ -1121,7 +993,7 @@
       "source_file": "constants\\theme.ts",
       "source_location": "L1",
       "id": "constants_theme_ts",
-      "community": 85
+      "community": 87
     },
     {
       "label": "schema.ts",
@@ -1129,7 +1001,7 @@
       "source_file": "db\\schema.ts",
       "source_location": "L1",
       "id": "db_schema_ts",
-      "community": 58
+      "community": 57
     },
     {
       "label": "initDatabase()",
@@ -1137,7 +1009,7 @@
       "source_file": "db\\schema.ts",
       "source_location": "L8",
       "id": "schema_initdatabase",
-      "community": 58
+      "community": 57
     },
     {
       "label": "use-color-scheme.ts",
@@ -1145,7 +1017,7 @@
       "source_file": "hooks\\use-color-scheme.ts",
       "source_location": "L1",
       "id": "hooks_use_color_scheme_ts",
-      "community": 86
+      "community": 88
     },
     {
       "label": "use-color-scheme.web.ts",
@@ -1153,7 +1025,7 @@
       "source_file": "hooks\\use-color-scheme.web.ts",
       "source_location": "L1",
       "id": "hooks_use_color_scheme_web_ts",
-      "community": 59
+      "community": 58
     },
     {
       "label": "useColorScheme()",
@@ -1161,7 +1033,7 @@
       "source_file": "hooks\\use-color-scheme.web.ts",
       "source_location": "L7",
       "id": "use_color_scheme_web_usecolorscheme",
-      "community": 59
+      "community": 58
     },
     {
       "label": "use-theme-color.ts",
@@ -1169,7 +1041,7 @@
       "source_file": "hooks\\use-theme-color.ts",
       "source_location": "L1",
       "id": "hooks_use_theme_color_ts",
-      "community": 60
+      "community": 59
     },
     {
       "label": "useThemeColor()",
@@ -1177,7 +1049,7 @@
       "source_file": "hooks\\use-theme-color.ts",
       "source_location": "L9",
       "id": "use_theme_color_usethemecolor",
-      "community": 60
+      "community": 59
     },
     {
       "label": "native-mock.js",
@@ -1185,7 +1057,7 @@
       "source_file": "mocks\\native-mock.js",
       "source_location": "L1",
       "id": "mocks_native_mock_js",
-      "community": 61
+      "community": 60
     },
     {
       "label": "constructor()",
@@ -1193,7 +1065,7 @@
       "source_file": "mocks\\native-mock.js",
       "source_location": "L15",
       "id": "native_mock_constructor",
-      "community": 61
+      "community": 60
     },
     {
       "label": "withIosModifications.js",
@@ -1201,7 +1073,7 @@
       "source_file": "plugins\\withIosModifications.js",
       "source_location": "L1",
       "id": "plugins_withiosmodifications_js",
-      "community": 62
+      "community": 61
     },
     {
       "label": "withIosModifications()",
@@ -1209,7 +1081,7 @@
       "source_file": "plugins\\withIosModifications.js",
       "source_location": "L9",
       "id": "withiosmodifications_withiosmodifications",
-      "community": 62
+      "community": 61
     },
     {
       "label": "check_braces.js",
@@ -1217,7 +1089,7 @@
       "source_file": "scratch\\check_braces.js",
       "source_location": "L1",
       "id": "scratch_check_braces_js",
-      "community": 87
+      "community": 89
     },
     {
       "label": "reset-project.js",
@@ -1225,7 +1097,7 @@
       "source_file": "scripts\\reset-project.js",
       "source_location": "L1",
       "id": "scripts_reset_project_js",
-      "community": 63
+      "community": 62
     },
     {
       "label": "moveDirectories()",
@@ -1233,7 +1105,7 @@
       "source_file": "scripts\\reset-project.js",
       "source_location": "L48",
       "id": "reset_project_movedirectories",
-      "community": 63
+      "community": 62
     },
     {
       "label": "train_classifier_head.py",
@@ -1241,7 +1113,7 @@
       "source_file": "scripts\\train_classifier_head.py",
       "source_location": "L1",
       "id": "scripts_train_classifier_head_py",
-      "community": 64
+      "community": 63
     },
     {
       "label": "main()",
@@ -1249,7 +1121,7 @@
       "source_file": "scripts\\train_classifier_head.py",
       "source_location": "L100",
       "id": "train_classifier_head_main",
-      "community": 64
+      "community": 63
     },
     {
       "label": "ai.ts",
@@ -1257,7 +1129,7 @@
       "source_file": "services\\ai.ts",
       "source_location": "L1",
       "id": "services_ai_ts",
-      "community": 32
+      "community": 26
     },
     {
       "label": "getLlama()",
@@ -1265,23 +1137,31 @@
       "source_file": "services\\ai.ts",
       "source_location": "L2",
       "id": "ai_getllama",
-      "community": 32
+      "community": 26
     },
     {
-      "label": "predictIntent()",
+      "label": "normalizeMetadata()",
       "file_type": "code",
       "source_file": "services\\ai.ts",
-      "source_location": "L53",
-      "id": "ai_predictintent",
-      "community": 32
+      "source_location": "L28",
+      "id": "ai_normalizemetadata",
+      "community": 26
+    },
+    {
+      "label": "extractRealtime()",
+      "file_type": "code",
+      "source_file": "services\\ai.ts",
+      "source_location": "L96",
+      "id": "ai_extractrealtime",
+      "community": 26
     },
     {
       "label": "extractDeep()",
       "file_type": "code",
       "source_file": "services\\ai.ts",
-      "source_location": "L145",
+      "source_location": "L196",
       "id": "ai_extractdeep",
-      "community": 32
+      "community": 26
     },
     {
       "label": "AIJobScheduler.ts",
@@ -1289,71 +1169,71 @@
       "source_file": "services\\AIJobScheduler.ts",
       "source_location": "L1",
       "id": "services_aijobscheduler_ts",
-      "community": 7
+      "community": 6
     },
     {
       "label": "AIJobScheduler",
       "file_type": "code",
       "source_file": "services\\AIJobScheduler.ts",
-      "source_location": "L14",
+      "source_location": "L16",
       "id": "aijobscheduler_aijobscheduler",
-      "community": 7
+      "community": 6
     },
     {
       "label": ".constructor()",
       "file_type": "code",
       "source_file": "services\\AIJobScheduler.ts",
-      "source_location": "L19",
+      "source_location": "L21",
       "id": "aijobscheduler_aijobscheduler_constructor",
-      "community": 7
+      "community": 6
     },
     {
       "label": ".getInstance()",
       "file_type": "code",
       "source_file": "services\\AIJobScheduler.ts",
-      "source_location": "L21",
+      "source_location": "L23",
       "id": "aijobscheduler_aijobscheduler_getinstance",
-      "community": 7
+      "community": 6
     },
     {
       "label": ".start()",
       "file_type": "code",
       "source_file": "services\\AIJobScheduler.ts",
-      "source_location": "L28",
+      "source_location": "L30",
       "id": "aijobscheduler_aijobscheduler_start",
-      "community": 7
+      "community": 6
     },
     {
       "label": ".stop()",
       "file_type": "code",
       "source_file": "services\\AIJobScheduler.ts",
-      "source_location": "L39",
+      "source_location": "L41",
       "id": "aijobscheduler_aijobscheduler_stop",
-      "community": 7
+      "community": 6
     },
     {
       "label": ".processNextBatch()",
       "file_type": "code",
       "source_file": "services\\AIJobScheduler.ts",
-      "source_location": "L45",
+      "source_location": "L47",
       "id": "aijobscheduler_aijobscheduler_processnextbatch",
-      "community": 7
+      "community": 6
     },
     {
       "label": ".executeEmbeddingJob()",
       "file_type": "code",
       "source_file": "services\\AIJobScheduler.ts",
-      "source_location": "L106",
+      "source_location": "L108",
       "id": "aijobscheduler_aijobscheduler_executeembeddingjob",
-      "community": 7
+      "community": 6
     },
     {
       "label": ".executeSynthesisJob()",
       "file_type": "code",
       "source_file": "services\\AIJobScheduler.ts",
-      "source_location": "L141",
+      "source_location": "L143",
       "id": "aijobscheduler_aijobscheduler_executesynthesisjob",
-      "community": 7
+      "community": 6
     },
     {
       "label": "AIResourceManager.ts",
@@ -1521,7 +1401,7 @@
       "source_file": "services\\CortexService.ts",
       "source_location": "L1",
       "id": "services_cortexservice_ts",
-      "community": 8
+      "community": 7
     },
     {
       "label": "getLlama()",
@@ -1529,7 +1409,7 @@
       "source_file": "services\\CortexService.ts",
       "source_location": "L3",
       "id": "cortexservice_getllama",
-      "community": 8
+      "community": 7
     },
     {
       "label": "getEmbed()",
@@ -1537,7 +1417,7 @@
       "source_file": "services\\CortexService.ts",
       "source_location": "L4",
       "id": "cortexservice_getembed",
-      "community": 8
+      "community": 7
     },
     {
       "label": "getVector()",
@@ -1545,7 +1425,7 @@
       "source_file": "services\\CortexService.ts",
       "source_location": "L5",
       "id": "cortexservice_getvector",
-      "community": 8
+      "community": 7
     },
     {
       "label": "CortexService",
@@ -1553,7 +1433,7 @@
       "source_file": "services\\CortexService.ts",
       "source_location": "L7",
       "id": "cortexservice_cortexservice",
-      "community": 8
+      "community": 7
     },
     {
       "label": ".constructor()",
@@ -1561,7 +1441,7 @@
       "source_file": "services\\CortexService.ts",
       "source_location": "L11",
       "id": "cortexservice_cortexservice_constructor",
-      "community": 8
+      "community": 7
     },
     {
       "label": ".getInstance()",
@@ -1569,7 +1449,7 @@
       "source_file": "services\\CortexService.ts",
       "source_location": "L13",
       "id": "cortexservice_cortexservice_getinstance",
-      "community": 8
+      "community": 7
     },
     {
       "label": ".transitionTo()",
@@ -1577,7 +1457,7 @@
       "source_file": "services\\CortexService.ts",
       "source_location": "L27",
       "id": "cortexservice_cortexservice_transitionto",
-      "community": 8
+      "community": 7
     },
     {
       "label": ".evolveThought()",
@@ -1585,7 +1465,7 @@
       "source_file": "services\\CortexService.ts",
       "source_location": "L71",
       "id": "cortexservice_cortexservice_evolvethought",
-      "community": 8
+      "community": 7
     },
     {
       "label": "DatabaseService.ts",
@@ -1631,7 +1511,7 @@
       "label": ".getDb()",
       "file_type": "code",
       "source_file": "services\\DatabaseService.ts",
-      "source_location": "L101",
+      "source_location": "L129",
       "id": "databaseservice_databaseservice_getdb",
       "community": 15
     },
@@ -1639,7 +1519,7 @@
       "label": ".updateNoteMetadata()",
       "file_type": "code",
       "source_file": "services\\DatabaseService.ts",
-      "source_location": "L131",
+      "source_location": "L159",
       "id": "databaseservice_databaseservice_updatenotemetadata",
       "community": 15
     },
@@ -1649,7 +1529,7 @@
       "source_file": "services\\EmbeddingEngine.ts",
       "source_location": "L1",
       "id": "services_embeddingengine_ts",
-      "community": 5
+      "community": 4
     },
     {
       "label": "EmbeddingEngine",
@@ -1657,7 +1537,7 @@
       "source_file": "services\\EmbeddingEngine.ts",
       "source_location": "L8",
       "id": "embeddingengine_embeddingengine",
-      "community": 5
+      "community": 4
     },
     {
       "label": ".constructor()",
@@ -1665,7 +1545,7 @@
       "source_file": "services\\EmbeddingEngine.ts",
       "source_location": "L15",
       "id": "embeddingengine_embeddingengine_constructor",
-      "community": 5
+      "community": 4
     },
     {
       "label": ".getInstance()",
@@ -1673,7 +1553,7 @@
       "source_file": "services\\EmbeddingEngine.ts",
       "source_location": "L17",
       "id": "embeddingengine_embeddingengine_getinstance",
-      "community": 5
+      "community": 4
     },
     {
       "label": ".init()",
@@ -1681,7 +1561,7 @@
       "source_file": "services\\EmbeddingEngine.ts",
       "source_location": "L24",
       "id": "embeddingengine_embeddingengine_init",
-      "community": 5
+      "community": 4
     },
     {
       "label": ".doInit()",
@@ -1689,7 +1569,7 @@
       "source_file": "services\\EmbeddingEngine.ts",
       "source_location": "L35",
       "id": "embeddingengine_embeddingengine_doinit",
-      "community": 5
+      "community": 4
     },
     {
       "label": ".embed()",
@@ -1697,7 +1577,7 @@
       "source_file": "services\\EmbeddingEngine.ts",
       "source_location": "L71",
       "id": "embeddingengine_embeddingengine_embed",
-      "community": 5
+      "community": 4
     },
     {
       "label": ".unload()",
@@ -1705,7 +1585,7 @@
       "source_file": "services\\EmbeddingEngine.ts",
       "source_location": "L104",
       "id": "embeddingengine_embeddingengine_unload",
-      "community": 5
+      "community": 4
     },
     {
       "label": ".meanPool()",
@@ -1713,7 +1593,7 @@
       "source_file": "services\\EmbeddingEngine.ts",
       "source_location": "L111",
       "id": "embeddingengine_embeddingengine_meanpool",
-      "community": 5
+      "community": 4
     },
     {
       "label": ".normalize()",
@@ -1721,7 +1601,7 @@
       "source_file": "services\\EmbeddingEngine.ts",
       "source_location": "L136",
       "id": "embeddingengine_embeddingengine_normalize",
-      "community": 5
+      "community": 4
     },
     {
       "label": "EmbeddingManager.ts",
@@ -1729,7 +1609,7 @@
       "source_file": "services\\EmbeddingManager.ts",
       "source_location": "L1",
       "id": "services_embeddingmanager_ts",
-      "community": 11
+      "community": 10
     },
     {
       "label": "EmbeddingManager",
@@ -1737,7 +1617,7 @@
       "source_file": "services\\EmbeddingManager.ts",
       "source_location": "L8",
       "id": "embeddingmanager_embeddingmanager",
-      "community": 11
+      "community": 10
     },
     {
       "label": ".constructor()",
@@ -1745,7 +1625,7 @@
       "source_file": "services\\EmbeddingManager.ts",
       "source_location": "L14",
       "id": "embeddingmanager_embeddingmanager_constructor",
-      "community": 11
+      "community": 10
     },
     {
       "label": ".getInstance()",
@@ -1753,7 +1633,7 @@
       "source_file": "services\\EmbeddingManager.ts",
       "source_location": "L18",
       "id": "embeddingmanager_embeddingmanager_getinstance",
-      "community": 11
+      "community": 10
     },
     {
       "label": ".processNote()",
@@ -1761,7 +1641,7 @@
       "source_file": "services\\EmbeddingManager.ts",
       "source_location": "L28",
       "id": "embeddingmanager_embeddingmanager_processnote",
-      "community": 11
+      "community": 10
     },
     {
       "label": ".runQueue()",
@@ -1769,7 +1649,7 @@
       "source_file": "services\\EmbeddingManager.ts",
       "source_location": "L38",
       "id": "embeddingmanager_embeddingmanager_runqueue",
-      "community": 11
+      "community": 10
     },
     {
       "label": ".calculateEdges()",
@@ -1777,7 +1657,7 @@
       "source_file": "services\\EmbeddingManager.ts",
       "source_location": "L215",
       "id": "embeddingmanager_embeddingmanager_calculateedges",
-      "community": 11
+      "community": 10
     },
     {
       "label": ".backfillEmbeddings()",
@@ -1785,7 +1665,7 @@
       "source_file": "services\\EmbeddingManager.ts",
       "source_location": "L254",
       "id": "embeddingmanager_embeddingmanager_backfillembeddings",
-      "community": 11
+      "community": 10
     },
     {
       "label": "IntelligenceService.ts",
@@ -1793,7 +1673,7 @@
       "source_file": "services\\IntelligenceService.ts",
       "source_location": "L1",
       "id": "services_intelligenceservice_ts",
-      "community": 88
+      "community": 90
     },
     {
       "label": "IntentDetector.ts",
@@ -1903,7 +1783,7 @@
       "label": ".warn()",
       "file_type": "code",
       "source_file": "services\\Logger.ts",
-      "source_location": "L18",
+      "source_location": "L19",
       "id": "logger_logger_warn",
       "community": 17
     },
@@ -1911,7 +1791,7 @@
       "label": ".error()",
       "file_type": "code",
       "source_file": "services\\Logger.ts",
-      "source_location": "L27",
+      "source_location": "L28",
       "id": "logger_logger_error",
       "community": 17
     },
@@ -1919,7 +1799,7 @@
       "label": ".setUserId()",
       "file_type": "code",
       "source_file": "services\\Logger.ts",
-      "source_location": "L43",
+      "source_location": "L44",
       "id": "logger_logger_setuserid",
       "community": 17
     },
@@ -1927,7 +1807,7 @@
       "label": ".setAttribute()",
       "file_type": "code",
       "source_file": "services\\Logger.ts",
-      "source_location": "L49",
+      "source_location": "L50",
       "id": "logger_logger_setattribute",
       "community": 17
     },
@@ -2049,7 +1929,7 @@
       "source_file": "services\\NoteService.ts",
       "source_location": "L1",
       "id": "services_noteservice_ts",
-      "community": 9
+      "community": 8
     },
     {
       "label": "NoteService",
@@ -2057,7 +1937,7 @@
       "source_file": "services\\NoteService.ts",
       "source_location": "L6",
       "id": "noteservice_noteservice",
-      "community": 9
+      "community": 8
     },
     {
       "label": ".constructor()",
@@ -2065,7 +1945,7 @@
       "source_file": "services\\NoteService.ts",
       "source_location": "L9",
       "id": "noteservice_noteservice_constructor",
-      "community": 9
+      "community": 8
     },
     {
       "label": ".getInstance()",
@@ -2073,7 +1953,7 @@
       "source_file": "services\\NoteService.ts",
       "source_location": "L11",
       "id": "noteservice_noteservice_getinstance",
-      "community": 9
+      "community": 8
     },
     {
       "label": ".loadVisibleNotes()",
@@ -2081,7 +1961,7 @@
       "source_file": "services\\NoteService.ts",
       "source_location": "L23",
       "id": "noteservice_noteservice_loadvisiblenotes",
-      "community": 9
+      "community": 8
     },
     {
       "label": ".saveNote()",
@@ -2089,7 +1969,7 @@
       "source_file": "services\\NoteService.ts",
       "source_location": "L67",
       "id": "noteservice_noteservice_savenote",
-      "community": 9
+      "community": 8
     },
     {
       "label": ".enqueueAIJob()",
@@ -2097,7 +1977,7 @@
       "source_file": "services\\NoteService.ts",
       "source_location": "L120",
       "id": "noteservice_noteservice_enqueueaijob",
-      "community": 9
+      "community": 8
     },
     {
       "label": ".updateNote()",
@@ -2105,7 +1985,7 @@
       "source_file": "services\\NoteService.ts",
       "source_location": "L134",
       "id": "noteservice_noteservice_updatenote",
-      "community": 9
+      "community": 8
     },
     {
       "label": ".deleteNote()",
@@ -2113,7 +1993,15 @@
       "source_file": "services\\NoteService.ts",
       "source_location": "L162",
       "id": "noteservice_noteservice_deletenote",
-      "community": 9
+      "community": 8
+    },
+    {
+      "label": "regexMaps.ts",
+      "file_type": "code",
+      "source_file": "services\\regexMaps.ts",
+      "source_location": "L1",
+      "id": "services_regexmaps_ts",
+      "community": 91
     },
     {
       "label": "ResourceCoordinator.ts",
@@ -2220,12 +2108,76 @@
       "community": 24
     },
     {
+      "label": "SemanticAnchorService.ts",
+      "file_type": "code",
+      "source_file": "services\\SemanticAnchorService.ts",
+      "source_location": "L1",
+      "id": "services_semanticanchorservice_ts",
+      "community": 11
+    },
+    {
+      "label": "SemanticAnchorService",
+      "file_type": "code",
+      "source_file": "services\\SemanticAnchorService.ts",
+      "source_location": "L3",
+      "id": "semanticanchorservice_semanticanchorservice",
+      "community": 11
+    },
+    {
+      "label": ".constructor()",
+      "file_type": "code",
+      "source_file": "services\\SemanticAnchorService.ts",
+      "source_location": "L7",
+      "id": "semanticanchorservice_semanticanchorservice_constructor",
+      "community": 11
+    },
+    {
+      "label": ".getInstance()",
+      "file_type": "code",
+      "source_file": "services\\SemanticAnchorService.ts",
+      "source_location": "L9",
+      "id": "semanticanchorservice_semanticanchorservice_getinstance",
+      "community": 11
+    },
+    {
+      "label": ".init()",
+      "file_type": "code",
+      "source_file": "services\\SemanticAnchorService.ts",
+      "source_location": "L16",
+      "id": "semanticanchorservice_semanticanchorservice_init",
+      "community": 11
+    },
+    {
+      "label": ".calculateResonances()",
+      "file_type": "code",
+      "source_file": "services\\SemanticAnchorService.ts",
+      "source_location": "L43",
+      "id": "semanticanchorservice_semanticanchorservice_calculateresonances",
+      "community": 11
+    },
+    {
+      "label": ".dotProduct()",
+      "file_type": "code",
+      "source_file": "services\\SemanticAnchorService.ts",
+      "source_location": "L55",
+      "id": "semanticanchorservice_semanticanchorservice_dotproduct",
+      "community": 11
+    },
+    {
+      "label": ".normalizeScore()",
+      "file_type": "code",
+      "source_file": "services\\SemanticAnchorService.ts",
+      "source_location": "L63",
+      "id": "semanticanchorservice_semanticanchorservice_normalizescore",
+      "community": 11
+    },
+    {
       "label": "SyncService.ts",
       "file_type": "code",
       "source_file": "services\\SyncService.ts",
       "source_location": "L1",
       "id": "services_syncservice_ts",
-      "community": 10
+      "community": 9
     },
     {
       "label": "getLlama()",
@@ -2233,7 +2185,7 @@
       "source_file": "services\\SyncService.ts",
       "source_location": "L8",
       "id": "syncservice_getllama",
-      "community": 10
+      "community": 9
     },
     {
       "label": "getEmbed()",
@@ -2241,7 +2193,7 @@
       "source_file": "services\\SyncService.ts",
       "source_location": "L9",
       "id": "syncservice_getembed",
-      "community": 10
+      "community": 9
     },
     {
       "label": "SyncService",
@@ -2249,7 +2201,7 @@
       "source_file": "services\\SyncService.ts",
       "source_location": "L18",
       "id": "syncservice_syncservice",
-      "community": 10
+      "community": 9
     },
     {
       "label": ".constructor()",
@@ -2257,7 +2209,7 @@
       "source_file": "services\\SyncService.ts",
       "source_location": "L23",
       "id": "syncservice_syncservice_constructor",
-      "community": 10
+      "community": 9
     },
     {
       "label": ".getInstance()",
@@ -2265,7 +2217,7 @@
       "source_file": "services\\SyncService.ts",
       "source_location": "L25",
       "id": "syncservice_syncservice_getinstance",
-      "community": 10
+      "community": 9
     },
     {
       "label": ".onProgress()",
@@ -2273,7 +2225,7 @@
       "source_file": "services\\SyncService.ts",
       "source_location": "L32",
       "id": "syncservice_syncservice_onprogress",
-      "community": 10
+      "community": 9
     },
     {
       "label": ".performFullSync()",
@@ -2281,7 +2233,7 @@
       "source_file": "services\\SyncService.ts",
       "source_location": "L40",
       "id": "syncservice_syncservice_performfullsync",
-      "community": 10
+      "community": 9
     },
     {
       "label": ".notify()",
@@ -2289,7 +2241,7 @@
       "source_file": "services\\SyncService.ts",
       "source_location": "L77",
       "id": "syncservice_syncservice_notify",
-      "community": 10
+      "community": 9
     },
     {
       "label": "SynthesisService.ts",
@@ -2297,7 +2249,7 @@
       "source_file": "services\\SynthesisService.ts",
       "source_location": "L1",
       "id": "services_synthesisservice_ts",
-      "community": 28
+      "community": 27
     },
     {
       "label": "SynthesisService",
@@ -2305,7 +2257,7 @@
       "source_file": "services\\SynthesisService.ts",
       "source_location": "L12",
       "id": "synthesisservice_synthesisservice",
-      "community": 28
+      "community": 27
     },
     {
       "label": ".constructor()",
@@ -2313,7 +2265,7 @@
       "source_file": "services\\SynthesisService.ts",
       "source_location": "L15",
       "id": "synthesisservice_synthesisservice_constructor",
-      "community": 28
+      "community": 27
     },
     {
       "label": ".getInstance()",
@@ -2321,7 +2273,7 @@
       "source_file": "services\\SynthesisService.ts",
       "source_location": "L17",
       "id": "synthesisservice_synthesisservice_getinstance",
-      "community": 28
+      "community": 27
     },
     {
       "label": ".evolveThought()",
@@ -2329,7 +2281,7 @@
       "source_file": "services\\SynthesisService.ts",
       "source_location": "L24",
       "id": "synthesisservice_synthesisservice_evolvethought",
-      "community": 28
+      "community": 27
     },
     {
       "label": "VectorSearchService.ts",
@@ -2433,7 +2385,7 @@
       "source_file": "store\\useNotesStore.ts",
       "source_location": "L1",
       "id": "store_usenotesstore_ts",
-      "community": 89
+      "community": 92
     },
     {
       "label": "useSettingsStore.ts",
@@ -2441,7 +2393,7 @@
       "source_file": "store\\useSettingsStore.ts",
       "source_location": "L1",
       "id": "store_usesettingsstore_ts",
-      "community": 90
+      "community": 93
     },
     {
       "label": "assetLoader.ts",
@@ -2449,7 +2401,7 @@
       "source_file": "utils\\assetLoader.ts",
       "source_location": "L1",
       "id": "utils_assetloader_ts",
-      "community": 65
+      "community": 64
     },
     {
       "label": "preloadNavigationAssets()",
@@ -2457,7 +2409,7 @@
       "source_file": "utils\\assetLoader.ts",
       "source_location": "L15",
       "id": "assetloader_preloadnavigationassets",
-      "community": 65
+      "community": 64
     },
     {
       "label": "idUtils.ts",
@@ -2465,7 +2417,7 @@
       "source_file": "utils\\idUtils.ts",
       "source_location": "L1",
       "id": "utils_idutils_ts",
-      "community": 66
+      "community": 65
     },
     {
       "label": "hashUUIDToNumber()",
@@ -2473,7 +2425,7 @@
       "source_file": "utils\\idUtils.ts",
       "source_location": "L5",
       "id": "idutils_hashuuidtonumber",
-      "community": 66
+      "community": 65
     },
     {
       "label": "insightUtils.ts",
@@ -2537,7 +2489,7 @@
       "source_file": "utils\\nexusEngine.ts",
       "source_location": "L1",
       "id": "utils_nexusengine_ts",
-      "community": 29
+      "community": 28
     },
     {
       "label": "makePRNG()",
@@ -2545,7 +2497,7 @@
       "source_file": "utils\\nexusEngine.ts",
       "source_location": "L58",
       "id": "nexusengine_makeprng",
-      "community": 29
+      "community": 28
     },
     {
       "label": "hash()",
@@ -2553,7 +2505,7 @@
       "source_file": "utils\\nexusEngine.ts",
       "source_location": "L68",
       "id": "nexusengine_hash",
-      "community": 29
+      "community": 28
     },
     {
       "label": "computeSimilarity()",
@@ -2561,7 +2513,7 @@
       "source_file": "utils\\nexusEngine.ts",
       "source_location": "L74",
       "id": "nexusengine_computesimilarity",
-      "community": 29
+      "community": 28
     },
     {
       "label": "computeConstellations()",
@@ -2569,7 +2521,7 @@
       "source_file": "utils\\nexusEngine.ts",
       "source_location": "L88",
       "id": "nexusengine_computeconstellations",
-      "community": 29
+      "community": 28
     },
     {
       "label": "noteUtils.ts",
@@ -2673,7 +2625,7 @@
       "source_file": "utils\\peopleUtils.ts",
       "source_location": "L1",
       "id": "utils_peopleutils_ts",
-      "community": 33
+      "community": 31
     },
     {
       "label": "extractPeopleFromNotes()",
@@ -2681,7 +2633,7 @@
       "source_file": "utils\\peopleUtils.ts",
       "source_location": "L18",
       "id": "peopleutils_extractpeoplefromnotes",
-      "community": 33
+      "community": 31
     },
     {
       "label": "getPeopleConnections()",
@@ -2689,7 +2641,7 @@
       "source_file": "utils\\peopleUtils.ts",
       "source_location": "L73",
       "id": "peopleutils_getpeopleconnections",
-      "community": 33
+      "community": 31
     },
     {
       "label": "generateSeedPeopleNotes()",
@@ -2697,7 +2649,7 @@
       "source_file": "utils\\peopleUtils.ts",
       "source_location": "L100",
       "id": "peopleutils_generateseedpeoplenotes",
-      "community": 33
+      "community": 31
     },
     {
       "label": "seedingUtils.ts",
@@ -2705,7 +2657,7 @@
       "source_file": "utils\\seedingUtils.ts",
       "source_location": "L1",
       "id": "utils_seedingutils_ts",
-      "community": 67
+      "community": 66
     },
     {
       "label": "seedSyntheticMemories()",
@@ -2713,7 +2665,7 @@
       "source_file": "utils\\seedingUtils.ts",
       "source_location": "L9",
       "id": "seedingutils_seedsyntheticmemories",
-      "community": 67
+      "community": 66
     },
     {
       "label": "studioUtils.ts",
@@ -2721,7 +2673,7 @@
       "source_file": "utils\\studioUtils.ts",
       "source_location": "L1",
       "id": "utils_studioutils_ts",
-      "community": 34
+      "community": 32
     },
     {
       "label": "getKeywords()",
@@ -2729,7 +2681,7 @@
       "source_file": "utils\\studioUtils.ts",
       "source_location": "L10",
       "id": "studioutils_getkeywords",
-      "community": 34
+      "community": 32
     },
     {
       "label": "calculateSemanticResonance()",
@@ -2737,7 +2689,7 @@
       "source_file": "utils\\studioUtils.ts",
       "source_location": "L15",
       "id": "studioutils_calculatesemanticresonance",
-      "community": 34
+      "community": 32
     },
     {
       "label": "growKnowledgeTree()",
@@ -2745,7 +2697,7 @@
       "source_file": "utils\\studioUtils.ts",
       "source_location": "L36",
       "id": "studioutils_growknowledgetree",
-      "community": 34
+      "community": 32
     },
     {
       "label": "theme.ts",
@@ -2753,7 +2705,7 @@
       "source_file": "v1_staging\\theme.ts",
       "source_location": "L1",
       "id": "v1_staging_theme_ts",
-      "community": 91
+      "community": 94
     },
     {
       "label": "index.tsx",
@@ -2793,7 +2745,7 @@
       "source_file": "v1_staging\\components\\NexusSurfaceMatrix.tsx",
       "source_location": "L1",
       "id": "v1_staging_components_nexussurfacematrix_tsx",
-      "community": 92
+      "community": 95
     },
     {
       "label": "UserModeMap.tsx",
@@ -2801,7 +2753,31 @@
       "source_file": "v1_staging\\components\\UserModeMap.tsx",
       "source_location": "L1",
       "id": "v1_staging_components_usermodemap_tsx",
-      "community": 27
+      "community": 33
+    },
+    {
+      "label": "handleDragStart()",
+      "file_type": "code",
+      "source_file": "v1_staging\\components\\UserModeMap.tsx",
+      "source_location": "L211",
+      "id": "usermodemap_handledragstart",
+      "community": 33
+    },
+    {
+      "label": "handleDragEnd()",
+      "file_type": "code",
+      "source_file": "v1_staging\\components\\UserModeMap.tsx",
+      "source_location": "L217",
+      "id": "usermodemap_handledragend",
+      "community": 33
+    },
+    {
+      "label": "findRangeIndices()",
+      "file_type": "code",
+      "source_file": "v1_staging\\components\\UserModeMap.tsx",
+      "source_location": "L278",
+      "id": "usermodemap_findrangeindices",
+      "community": 33
     },
     {
       "label": "noteUtils.ts",
@@ -3000,42 +2976,6 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "app\\_layout.tsx",
-      "source_location": "L36",
-      "weight": 1.0,
-      "_src": "app_layout_tsx",
-      "_tgt": "layout_handleopeningcomplete",
-      "source": "app_layout_tsx",
-      "target": "layout_handleopeningcomplete",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "app\\_layout.tsx",
-      "source_location": "L46",
-      "weight": 1.0,
-      "_src": "app_layout_tsx",
-      "_tgt": "layout_checkdeployment",
-      "source": "app_layout_tsx",
-      "target": "layout_checkdeployment",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "app\\_layout.tsx",
-      "source_location": "L81",
-      "weight": 1.0,
-      "_src": "app_layout_tsx",
-      "_tgt": "layout_handleconsent",
-      "source": "app_layout_tsx",
-      "target": "layout_handleconsent",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
       "source_file": "app\\(tabs)\\capture.tsx",
       "source_location": "L49",
       "weight": 1.0,
@@ -3133,120 +3073,24 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app\\(tabs)\\index.tsx",
-      "source_location": "L56",
+      "source_location": "L41",
       "weight": 1.0,
       "_src": "app_tabs_index_tsx",
-      "_tgt": "index_triggermanualpulse",
+      "_tgt": "index_handlecreateproject",
       "source": "app_tabs_index_tsx",
-      "target": "index_triggermanualpulse",
+      "target": "index_handlecreateproject",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app\\(tabs)\\index.tsx",
-      "source_location": "L189",
-      "weight": 1.0,
-      "_src": "app_tabs_index_tsx",
-      "_tgt": "index_handledoubletapseed",
-      "source": "app_tabs_index_tsx",
-      "target": "index_handledoubletapseed",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "app\\(tabs)\\index.tsx",
-      "source_location": "L209",
-      "weight": 1.0,
-      "_src": "app_tabs_index_tsx",
-      "_tgt": "index_handletripletapseed",
-      "source": "app_tabs_index_tsx",
-      "target": "index_handletripletapseed",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "app\\(tabs)\\index.tsx",
-      "source_location": "L233",
-      "weight": 1.0,
-      "_src": "app_tabs_index_tsx",
-      "_tgt": "index_triggerhaptic",
-      "source": "app_tabs_index_tsx",
-      "target": "index_triggerhaptic",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "app\\(tabs)\\index.tsx",
-      "source_location": "L263",
-      "weight": 1.0,
-      "_src": "app_tabs_index_tsx",
-      "_tgt": "index_ongestureevent",
-      "source": "app_tabs_index_tsx",
-      "target": "index_ongestureevent",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "app\\(tabs)\\index.tsx",
-      "source_location": "L270",
-      "weight": 1.0,
-      "_src": "app_tabs_index_tsx",
-      "_tgt": "index_onhandlerstatechange",
-      "source": "app_tabs_index_tsx",
-      "target": "index_onhandlerstatechange",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "app\\(tabs)\\index.tsx",
-      "source_location": "L307",
+      "source_location": "L105",
       "weight": 1.0,
       "_src": "app_tabs_index_tsx",
       "_tgt": "index_handlenodepress",
       "source": "app_tabs_index_tsx",
       "target": "index_handlenodepress",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "app\\(tabs)\\index.tsx",
-      "source_location": "L319",
-      "weight": 1.0,
-      "_src": "app_tabs_index_tsx",
-      "_tgt": "index_handlescroll",
-      "source": "app_tabs_index_tsx",
-      "target": "index_handlescroll",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "app\\(tabs)\\index.tsx",
-      "source_location": "L324",
-      "weight": 1.0,
-      "_src": "app_tabs_index_tsx",
-      "_tgt": "index_togglesearch",
-      "source": "app_tabs_index_tsx",
-      "target": "index_togglesearch",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "app\\(tabs)\\index.tsx",
-      "source_location": "L331",
-      "weight": 1.0,
-      "_src": "app_tabs_index_tsx",
-      "_tgt": "index_scrolltotop",
-      "source": "app_tabs_index_tsx",
-      "target": "index_scrolltotop",
       "confidence_score": 1.0
     },
     {
@@ -3697,60 +3541,36 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "components\\BrandedSplashScreen.tsx",
-      "source_location": "L68",
+      "source_location": "L59",
       "weight": 1.0,
       "_src": "components_brandedsplashscreen_tsx",
-      "_tgt": "brandedsplashscreen_buildnaturalthread",
+      "_tgt": "brandedsplashscreen_getprojectedpoint",
       "source": "components_brandedsplashscreen_tsx",
-      "target": "brandedsplashscreen_buildnaturalthread",
+      "target": "brandedsplashscreen_getprojectedpoint",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "components\\BrandedSplashScreen.tsx",
-      "source_location": "L204",
+      "source_location": "L179",
       "weight": 1.0,
       "_src": "components_brandedsplashscreen_tsx",
-      "_tgt": "brandedsplashscreen_pickrandom",
+      "_tgt": "brandedsplashscreen_brandedsplashscreen",
       "source": "components_brandedsplashscreen_tsx",
-      "target": "brandedsplashscreen_pickrandom",
+      "target": "brandedsplashscreen_brandedsplashscreen",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "components\\BrandedSplashScreen.tsx",
-      "source_location": "L256",
-      "weight": 1.0,
-      "_src": "components_brandedsplashscreen_tsx",
-      "_tgt": "brandedsplashscreen_tick",
-      "source": "components_brandedsplashscreen_tsx",
-      "target": "brandedsplashscreen_tick",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "components\\BrandedSplashScreen.tsx",
-      "source_location": "L274",
+      "source_location": "L306",
       "weight": 1.0,
       "_src": "components_brandedsplashscreen_tsx",
       "_tgt": "brandedsplashscreen_spawn",
       "source": "components_brandedsplashscreen_tsx",
       "target": "brandedsplashscreen_spawn",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "confidence": "EXTRACTED",
-      "source_file": "components\\BrandedSplashScreen.tsx",
-      "source_location": "L264",
-      "weight": 1.0,
-      "_src": "brandedsplashscreen_tick",
-      "_tgt": "brandedsplashscreen_buildnaturalthread",
-      "source": "brandedsplashscreen_buildnaturalthread",
-      "target": "brandedsplashscreen_tick",
       "confidence_score": 1.0
     },
     {
@@ -3763,18 +3583,6 @@
       "_tgt": "chronosnexustoggle_handlepress",
       "source": "components_chronosnexustoggle_tsx",
       "target": "chronosnexustoggle_handlepress",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "components\\DriftNode.tsx",
-      "source_location": "L122",
-      "weight": 1.0,
-      "_src": "components_driftnode_tsx",
-      "_tgt": "driftnode_getpipelinecolor",
-      "source": "components_driftnode_tsx",
-      "target": "driftnode_getpipelinecolor",
       "confidence_score": 1.0
     },
     {
@@ -4044,78 +3852,6 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "components\\UserModeMap.tsx",
-      "source_location": "L203",
-      "weight": 1.0,
-      "_src": "components_usermodemap_tsx",
-      "_tgt": "usermodemap_handledragstart",
-      "source": "components_usermodemap_tsx",
-      "target": "usermodemap_handledragstart",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "components\\UserModeMap.tsx",
-      "source_location": "L209",
-      "weight": 1.0,
-      "_src": "components_usermodemap_tsx",
-      "_tgt": "usermodemap_handledragend",
-      "source": "components_usermodemap_tsx",
-      "target": "usermodemap_handledragend",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "components\\UserModeMap.tsx",
-      "source_location": "L259",
-      "weight": 1.0,
-      "_src": "components_usermodemap_tsx",
-      "_tgt": "usermodemap_findrangeindices",
-      "source": "components_usermodemap_tsx",
-      "target": "usermodemap_findrangeindices",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "v1_staging\\components\\UserModeMap.tsx",
-      "source_location": "L211",
-      "weight": 1.0,
-      "_src": "v1_staging_components_usermodemap_tsx",
-      "_tgt": "usermodemap_handledragstart",
-      "source": "usermodemap_handledragstart",
-      "target": "v1_staging_components_usermodemap_tsx",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "v1_staging\\components\\UserModeMap.tsx",
-      "source_location": "L217",
-      "weight": 1.0,
-      "_src": "v1_staging_components_usermodemap_tsx",
-      "_tgt": "usermodemap_handledragend",
-      "source": "usermodemap_handledragend",
-      "target": "v1_staging_components_usermodemap_tsx",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "v1_staging\\components\\UserModeMap.tsx",
-      "source_location": "L278",
-      "weight": 1.0,
-      "_src": "v1_staging_components_usermodemap_tsx",
-      "_tgt": "usermodemap_findrangeindices",
-      "source": "usermodemap_findrangeindices",
-      "target": "v1_staging_components_usermodemap_tsx",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
       "source_file": "components\\ui\\icon-symbol.ios.tsx",
       "source_location": "L4",
       "weight": 1.0,
@@ -4237,19 +3973,31 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "services\\ai.ts",
-      "source_location": "L53",
+      "source_location": "L28",
       "weight": 1.0,
       "_src": "services_ai_ts",
-      "_tgt": "ai_predictintent",
+      "_tgt": "ai_normalizemetadata",
       "source": "services_ai_ts",
-      "target": "ai_predictintent",
+      "target": "ai_normalizemetadata",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "services\\ai.ts",
-      "source_location": "L145",
+      "source_location": "L96",
+      "weight": 1.0,
+      "_src": "services_ai_ts",
+      "_tgt": "ai_extractrealtime",
+      "source": "services_ai_ts",
+      "target": "ai_extractrealtime",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "services\\ai.ts",
+      "source_location": "L196",
       "weight": 1.0,
       "_src": "services_ai_ts",
       "_tgt": "ai_extractdeep",
@@ -4261,11 +4009,23 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "services\\ai.ts",
-      "source_location": "L149",
+      "source_location": "L46",
+      "weight": 1.0,
+      "_src": "ai_normalizemetadata",
+      "_tgt": "ai_extractrealtime",
+      "source": "ai_normalizemetadata",
+      "target": "ai_extractrealtime",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "services\\ai.ts",
+      "source_location": "L199",
       "weight": 1.0,
       "_src": "ai_extractdeep",
-      "_tgt": "ai_predictintent",
-      "source": "ai_predictintent",
+      "_tgt": "ai_extractrealtime",
+      "source": "ai_extractrealtime",
       "target": "ai_extractdeep",
       "confidence_score": 1.0
     },
@@ -4273,7 +4033,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "services\\AIJobScheduler.ts",
-      "source_location": "L14",
+      "source_location": "L16",
       "weight": 1.0,
       "_src": "services_aijobscheduler_ts",
       "_tgt": "aijobscheduler_aijobscheduler",
@@ -4285,7 +4045,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "services\\AIJobScheduler.ts",
-      "source_location": "L19",
+      "source_location": "L21",
       "weight": 1.0,
       "_src": "aijobscheduler_aijobscheduler",
       "_tgt": "aijobscheduler_aijobscheduler_constructor",
@@ -4297,7 +4057,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "services\\AIJobScheduler.ts",
-      "source_location": "L21",
+      "source_location": "L23",
       "weight": 1.0,
       "_src": "aijobscheduler_aijobscheduler",
       "_tgt": "aijobscheduler_aijobscheduler_getinstance",
@@ -4309,7 +4069,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "services\\AIJobScheduler.ts",
-      "source_location": "L28",
+      "source_location": "L30",
       "weight": 1.0,
       "_src": "aijobscheduler_aijobscheduler",
       "_tgt": "aijobscheduler_aijobscheduler_start",
@@ -4321,7 +4081,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "services\\AIJobScheduler.ts",
-      "source_location": "L39",
+      "source_location": "L41",
       "weight": 1.0,
       "_src": "aijobscheduler_aijobscheduler",
       "_tgt": "aijobscheduler_aijobscheduler_stop",
@@ -4333,7 +4093,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "services\\AIJobScheduler.ts",
-      "source_location": "L45",
+      "source_location": "L47",
       "weight": 1.0,
       "_src": "aijobscheduler_aijobscheduler",
       "_tgt": "aijobscheduler_aijobscheduler_processnextbatch",
@@ -4345,7 +4105,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "services\\AIJobScheduler.ts",
-      "source_location": "L106",
+      "source_location": "L108",
       "weight": 1.0,
       "_src": "aijobscheduler_aijobscheduler",
       "_tgt": "aijobscheduler_aijobscheduler_executeembeddingjob",
@@ -4357,7 +4117,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "services\\AIJobScheduler.ts",
-      "source_location": "L141",
+      "source_location": "L143",
       "weight": 1.0,
       "_src": "aijobscheduler_aijobscheduler",
       "_tgt": "aijobscheduler_aijobscheduler_executesynthesisjob",
@@ -4369,7 +4129,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "services\\AIJobScheduler.ts",
-      "source_location": "L53",
+      "source_location": "L55",
       "weight": 1.0,
       "_src": "aijobscheduler_aijobscheduler_processnextbatch",
       "_tgt": "aijobscheduler_aijobscheduler_getinstance",
@@ -4381,7 +4141,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "services\\AIJobScheduler.ts",
-      "source_location": "L107",
+      "source_location": "L109",
       "weight": 1.0,
       "_src": "aijobscheduler_aijobscheduler_executeembeddingjob",
       "_tgt": "aijobscheduler_aijobscheduler_getinstance",
@@ -4393,7 +4153,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "services\\AIJobScheduler.ts",
-      "source_location": "L142",
+      "source_location": "L144",
       "weight": 1.0,
       "_src": "aijobscheduler_aijobscheduler_executesynthesisjob",
       "_tgt": "aijobscheduler_aijobscheduler_getinstance",
@@ -4405,7 +4165,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "services\\AIJobScheduler.ts",
-      "source_location": "L82",
+      "source_location": "L84",
       "weight": 1.0,
       "_src": "aijobscheduler_aijobscheduler_processnextbatch",
       "_tgt": "aijobscheduler_aijobscheduler_executeembeddingjob",
@@ -4417,7 +4177,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "services\\AIJobScheduler.ts",
-      "source_location": "L92",
+      "source_location": "L94",
       "weight": 1.0,
       "_src": "aijobscheduler_aijobscheduler_processnextbatch",
       "_tgt": "aijobscheduler_aijobscheduler_executesynthesisjob",
@@ -4993,7 +4753,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "services\\DatabaseService.ts",
-      "source_location": "L101",
+      "source_location": "L129",
       "weight": 1.0,
       "_src": "databaseservice_databaseservice",
       "_tgt": "databaseservice_databaseservice_getdb",
@@ -5005,7 +4765,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "services\\DatabaseService.ts",
-      "source_location": "L131",
+      "source_location": "L159",
       "weight": 1.0,
       "_src": "databaseservice_databaseservice",
       "_tgt": "databaseservice_databaseservice_updatenotemetadata",
@@ -5449,7 +5209,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "services\\Logger.ts",
-      "source_location": "L18",
+      "source_location": "L19",
       "weight": 1.0,
       "_src": "logger_logger",
       "_tgt": "logger_logger_warn",
@@ -5461,7 +5221,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "services\\Logger.ts",
-      "source_location": "L27",
+      "source_location": "L28",
       "weight": 1.0,
       "_src": "logger_logger",
       "_tgt": "logger_logger_error",
@@ -5473,7 +5233,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "services\\Logger.ts",
-      "source_location": "L43",
+      "source_location": "L44",
       "weight": 1.0,
       "_src": "logger_logger",
       "_tgt": "logger_logger_setuserid",
@@ -5485,7 +5245,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "services\\Logger.ts",
-      "source_location": "L49",
+      "source_location": "L50",
       "weight": 1.0,
       "_src": "logger_logger",
       "_tgt": "logger_logger_setattribute",
@@ -5497,7 +5257,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "services\\Logger.ts",
-      "source_location": "L23",
+      "source_location": "L24",
       "weight": 1.0,
       "_src": "logger_logger_warn",
       "_tgt": "logger_logger_log",
@@ -5509,7 +5269,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "services\\Logger.ts",
-      "source_location": "L31",
+      "source_location": "L32",
       "weight": 1.0,
       "_src": "logger_logger_error",
       "_tgt": "logger_logger_log",
@@ -6079,6 +5839,126 @@
       "_tgt": "retrievalservice_retrievalservice_search",
       "source": "retrievalservice_retrievalservice_search",
       "target": "retrievalservice_retrievalservice_executeexplore",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "services\\SemanticAnchorService.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_src": "services_semanticanchorservice_ts",
+      "_tgt": "semanticanchorservice_semanticanchorservice",
+      "source": "services_semanticanchorservice_ts",
+      "target": "semanticanchorservice_semanticanchorservice",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "services\\SemanticAnchorService.ts",
+      "source_location": "L7",
+      "weight": 1.0,
+      "_src": "semanticanchorservice_semanticanchorservice",
+      "_tgt": "semanticanchorservice_semanticanchorservice_constructor",
+      "source": "semanticanchorservice_semanticanchorservice",
+      "target": "semanticanchorservice_semanticanchorservice_constructor",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "services\\SemanticAnchorService.ts",
+      "source_location": "L9",
+      "weight": 1.0,
+      "_src": "semanticanchorservice_semanticanchorservice",
+      "_tgt": "semanticanchorservice_semanticanchorservice_getinstance",
+      "source": "semanticanchorservice_semanticanchorservice",
+      "target": "semanticanchorservice_semanticanchorservice_getinstance",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "services\\SemanticAnchorService.ts",
+      "source_location": "L16",
+      "weight": 1.0,
+      "_src": "semanticanchorservice_semanticanchorservice",
+      "_tgt": "semanticanchorservice_semanticanchorservice_init",
+      "source": "semanticanchorservice_semanticanchorservice",
+      "target": "semanticanchorservice_semanticanchorservice_init",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "services\\SemanticAnchorService.ts",
+      "source_location": "L43",
+      "weight": 1.0,
+      "_src": "semanticanchorservice_semanticanchorservice",
+      "_tgt": "semanticanchorservice_semanticanchorservice_calculateresonances",
+      "source": "semanticanchorservice_semanticanchorservice",
+      "target": "semanticanchorservice_semanticanchorservice_calculateresonances",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "services\\SemanticAnchorService.ts",
+      "source_location": "L55",
+      "weight": 1.0,
+      "_src": "semanticanchorservice_semanticanchorservice",
+      "_tgt": "semanticanchorservice_semanticanchorservice_dotproduct",
+      "source": "semanticanchorservice_semanticanchorservice",
+      "target": "semanticanchorservice_semanticanchorservice_dotproduct",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "services\\SemanticAnchorService.ts",
+      "source_location": "L63",
+      "weight": 1.0,
+      "_src": "semanticanchorservice_semanticanchorservice",
+      "_tgt": "semanticanchorservice_semanticanchorservice_normalizescore",
+      "source": "semanticanchorservice_semanticanchorservice",
+      "target": "semanticanchorservice_semanticanchorservice_normalizescore",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "services\\SemanticAnchorService.ts",
+      "source_location": "L35",
+      "weight": 1.0,
+      "_src": "semanticanchorservice_semanticanchorservice_init",
+      "_tgt": "semanticanchorservice_semanticanchorservice_getinstance",
+      "source": "semanticanchorservice_semanticanchorservice_getinstance",
+      "target": "semanticanchorservice_semanticanchorservice_init",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "services\\SemanticAnchorService.ts",
+      "source_location": "L47",
+      "weight": 1.0,
+      "_src": "semanticanchorservice_semanticanchorservice_calculateresonances",
+      "_tgt": "semanticanchorservice_semanticanchorservice_dotproduct",
+      "source": "semanticanchorservice_semanticanchorservice_calculateresonances",
+      "target": "semanticanchorservice_semanticanchorservice_dotproduct",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "services\\SemanticAnchorService.ts",
+      "source_location": "L48",
+      "weight": 1.0,
+      "_src": "semanticanchorservice_semanticanchorservice_calculateresonances",
+      "_tgt": "semanticanchorservice_semanticanchorservice_normalizescore",
+      "source": "semanticanchorservice_semanticanchorservice_calculateresonances",
+      "target": "semanticanchorservice_semanticanchorservice_normalizescore",
       "confidence_score": 1.0
     },
     {
@@ -7063,6 +6943,42 @@
       "_tgt": "index_if",
       "source": "v1_staging_app_tabs_index_tsx",
       "target": "index_if",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "v1_staging\\components\\UserModeMap.tsx",
+      "source_location": "L211",
+      "weight": 1.0,
+      "_src": "v1_staging_components_usermodemap_tsx",
+      "_tgt": "usermodemap_handledragstart",
+      "source": "v1_staging_components_usermodemap_tsx",
+      "target": "usermodemap_handledragstart",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "v1_staging\\components\\UserModeMap.tsx",
+      "source_location": "L217",
+      "weight": 1.0,
+      "_src": "v1_staging_components_usermodemap_tsx",
+      "_tgt": "usermodemap_handledragend",
+      "source": "v1_staging_components_usermodemap_tsx",
+      "target": "usermodemap_handledragend",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "v1_staging\\components\\UserModeMap.tsx",
+      "source_location": "L278",
+      "weight": 1.0,
+      "_src": "v1_staging_components_usermodemap_tsx",
+      "_tgt": "usermodemap_findrangeindices",
+      "source": "v1_staging_components_usermodemap_tsx",
+      "target": "usermodemap_findrangeindices",
       "confidence_score": 1.0
     },
     {

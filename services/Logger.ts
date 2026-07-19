@@ -7,6 +7,7 @@ import { Platform } from 'react-native';
  */
 export class Logger {
   public static log(message: string, context?: Record<string, any>) {
+    console.log('[LocalCoder Test] Verification successful!');
     const logStr = context ? `${message} | ${JSON.stringify(context)}` : message;
     console.log(`[Drift] ${logStr}`);
     

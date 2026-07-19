@@ -51,44 +51,54 @@ const STARS = Array.from({ length: 60 }, () => ({
   r: 0.5 + Math.random() * 1.5, o: 0.15 + Math.random() * 0.45,
 }));
 
-// ─── LOGO NODES ───────────────────────────────────────────────
-const NODES = [
-  { x: W * 0.22, y: H * 0.455 },
-  { x: W * 0.36, y: H * 0.475 },
-  { x: W * 0.50, y: H * 0.455 },
-  { x: W * 0.64, y: H * 0.435 },
-  { x: W * 0.78, y: H * 0.455 },
-];
-const R = W * 0.032;
+// ─── LOGO NODES & THREAD (Replaced with 3D Wireframe Mountain Peak Mesh) ─────
+const COLS = 26;
+const ROWS = 14;
 
-// ─── NATURAL THREAD ───────────────────────────────────────────
-const CENTER_Y = H * 0.455;
-const THREAD_POINTS = 60;
+// Get projected coordinates of a point in the wireframe grid
+function getProjectedPoint(
+  col: number, 
+  row: number, 
+  time: number, 
+  W: number, 
+  H: number
+) {
+  const mountWidth = W * 0.82;
+  const mountHeight = 120;
+  const startX = W * 0.09;
+  const startY = H * 0.46; // Center vertically
 
-function buildNaturalThread(time: number, phaseOff: number, targetNode: { x: number; y: number } | null): string {
-  const parts: string[] = [];
-  const startX = NODES[0].x;
-  const endX = NODES[NODES.length - 1].x;
-  const span = endX - startX;
+  const dx = col / (COLS - 1);
+  const dy = row / (ROWS - 1);
 
-  for (let i = 0; i <= THREAD_POINTS; i++) {
-    const t = i / THREAD_POINTS;
-    const x = startX + span * t;
-    const wave1 = Math.sin(t * Math.PI * 3.2 - time * 1.4 + phaseOff) * 22;
-    const wave2 = Math.sin(t * Math.PI * 5.7 - time * 0.9 + phaseOff * 0.7) * 8;
-    const wave3 = Math.sin(t * Math.PI * 1.1 + time * 0.5 + phaseOff * 1.3) * 12;
-    const drift = Math.sin(t * Math.PI * 0.8 + time * 0.3) * 6;
-    const edgeFade = Math.sin(t * Math.PI);
-    let y = CENTER_Y + (wave1 + wave2 + wave3 + drift) * edgeFade * 0.7;
+  // Skew x slightly based on row to give 3D tilt perspective
+  const x = startX + dx * mountWidth + (dy - 0.5) * 24;
 
-    if (targetNode) {
-      const dx = (x - targetNode.x) / (span * 0.12);
-      const pull = Math.exp(-dx * dx);
-      y = y + (targetNode.y - y) * pull;
-    }
-    parts.push(`${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`);
-  }
-  return parts.join(' ');
+  // Mountain Profile (Two main gaussian peaks + roughness)
+  const peak1Center = 0.35;
+  const peak1Width = 0.12;
+  const peak1Height = 48;
+
+  const peak2Center = 0.65;
+  const peak2Width = 0.14;
+  const peak2Height = 72;
+
+  // Gaussian formulas for the peaks
+  const g1 = Math.exp(-Math.pow((dx - peak1Center) / peak1Width, 2));
+  const g2 = Math.exp(-Math.pow((dx - peak2Center) / peak2Width, 2));
+
+  // Dynamic wave animation ripple representing "drifting resonance"
+  const wave = Math.sin(dx * Math.PI * 3.5 - time * 1.8) * Math.cos(dy * Math.PI * 2.0 + time * 1.2) * 3.5;
+  
+  // Height profile diminishes near the front edges (lower rows) and far side boundaries
+  const edgeFadeX = Math.sin(dx * Math.PI);
+  const edgeFadeY = Math.sin(dy * Math.PI);
+
+  const baseHeight = (g1 * peak1Height + g2 * peak2Height) * edgeFadeX * (0.35 + 0.65 * edgeFadeY);
+  
+  const y = startY + dy * 45 - (baseHeight + wave);
+
+  return { x, y };
 }
 
 // ─── MINI CONSTELLATION (inline SVG icon) ─────────────────────
@@ -109,7 +119,7 @@ const MiniConstellation = React.memo(({ patternIdx, size, color }: {
     </Svg>
   );
 });
-
+ 
 // ─── BACKGROUND CONSTELLATION ─────────────────────────────────
 const ConstellationInstance = React.memo(({ pattern, cx, cy, scale, lineColor, starColor, starOpacity }: {
   pattern: typeof PATTERNS[0]; cx: number; cy: number; scale: number;
@@ -123,11 +133,11 @@ const ConstellationInstance = React.memo(({ pattern, cx, cy, scale, lineColor, s
       Animated.timing(fade, { toValue: 0.12, duration: 2000, useNativeDriver: true }),
     ]).start();
   }, []);
-
+ 
   const positions = useMemo(() =>
     pattern.s.map(([sx, sy]: number[]) => ({ x: cx + (sx - 0.5) * scale, y: cy + (sy - 0.5) * scale })),
   [pattern, cx, cy, scale]);
-
+ 
   return (
     <Animated.View style={[StyleSheet.absoluteFill, { opacity: fade }]}>
       <Svg width={W} height={H} style={StyleSheet.absoluteFill}>
@@ -142,7 +152,7 @@ const ConstellationInstance = React.memo(({ pattern, cx, cy, scale, lineColor, s
     </Animated.View>
   );
 });
-
+ 
 // ─── TWINKLING STAR ───────────────────────────────────────────
 const TwinkleStar = React.memo(({ x, y, r, delay, color }: { x: number; y: number; r: number; delay: number; color: string }) => {
   const a = useRef(new Animated.Value(0.2)).current;
@@ -155,7 +165,7 @@ const TwinkleStar = React.memo(({ x, y, r, delay, color }: { x: number; y: numbe
   }, []);
   return <Animated.View style={{ position:'absolute', left:x, top:y, width:r*2, height:r*2, borderRadius:r, backgroundColor:color, opacity:a }} />;
 });
-
+ 
 // ─── PROPS ────────────────────────────────────────────────────
 interface SplashProps {
   phase: 'checking' | 'consent' | 'downloading' | 'loading';
@@ -164,24 +174,24 @@ interface SplashProps {
   speed?: string;
   onConsent?: () => void;
 }
-
+ 
 // ─── MAIN ─────────────────────────────────────────────────────
 export const BrandedSplashScreen = ({ phase, status, progress = 0, speed, onConsent }: SplashProps) => {
   const scheme = useColorScheme();
   const dark = scheme === 'dark';
-
+ 
   // Dynamic color palette (light mode ~10% brighter stars/constellations)
   const C = useMemo(() => ({
     bg: dark ? '#000' : '#FFFFFF',
     fg: dark ? '#fff' : '#000',
-    threadColor: dark ? '#fff' : '#000',
-    threadOpacity: dark ? 0.35 : 0.25,
+    threadColor: '#E8673C', // Always orange mountain wires
+    threadOpacity: dark ? 0.75 : 0.65,
     starColor: dark ? '#fff' : '#000',
     starOpacity: dark ? 1 : 0.35,          // boosted from 0.25
     constLine: dark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.18)',  // boosted from 0.12
     constStar: dark ? 'white' : 'black',
     constStarOpacity: dark ? 0.9 : 0.6,    // boosted from 0.5
-    textOpacity: dark ? 0.7 : 0.85,
+    textOpacity: dark ? 0.85 : 0.95,
     cardBg: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
     cardBorder: dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
     cardTitle: dark ? '#fff' : '#000',
@@ -195,19 +205,15 @@ export const BrandedSplashScreen = ({ phase, status, progress = 0, speed, onCons
     tipColor: dark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.30)',
     miniConst: dark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.35)',
   }), [dark]);
-
+ 
   // ── Wave animation state ──
-  const [thread1, setThread1] = useState('');
-  const [thread2, setThread2] = useState('');
+  const [wireLines, setWireLines] = useState<React.ReactNode[]>([]);
   const timeRef = useRef(0);
   const rafRef = useRef<number | undefined>(undefined);
-  const pickRandom = () => NODES[1 + Math.floor(Math.random() * 3)];
-  const attr1 = useRef({ from: pickRandom(), to: pickRandom(), progress: 1 });
-  const attr2 = useRef({ from: pickRandom(), to: pickRandom(), progress: 1 });
-
+ 
   // ── Popup Animation ──
   const popupEntry = useRef(new Animated.Value(0)).current; 
-
+ 
   useEffect(() => {
     if (phase === 'consent') {
       // PREMIUM LIQUID SPRING
@@ -219,56 +225,82 @@ export const BrandedSplashScreen = ({ phase, status, progress = 0, speed, onCons
       }).start();
     }
   }, [phase]);
-
+ 
   const popupY = popupEntry.interpolate({
     inputRange: [0, 1],
     outputRange: [-400, 0] // Drop from 400px up
   });
-
+ 
   const popupScale = popupEntry.interpolate({
     inputRange: [0, 0.8, 1],
     outputRange: [0.8, 1.05, 1] // Slight overshoot scale
   });
-
+ 
   // ── Background constellations ──
   const [constellations, setConstellations] = useState<Array<{
     id: number; patternIdx: number; cx: number; cy: number; scale: number;
   }>>([]);
   const ctrRef = useRef(0);
-
+ 
   // ── Rotating tip + mini constellation ──
   const [tipIdx, setTipIdx] = useState(Math.floor(Math.random() * TIPS.length));
   const [miniConstIdx, setMiniConstIdx] = useState(Math.floor(Math.random() * PATTERNS.length));
   const [barConstIdx, setBarConstIdx] = useState(Math.floor(Math.random() * PATTERNS.length));
   const tipFade = useRef(new Animated.Value(1)).current;
-
-  // Rotate attractor every 5s
-  useEffect(() => {
-    const iv = setInterval(() => {
-      attr1.current = { from: attr1.current.to, to: pickRandom(), progress: 0 };
-      attr2.current = { from: attr2.current.to, to: pickRandom(), progress: 0 };
-    }, 5000);
-    return () => clearInterval(iv);
-  }, []);
-
-  // Wave animation loop
+ 
+  // Wireframe mountain generation loop
   useEffect(() => {
     const tick = () => {
-      timeRef.current += 0.016;
-      if (attr1.current.progress < 1) attr1.current.progress = Math.min(1, attr1.current.progress + 0.008);
-      if (attr2.current.progress < 1) attr2.current.progress = Math.min(1, attr2.current.progress + 0.008);
-      const ease = (t: number) => t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2, 3) / 2;
-      const l1 = ease(attr1.current.progress), l2 = ease(attr2.current.progress);
-      const t1 = { x: attr1.current.from.x + (attr1.current.to.x - attr1.current.from.x)*l1, y: attr1.current.from.y + (attr1.current.to.y - attr1.current.from.y)*l1 };
-      const t2 = { x: attr2.current.from.x + (attr2.current.to.x - attr2.current.from.x)*l2, y: attr2.current.from.y + (attr2.current.to.y - attr2.current.from.y)*l2 };
-      setThread1(buildNaturalThread(timeRef.current, 0, t1));
-      setThread2(buildNaturalThread(timeRef.current, 2.1, t2));
+      timeRef.current += 0.024;
+      const t = timeRef.current;
+      
+      const elements: React.ReactNode[] = [];
+
+      // Generate horizontal latitude lines
+      for (let r = 0; r < ROWS; r++) {
+        let path = '';
+        for (let c = 0; c < COLS; c++) {
+          const pt = getProjectedPoint(c, r, t, W, H);
+          path += `${c === 0 ? 'M' : 'L'}${pt.x.toFixed(1)},${pt.y.toFixed(1)}`;
+        }
+        elements.push(
+          <Path 
+            key={`lat-${r}`} 
+            d={path} 
+            stroke={C.threadColor} 
+            strokeWidth={0.7} 
+            fill="none" 
+            opacity={C.threadOpacity * (0.3 + 0.7 * (r / (ROWS - 1)))} 
+          />
+        );
+      }
+
+      // Generate vertical longitude lines
+      for (let c = 0; c < COLS; c++) {
+        let path = '';
+        for (let r = 0; r < ROWS; r++) {
+          const pt = getProjectedPoint(c, r, t, W, H);
+          path += `${r === 0 ? 'M' : 'L'}${pt.x.toFixed(1)},${pt.y.toFixed(1)}`;
+        }
+        elements.push(
+          <Path 
+            key={`long-${c}`} 
+            d={path} 
+            stroke={C.threadColor} 
+            strokeWidth={0.6} 
+            fill="none" 
+            opacity={C.threadOpacity * 0.75 * (0.35 + 0.65 * (c % 2 === 0 ? 1 : 0.4))} 
+          />
+        );
+      }
+
+      setWireLines(elements);
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-  }, []);
-
+  }, [C.threadColor, C.threadOpacity]);
+ 
   // Constellation spawner
   useEffect(() => {
     const spawn = () => {
@@ -286,7 +318,7 @@ export const BrandedSplashScreen = ({ phase, status, progress = 0, speed, onCons
     const iv = setInterval(spawn, 4000);
     return () => clearInterval(iv);
   }, []);
-
+ 
   // Rotate tip text every 3s with fade
   useEffect(() => {
     if (phase !== 'downloading' && phase !== 'loading') return;
@@ -299,7 +331,7 @@ export const BrandedSplashScreen = ({ phase, status, progress = 0, speed, onCons
     }, 3000);
     return () => clearInterval(iv);
   }, [phase]);
-
+ 
   // Rotate bar constellation icon every 2s
   useEffect(() => {
     if (phase !== 'downloading') return;
@@ -308,11 +340,11 @@ export const BrandedSplashScreen = ({ phase, status, progress = 0, speed, onCons
     }, 2000);
     return () => clearInterval(iv);
   }, [phase]);
-
+ 
   const twinklers = useMemo(() =>
     STARS.filter(() => Math.random() > 0.7).map((s, i) => ({ ...s, delay: i * 300 })),
   []);
-
+ 
   return (
     <View style={[styles.container, { backgroundColor: dark ? '#000000' : '#FFFFFF' }]}>
       {/* ── STAR FIELD ── */}
@@ -320,22 +352,18 @@ export const BrandedSplashScreen = ({ phase, status, progress = 0, speed, onCons
         <View key={i} style={{ position:'absolute', left:s.x, top:s.y, width:s.r*2, height:s.r*2, borderRadius:s.r, backgroundColor:C.starColor, opacity:s.o * C.starOpacity }} />
       ))}
       {twinklers.map((s, i) => <TwinkleStar key={`tw${i}`} x={s.x} y={s.y} r={s.r} delay={s.delay} color={C.starColor} />)}
-
+ 
       {/* ── CONSTELLATIONS ── */}
       {constellations.map(c => (
         <ConstellationInstance key={c.id} pattern={PATTERNS[c.patternIdx]} cx={c.cx} cy={c.cy} scale={c.scale}
           lineColor={C.constLine} starColor={C.constStar} starOpacity={C.constStarOpacity} />
       ))}
-
-      {/* ── LOGO ── */}
+ 
+      {/* ── LOGO (3D Wireframe Mountains) ── */}
       <Svg width={W} height={H} style={StyleSheet.absoluteFill}>
-        <Path d={thread1} stroke={C.threadColor} strokeWidth={1.5} fill="none" opacity={C.threadOpacity} />
-        <Path d={thread2} stroke={C.threadColor} strokeWidth={1.5} fill="none" opacity={C.threadOpacity} />
-        {NODES.map((n, i) => (
-          <SvgCircle key={i} cx={n.x} cy={n.y} r={R} fill={C.fg} opacity={1} />
-        ))}
+        {wireLines}
       </Svg>
-
+ 
       {/* ── DRIFT TEXT ── */}
       <View style={styles.textAnchor}>
         <Text style={[styles.driftText, { color: C.fg, opacity: C.textOpacity }]}>D R I F T</Text>
@@ -424,7 +452,7 @@ export const BrandedSplashScreen = ({ phase, status, progress = 0, speed, onCons
 // ─── STYLES ───────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
-  textAnchor: { position:'absolute', top: NODES[2].y + R + 28, width: W, alignItems:'center' },
+  textAnchor: { position:'absolute', top: H * 0.53, width: W, alignItems:'center' },
   driftText: { fontSize:13, fontWeight:'800', letterSpacing:14 },
   overlayContainer: { position:'absolute', bottom:90, width:'100%', alignItems:'center', paddingHorizontal:28, zIndex:1000 },
   card: { width:'100%', padding:28, borderRadius:28, borderWidth:1 },
