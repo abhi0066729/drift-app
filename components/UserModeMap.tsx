@@ -4,125 +4,52 @@ import Animated, {
   useAnimatedStyle, 
   useSharedValue, 
   withSpring,
-  useAnimatedProps,
-  withRepeat,
-  withTiming,
-  Easing
+  useAnimatedProps
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Svg, { Path, Rect, Circle, Defs, Pattern, RadialGradient, Stop } from 'react-native-svg';
+import Svg, { Path, Rect, Circle, Defs, Pattern } from 'react-native-svg';
 import DriftNode from './DriftNode';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
-// 10 Mock Datasets reflecting various rich media formats
+// 20 Mock Datasets reflecting various rich media formats
 const MOCK_CARDS = [
-  {
-    id: 'card-1',
-    source_type: 'image',
-    content: 'Sunset in Manali',
-    content_image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400&q=80',
-    tags: ['Travel', 'Mountains'],
-    unfocusedX: 2000 - 220,
-    unfocusedY: 2000 - 280,
-    date: 'May 12 · 7:45 PM'
-  },
-  {
-    id: 'card-2',
-    source_type: 'voice',
-    duration: '1:30',
-    unfocusedX: 2000 + 80,
-    unfocusedY: 2000 - 320,
-    date: 'May 12'
-  },
-  {
-    id: 'card-3',
-    source_type: 'text',
-    category: 'Idea',
-    content: 'Kinetic typography scaling dynamically based on user motion acceleration.',
-    unfocusedX: 2000 + 200,
-    unfocusedY: 2000 - 180,
-    date: 'May 12'
-  },
-  {
-    id: 'card-4',
-    source_type: 'todo',
-    content: 'Rebuild Tasks',
-    items: [
-      { text: 'Design infinite canvas layout', completed: true },
-      { text: 'Neighbor reacts magnetic avoidance', completed: true },
-      { text: 'SVG curved line connectors', completed: false }
-    ],
-    unfocusedX: 2000 - 80,
-    unfocusedY: 2000 - 40
-  },
-  {
-    id: 'card-5',
-    source_type: 'image',
-    content: 'Bali Coastline',
-    content_image: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=400&q=80',
-    tags: ['Travel', 'Ocean'],
-    unfocusedX: 2000 + 180,
-    unfocusedY: 2000 + 30,
-    date: 'May 13 · 9:15 AM'
-  },
-  {
-    id: 'card-6',
-    source_type: 'document',
-    content: 'Project Brief.pdf',
-    meta: 'dribbble.com · 2.4MB',
-    unfocusedX: 2000 - 260,
-    unfocusedY: 2000 - 20
-  },
-  {
-    id: 'card-7',
-    source_type: 'map',
-    content: 'Bali Topographies',
-    unfocusedX: 2000 - 120,
-    unfocusedY: 2000 + 160,
-    date: 'May 14'
-  },
-  {
-    id: 'card-8',
-    source_type: 'moodboard',
-    content: 'Sea Textures Moodboard',
-    images: [
-      'https://images.unsplash.com/photo-1505118380757-91f5f5632de0?w=200&q=80',
-      'https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=200&q=80',
-      'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=200&q=80',
-      'https://images.unsplash.com/photo-1473116763269-25541579ffbe?w=200&q=80'
-    ],
-    itemsCount: '12 items',
-    unfocusedX: 2000 - 360,
-    unfocusedY: 2000 + 180
-  },
-  {
-    id: 'card-9',
-    source_type: 'text',
-    category: 'Journal',
-    content: 'Synchronized visual layout specifications. Moving entirely to a 2D spatial canvas feed.',
-    unfocusedX: 2000 + 120,
-    unfocusedY: 2000 + 280,
-    date: 'Today'
-  },
-  {
-    id: 'card-10',
-    source_type: 'link',
-    content: 'imdb.com/title/tt0111161',
-    title: 'The Shawshank Redemption',
-    unfocusedX: 2000 + 300,
-    unfocusedY: 2000 - 100,
-    date: 'Yesterday'
-  }
+  { id: 'card-1', source_type: 'image', content: 'Manali Heights', content_image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400&q=80', unfocusedX: 2000 - 320, unfocusedY: 2000 - 380, date: 'Today · 8:15 AM', category: 'Travel' },
+  { id: 'card-2', source_type: 'voice', duration: '1:30', unfocusedX: 2000 + 120, unfocusedY: 2000 - 360, date: 'Today' },
+  { id: 'card-3', source_type: 'text', category: 'Idea', content: 'Kinetic typography scaling dynamically based on user motion acceleration.', unfocusedX: 2000 + 380, unfocusedY: 2000 - 240, date: 'Today' },
+  { id: 'card-4', source_type: 'todo', content: 'Rebuild Tasks', items: [{ text: 'Design infinite canvas layout', completed: true }, { text: 'SVG curved line connectors', completed: false }], unfocusedX: 2000 - 80, unfocusedY: 2000 - 160 },
+  { id: 'card-5', source_type: 'image', content: 'Bali Coastline', content_image: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=400&q=80', unfocusedX: 2000 + 260, unfocusedY: 2000 - 20, date: 'Yesterday · 9:15 AM', category: 'Travel' },
+  { id: 'card-6', source_type: 'document', content: 'Project Brief.pdf', meta: 'dribbble.com · 2.4MB', unfocusedX: 2000 - 340, unfocusedY: 2000 - 60 },
+  { id: 'card-7', source_type: 'map', content: 'Bali Topographies', unfocusedX: 2000 - 180, unfocusedY: 2000 + 120, date: 'May 14' },
+  { id: 'card-8', source_type: 'moodboard', content: 'Sea Textures', images: ['https://images.unsplash.com/photo-1505118380757-91f5f5632de0?w=200&q=80', 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=200&q=80'], itemsCount: '12 items', unfocusedX: 2000 - 420, unfocusedY: 2000 + 220 },
+  { id: 'card-9', source_type: 'text', category: 'Journal', content: 'Synchronized visual layout specifications. Moving entirely to a 2D spatial canvas feed.', unfocusedX: 2000 + 120, unfocusedY: 2000 + 180, date: 'May 13' },
+  { id: 'card-10', source_type: 'link', content: 'imdb.com/title/tt0111161', title: 'The Shawshank Redemption', unfocusedX: 2000 + 380, unfocusedY: 2000 + 80, date: 'May 13' },
+  { id: 'card-11', source_type: 'image', content: 'Tokyo Streets', content_image: 'https://images.unsplash.com/photo-1540959733332-eab4deceeaf7?w=400&q=80', unfocusedX: 2000 - 240, unfocusedY: 2000 + 340, date: 'May 14 · 10:20 PM', category: 'Inspiration' },
+  { id: 'card-12', source_type: 'voice', duration: '0:45', unfocusedX: 2000 - 60, unfocusedY: 2000 + 420, date: 'May 14' },
+  { id: 'card-13', source_type: 'text', category: 'Reflection', content: 'Fiercely protect your focus. Almost everything is noise.', unfocusedX: 2000 + 220, unfocusedY: 2000 + 380, date: 'May 15' },
+  { id: 'card-14', source_type: 'todo', content: 'Weekly Groceries', items: [{ text: 'Oat milk & Espresso beans', completed: true }, { text: 'Avocados & Sourdough bread', completed: false }], unfocusedX: 2000 + 440, unfocusedY: 2000 + 280 },
+  { id: 'card-15', source_type: 'link', content: 'linear.app/design', title: 'Linear Design System', unfocusedX: 2000 - 460, unfocusedY: 2000 - 220, date: 'May 15' },
+  { id: 'card-16', source_type: 'document', content: 'Roadmap_v2.pdf', meta: 'google.drive · 1.8MB', unfocusedX: 2000 - 180, unfocusedY: 2000 - 320 },
+  { id: 'card-17', source_type: 'map', content: 'Studio Location', unfocusedX: 2000 + 80, unfocusedY: 2000 - 480, date: 'May 16' },
+  { id: 'card-18', source_type: 'moodboard', content: 'Amber Palette', images: ['https://images.unsplash.com/photo-1509316975850-ff9c5edd0cd9?w=200&q=80', 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=200&q=80'], itemsCount: '6 items', unfocusedX: 2000 - 380, unfocusedY: 2000 - 460 },
+  { id: 'card-19', source_type: 'image', content: 'Mountain Summit', content_image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400&q=80', unfocusedX: 2000 + 480, unfocusedY: 2000 - 420, date: 'May 16 · 5:30 AM', category: 'Outdoors' },
+  { id: 'card-20', source_type: 'text', category: 'Study', content: 'Deep study into React Native SVG rendering performance optimizations.', unfocusedX: 2000 - 480, unfocusedY: 2000 + 60, date: 'May 17' }
 ];
+
+// Linear path connections to form constellation curves between consecutive notes
+const CARD_CONNECTIONS = Array.from({ length: 19 }, (_, i) => ({
+  fromId: `card-${i + 1}`,
+  toId: `card-${i + 2}`
+}));
 
 interface UserModeMapProps {
   onNodePress: (node: any, type: string) => void;
   theme?: 'light' | 'dark';
+  focusedCardIndex?: number;
 }
 
 const UserModeMap = React.forwardRef<any, UserModeMapProps>((props, ref) => {
-  const { onNodePress, theme = 'light' } = props;
+  const { onNodePress, theme = 'light', focusedCardIndex } = props;
 
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
 
@@ -143,7 +70,7 @@ const UserModeMap = React.forwardRef<any, UserModeMapProps>((props, ref) => {
   const activeDragY = useSharedValue(0);
   const draggedNodeId = useSharedValue<string | null>(null);
 
-  // Canvas Pan & Zoom gesture handler
+  // Pan gesture
   const panGesture = Gesture.Pan()
     .onStart(() => {
       'worklet';
@@ -156,6 +83,7 @@ const UserModeMap = React.forwardRef<any, UserModeMapProps>((props, ref) => {
       canvasY.value = startY.value + event.translationY;
     });
 
+  // Pinch gesture
   const pinchGesture = Gesture.Pinch()
     .onStart(() => {
       'worklet';
@@ -168,6 +96,17 @@ const UserModeMap = React.forwardRef<any, UserModeMapProps>((props, ref) => {
 
   const combinedGesture = Gesture.Simultaneous(panGesture, pinchGesture);
 
+  // Center on focused note when index changes (controlled by shuffler slider)
+  useEffect(() => {
+    if (focusedCardIndex !== undefined && MOCK_CARDS[focusedCardIndex]) {
+      const node = MOCK_CARDS[focusedCardIndex];
+      const targetX = -(node.unfocusedX - 2000);
+      const targetY = -(node.unfocusedY - 2000);
+      canvasX.value = withSpring(targetX, { damping: 22, stiffness: 120 });
+      canvasY.value = withSpring(targetY, { damping: 22, stiffness: 120 });
+    }
+  }, [focusedCardIndex]);
+
   const animatedCanvasStyle = useAnimatedStyle(() => ({
     left: -2000 + windowWidth / 2,
     top: -2000 + windowHeight / 2,
@@ -178,34 +117,55 @@ const UserModeMap = React.forwardRef<any, UserModeMapProps>((props, ref) => {
     ],
   }));
 
-  // Visual variants mapping for Light vs Dark themes
+  // Dynamic strokeWidth props for connection lines (inversely proportional to scale)
+  const animatedLineProps = useAnimatedProps(() => {
+    return {
+      strokeWidth: 2.0 / canvasScale.value,
+    };
+  });
+
   const isDark = true;
-  const bgColor = isDark ? '#09090A' : '#FAF9F6';
   const gridDotColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)';
 
   return (
     <View style={styles.container}>
       <GestureDetector gesture={combinedGesture}>
         <View style={StyleSheet.absoluteFillObject}>
-          {/* Canvas Wrapper */}
           <Animated.View style={[styles.canvas, animatedCanvasStyle]}>
             
-            {/* Infinite SVG Dot Grid */}
+            {/* Infinite SVG Layer for grid and constellation lines */}
             <View style={StyleSheet.absoluteFillObject}>
               <Svg width={4000} height={4000} style={StyleSheet.absoluteFillObject}>
                 <Defs>
-                  {/* Dynamic Repeating Dot Grid */}
                   <Pattern id="dotGrid" width="32" height="32" patternUnits="userSpaceOnUse">
                     <Circle cx="2" cy="2" r="1.2" fill={gridDotColor} />
                   </Pattern>
                 </Defs>
 
-                {/* Dot Grid Layer */}
+                {/* Dot Grid */}
                 <Rect width={4000} height={4000} fill="url(#dotGrid)" />
+
+                {/* Orange Constellation Lines (Scale-adaptive stroke width) */}
+                {CARD_CONNECTIONS.map((conn, idx) => {
+                  const src = MOCK_CARDS.find(c => c.id === conn.fromId);
+                  const tgt = MOCK_CARDS.find(c => c.id === conn.toId);
+                  if (!src || !tgt) return null;
+
+                  return (
+                    <AnimatedPath
+                      key={`bond-${idx}`}
+                      d={`M ${src.unfocusedX} ${src.unfocusedY} Q ${(src.unfocusedX + tgt.unfocusedX)/2 + 50} ${(src.unfocusedY + tgt.unfocusedY)/2 - 50} ${tgt.unfocusedX} ${tgt.unfocusedY}`}
+                      stroke="#E8673C"
+                      animatedProps={animatedLineProps}
+                      fill="none"
+                      opacity={0.65}
+                    />
+                  );
+                })}
               </Svg>
             </View>
 
-            {/* Float cards in 2D coordinate positions */}
+            {/* Render 20 Spatial Cards */}
             {MOCK_CARDS.map((node) => (
               <DriftNode
                 key={node.id}

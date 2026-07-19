@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, Pressable, ScrollView, Dimensions, TextInput, Platform, useWindowDimensions, Image } from 'react-native';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { StyleSheet, Text, View, Pressable, ScrollView, Dimensions, TextInput, Platform, Image, TouchableOpacity, Alert } from 'react-native';
 import Animated, { 
   useAnimatedStyle, 
   useSharedValue, 
   withRepeat, 
   withTiming, 
-  Easing 
+  Easing,
+  withSpring
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,17 +20,12 @@ import ReadingModal from '@/components/ReadingModal';
 const LIGHT_BG = require('../../assets/images/light_bg.png');
 const DARK_BG = require('../../assets/images/dark_bg.png');
 
-// List of scrollable filter chips
-const FILTER_CHIPS = ['All', 'Notes', 'Media', 'Audio', 'Docs', 'Maps'];
-
 export default function TodayScreen() {
   const insets = useSafeAreaInsets();
   const theme = useNotesStore(state => state.theme);
   const toggleTheme = useNotesStore(state => state.toggleTheme);
-  const [activeFilter, setActiveFilter] = useState('All');
   const [readingNode, setReadingNode] = useState<any>(null);
   
-  // Safe dimension evaluation inside function body (avoids startup file-scope zero-evaluation)
   const { width: windowWidth, height: windowHeight } = Dimensions.get('window');
 
   // Project Space Switcher State
@@ -52,13 +48,11 @@ export default function TodayScreen() {
   const filamentGlow = useSharedValue(0.4);
 
   useEffect(() => {
-    // Smooth 25s texture breathing cycle (scale and subtle pan loop)
     bgAnimation.value = withRepeat(
       withTiming(1, { duration: 25000, easing: Easing.bezier(0.33, 1, 0.68, 1) }),
       -1,
       true
     );
-    // Glowing threads pulse cycle (3.2s breathing filament loop)
     filamentGlow.value = withRepeat(
       withTiming(0.85, { duration: 3200, easing: Easing.inOut(Easing.ease) }),
       -1,
@@ -67,10 +61,10 @@ export default function TodayScreen() {
   }, []);
 
   const animBgStyle = useAnimatedStyle(() => {
-    const scale = 1.0 + bgAnimation.value * 0.04; // Base zoom
-    const translateX = Math.sin(bgAnimation.value * Math.PI) * 12; // Base pan X
-    const translateY = Math.cos(bgAnimation.value * Math.PI) * 6; // Base pan Y
-    const rotate = `${Math.sin(bgAnimation.value * Math.PI) * 1.2}deg`; // Base rotate
+    const scale = 1.0 + bgAnimation.value * 0.04;
+    const translateX = Math.sin(bgAnimation.value * Math.PI) * 12;
+    const translateY = Math.cos(bgAnimation.value * Math.PI) * 6;
+    const rotate = `${Math.sin(bgAnimation.value * Math.PI) * 1.2}deg`;
     return {
       transform: [
         { scale },
@@ -83,10 +77,10 @@ export default function TodayScreen() {
 
   const animBgOverlayStyle = useAnimatedStyle(() => {
     const t = bgAnimation.value;
-    const scale = 1.05 - t * 0.035; // Counter zoom
-    const translateX = Math.cos(t * Math.PI) * -10; // Counter pan X
-    const translateY = Math.sin(t * Math.PI) * -5; // Counter pan Y
-    const rotate = `${Math.cos(t * Math.PI) * -1.8}deg`; // Counter rotate
+    const scale = 1.05 - t * 0.035;
+    const translateX = Math.cos(t * Math.PI) * -10;
+    const translateY = Math.sin(t * Math.PI) * -5;
+    const rotate = `${Math.cos(t * Math.PI) * -1.8}deg`;
     return {
       transform: [
         { scale },
@@ -108,13 +102,27 @@ export default function TodayScreen() {
 
   const isDark = theme === 'dark';
 
+  const [sliderVal, setSliderVal] = useState(0);
+
+  // Dynamic label for focused card in slider
+  const focusedCardLabel = useMemo(() => {
+    const totalCards = 20;
+    const idx = Math.min(totalCards - 1, Math.floor(sliderVal * totalCards));
+    // Categories matching index in MOCK_CARDS
+    const categories = [
+      'Travel', 'Audio', 'Idea', 'Tasks', 'Travel', 'Document', 'Map', 'Moodboard', 'Journal', 'Link',
+      'Inspiration', 'Audio', 'Reflection', 'Tasks', 'Link', 'Document', 'Map', 'Moodboard', 'Outdoors', 'Study'
+    ];
+    const cat = categories[idx] || 'Note';
+    return `[${cat.toUpperCase()}] NOTE ${idx + 1} OF ${totalCards}`;
+  }, [sliderVal]);
+
   return (
     <View style={[styles.container, { backgroundColor: isDark ? '#09090A' : '#FAF9F6' }]}>
       
       {/* Viewport-Fixed Custom Background with refraction morphing overlay */}
       {windowWidth > 0 && windowHeight > 0 && (
         <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
-          {/* Base Background Image Layer */}
           <Animated.View style={[StyleSheet.absoluteFillObject, animBgStyle]}>
             <Image
               source={isDark ? DARK_BG : LIGHT_BG}
@@ -123,7 +131,6 @@ export default function TodayScreen() {
             />
           </Animated.View>
           
-          {/* Refraction Warp Overlap Layer */}
           <Animated.View style={[StyleSheet.absoluteFillObject, animBgOverlayStyle]}>
             <Image
               source={isDark ? DARK_BG : LIGHT_BG}
@@ -132,10 +139,8 @@ export default function TodayScreen() {
             />
           </Animated.View>
 
-          {/* Synchronized glowing filaments overlay (follows image gold ribbons) */}
           <Animated.View style={[StyleSheet.absoluteFillObject, animFilamentStyle]} pointerEvents="none">
             <Svg width={windowWidth} height={windowHeight} style={StyleSheet.absoluteFillObject}>
-              {/* Volumetric Glowing Ribbon 1 (Center nexus/vortex swipe) */}
               <Path 
                 d={`M ${windowWidth * 0.85} -30 Q ${windowWidth * 0.3} ${windowHeight * 0.35} ${windowWidth * 0.55} ${windowHeight * 0.5} T ${windowWidth * 0.15} ${windowHeight * 1.08}`}
                 stroke={isDark ? '#E8673C' : '#FF8F6B'}
@@ -167,6 +172,7 @@ export default function TodayScreen() {
         <UserModeMap 
           onNodePress={handleNodePress}
           theme={theme}
+          focusedCardIndex={Math.min(19, Math.floor(sliderVal * 20))}
         />
       </View>
 
@@ -238,8 +244,51 @@ export default function TodayScreen() {
         </View>
       )}
 
-      {/* Premium Dock Menu (Dock-style, compact pill, vertical separators) */}
-      <View style={[styles.kineticDock, { paddingBottom: insets.bottom + 8 }]}>
+      {/* Note-Shuffling Glassmorphic Dial Slider */}
+      <View style={[styles.sliderContainer, { bottom: 94 }]}>
+        <BlurView experimentalBlurMethod="dimezisBlurView" intensity={40} style={StyleSheet.absoluteFillObject} tint="dark" />
+        <View style={[styles.cardBorderOverlay, { borderRadius: 20, borderColor: 'rgba(255, 255, 255, 0.08)', borderWidth: 1 }]} pointerEvents="none" />
+        
+        <View style={styles.sliderHeader}>
+          <Text style={styles.sliderLabel}>{focusedCardLabel}</Text>
+        </View>
+
+        <View style={styles.sliderTrackContainer}>
+          <View style={styles.sliderTicks}>
+            {Array.from({ length: 25 }).map((_, i) => (
+              <View key={i} style={[styles.sliderTick, i % 5 === 0 && styles.sliderTickMajor]} />
+            ))}
+          </View>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ width: 280 }}
+            scrollEventThrottle={16}
+            onScroll={(e) => {
+              const x = e.nativeEvent.contentOffset.x;
+              const maxScroll = 280 - 40;
+              const ratio = Math.max(0, Math.min(1, x / maxScroll));
+              setSliderVal(ratio);
+            }}
+            style={styles.sliderScroll}
+          >
+            <View style={{ width: 280 + 200, height: 20 }} />
+          </ScrollView>
+
+          <View 
+            style={[
+              styles.sliderThumb, 
+              { 
+                left: 10 + sliderVal * (240 - 32)
+              }
+            ]} 
+          />
+        </View>
+      </View>
+
+      {/* Premium Dock Menu */}
+      <View style={[styles.kineticDock, { bottom: 12 + insets.bottom }]}>
         <View style={styles.dockInner}>
           <BlurView experimentalBlurMethod="dimezisBlurView" intensity={40} style={StyleSheet.absoluteFillObject} tint="dark" />
           <View style={[styles.cardBorderOverlay, { borderRadius: 32, borderColor: 'rgba(255, 255, 255, 0.08)', borderWidth: 1 }]} pointerEvents="none" />
@@ -250,7 +299,6 @@ export default function TodayScreen() {
             </Pressable>
             <View style={styles.dockDivider} />
             <Pressable style={styles.dockItem}>
-              {/* Custom orange glowing active tab wrapper */}
               <View style={styles.activeDockGlow}>
                 <ExpoLinearGradient
                   colors={['#FF8F6B', '#E8673C', '#B83F1B']}
@@ -282,7 +330,6 @@ export default function TodayScreen() {
         </View>
       </View>
 
-      {/* Detail Reading view */}
       {readingNode && (
         <ReadingModal 
           node={readingNode} 
@@ -303,11 +350,80 @@ const styles = StyleSheet.create({
     height: '100%',
     position: 'absolute',
   },
-  
-  // Dock menu styles
+  sliderContainer: {
+    position: 'absolute',
+    alignSelf: 'center',
+    width: 280,
+    height: 64,
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.35,
+    shadowRadius: 18,
+    elevation: 8,
+    zIndex: 1000,
+    paddingHorizontal: 12,
+    justifyContent: 'center',
+  },
+  sliderHeader: {
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  sliderLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#E8673C',
+    letterSpacing: 0.8,
+  },
+  sliderTrackContainer: {
+    height: 24,
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  sliderTicks: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    paddingHorizontal: 10,
+    position: 'absolute',
+    opacity: 0.25,
+  },
+  sliderTick: {
+    width: 1.5,
+    height: 8,
+    backgroundColor: '#FFFFFF',
+  },
+  sliderTickMajor: {
+    height: 14,
+    backgroundColor: '#E8673C',
+  },
+  sliderScroll: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 24,
+    zIndex: 20,
+    opacity: 0.1,
+  },
+  sliderThumb: {
+    width: 32,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderWidth: 1,
+    borderColor: '#E8673C',
+    position: 'absolute',
+    shadowColor: '#E8673C',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
+    elevation: 3,
+    zIndex: 10,
+  },
   kineticDock: {
     position: 'absolute',
-    bottom: 24,
     alignSelf: 'center',
     zIndex: 1000,
   },
@@ -382,7 +498,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.15)',
   },
-
   header: {
     position: 'absolute',
     top: 0,
@@ -431,7 +546,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#E8673C',
   },
-  // Project Switcher Dropdown Modal
   dropdownContainer: {
     position: 'absolute',
     left: 24,
@@ -522,7 +636,6 @@ const styles = StyleSheet.create({
     borderRadius: 36,
     borderWidth: 1,
   },
-  // Background Blobs
   blob: {
     position: 'absolute',
     borderRadius: 300,
@@ -533,13 +646,13 @@ const styles = StyleSheet.create({
     right: -120,
     width: 480,
     height: 480,
-    backgroundColor: '#FFA87D', // Vibrant premium sunset orange-peach
+    backgroundColor: '#FFA87D',
   },
   blobLavender: {
     bottom: 80,
     left: -140,
     width: 400,
     height: 400,
-    backgroundColor: '#FFE5A3', // Vibrant golden-amber sun glow
+    backgroundColor: '#FFE5A3',
   },
 });

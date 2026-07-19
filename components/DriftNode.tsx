@@ -275,18 +275,20 @@ function DriftNode({
             );
           case 'image':
             return (
-              <View style={styles.photoCard}>
+              <View style={[styles.photoCard, { height: 180 }]}>
                 <Image 
                   source={{ uri: node.content_image }} 
-                  style={[styles.photoImage, { borderTopLeftRadius: cardBorderRadius, borderTopRightRadius: cardBorderRadius }]} 
+                  style={[StyleSheet.absoluteFillObject, { borderRadius: cardBorderRadius }]} 
                   resizeMode="cover" 
                 />
-                <View style={styles.photoMeta}>
+                {/* Floating Glassmorphic Text overlay */}
+                <View style={styles.photoGlassOverlay}>
+                  <BlurView experimentalBlurMethod="dimezisBlurView" intensity={30} style={StyleSheet.absoluteFillObject} tint="dark" />
                   <View style={styles.photoHeader}>
-                    <Ionicons name="heart" size={12} color="#E8673C" style={{ marginRight: 6 }} />
-                    <Text style={styles.photoTitle}>{node.content}</Text>
+                    <Ionicons name="image-outline" size={12} color="#E8673C" style={{ marginRight: 6 }} />
+                    <Text style={styles.photoTitle} numberOfLines={2}>{node.content}</Text>
                   </View>
-                  <Text style={styles.photoTime}>{node.date || 'May 12'}</Text>
+                  <Text style={styles.photoTime}>{node.date || 'Today'}</Text>
                 </View>
               </View>
             );
@@ -369,6 +371,20 @@ function DriftNode({
 export default memo(DriftNode);
 
 const styles = StyleSheet.create({
+
+  photoGlassOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 10,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    overflow: 'hidden',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.08)',
+  },
+
   cardWrapper: {
     position: 'absolute',
     left: 0,
@@ -675,6 +691,7 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
   photoCard: {
+    overflow: 'hidden',
     width: 180,
   },
   photoImage: {
