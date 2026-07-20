@@ -105,6 +105,16 @@ export default function TodayScreen() {
   const isDark = theme === 'dark';
 
   const [sliderVal, setSliderVal] = useState(0);
+  const [menuNode, setMenuNode] = useState<any>(null);
+  const [showFocusModeSelection, setShowFocusModeSelection] = useState<boolean>(false);
+
+  const handleOpenQuickMenu = (node: any) => {
+    setMenuNode(node);
+  };
+
+  const handleCloseMenu = () => {
+    setMenuNode(null);
+  };
   
   // Gesture-driven slider shared values
   const sliderX = useSharedValue(0);
@@ -347,11 +357,164 @@ export default function TodayScreen() {
           onClose={() => setReadingNode(null)} 
         />
       )}
+      {/* Quick Context Menu with Blur Overlay */}
+      {menuNode && (
+        <View style={StyleSheet.absoluteFillObject}>
+          <BlurView experimentalBlurMethod="dimezisBlurView" intensity={65} style={StyleSheet.absoluteFillObject} tint="dark" />
+          <Pressable style={StyleSheet.absoluteFillObject} onPress={handleCloseMenu} />
+          
+          <View style={styles.contextMenuCard}>
+            <Text style={styles.contextMenuTitle}>[ {menuNode.source_type.toUpperCase()} ] ACTION MENU</Text>
+            
+            <TouchableOpacity style={styles.contextMenuItem} onPress={handleCloseMenu}>
+              <Ionicons name="star-outline" size={16} color="#E8673C" style={{ marginRight: 12 }} />
+              <Text style={styles.contextMenuText}>Add to Favorites</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.contextMenuItem} onPress={() => { handleCloseMenu(); setShowFocusModeSelection(true); }}>
+              <Ionicons name="git-branch-outline" size={16} color="#E8673C" style={{ marginRight: 12 }} />
+              <Text style={styles.contextMenuText}>Open Focus Mode Layout</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.contextMenuItem} onPress={handleCloseMenu}>
+              <Ionicons name="folder-outline" size={16} color="#E8673C" style={{ marginRight: 12 }} />
+              <Text style={styles.contextMenuText}>Move to project Space</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.contextMenuItem} onPress={handleCloseMenu}>
+              <Ionicons name="trash-outline" size={16} color="#FF4D4D" style={{ marginRight: 12 }} />
+              <Text style={[styles.contextMenuText, { color: '#FF4D4D' }]}>Delete Node</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Focus Mode Selection Layout Popup */}
+      {showFocusModeSelection && (
+        <View style={StyleSheet.absoluteFillObject}>
+          <BlurView experimentalBlurMethod="dimezisBlurView" intensity={70} style={StyleSheet.absoluteFillObject} tint="dark" />
+          <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setShowFocusModeSelection(false)} />
+          
+          <View style={styles.focusSelectionCard}>
+            <Text style={styles.focusTitle}>Focus Mode Layout</Text>
+            <Text style={styles.focusSub}>Choose how you want to interact with this grouped cluster</Text>
+            
+            <TouchableOpacity 
+              style={styles.focusOptionBtn} 
+              onPress={() => setShowFocusModeSelection(false)}
+            >
+              <Ionicons name="albums-outline" size={24} color="#E8673C" />
+              <View style={{ marginLeft: 16 }}>
+                <Text style={styles.focusOptionTitle}>Stack View</Text>
+                <Text style={styles.focusOptionDesc}>Flip through cards vertically to peek contents underneath.</Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.focusOptionBtn} 
+              onPress={() => setShowFocusModeSelection(false)}
+            >
+              <Ionicons name="apps-outline" size={24} color="#E8673C" />
+              <View style={{ marginLeft: 16 }}>
+                <Text style={styles.focusOptionTitle}>Interactive Cluster</Text>
+                <Text style={styles.focusOptionDesc}>Grid display of floating notes with thread loops hidden.</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+
+  contextMenuCard: {
+    position: 'absolute',
+    alignSelf: 'center',
+    top: '35%',
+    width: 260,
+    borderRadius: 20,
+    backgroundColor: 'rgba(15, 15, 18, 0.95)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    padding: 16,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.45,
+    shadowRadius: 24,
+    elevation: 12,
+  },
+  contextMenuTitle: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#E8673C',
+    letterSpacing: 0.8,
+    marginBottom: 14,
+    textAlign: 'center',
+  },
+  contextMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  contextMenuText: {
+    fontSize: 13,
+    color: '#FFFFFF',
+  },
+  focusSelectionCard: {
+    position: 'absolute',
+    alignSelf: 'center',
+    top: '30%',
+    width: 320,
+    borderRadius: 24,
+    backgroundColor: 'rgba(15, 15, 18, 0.95)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    padding: 24,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.5,
+    shadowRadius: 28,
+    elevation: 16,
+  },
+  focusTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  focusSub: {
+    fontSize: 11,
+    color: 'rgba(255, 255, 255, 0.45)',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  focusOptionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  focusOptionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  focusOptionDesc: {
+    fontSize: 10,
+    color: 'rgba(255, 255, 255, 0.4)',
+    marginTop: 2,
+    width: 200,
+  },
+
   container: {
     flex: 1,
   },

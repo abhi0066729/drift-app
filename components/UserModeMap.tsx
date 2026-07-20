@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
-import { StyleSheet, View, useWindowDimensions, Platform } from 'react-native';
+import React, { useEffect, useState, useMemo } from 'react';
+import { StyleSheet, View, useWindowDimensions, Platform, Text } from 'react-native';
 import Animated, { 
   useAnimatedStyle, 
   useSharedValue, 
   withSpring,
-  useAnimatedProps
+  useAnimatedProps,
+  withTiming
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Svg, { Path, Rect, Circle, Defs, Pattern } from 'react-native-svg';
@@ -13,7 +14,7 @@ import DriftNode from './DriftNode';
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
 // 20 Mock Datasets reflecting various rich media formats
-const MOCK_CARDS = [
+const INITIAL_MOCK_CARDS = [
   { id: 'card-1', source_type: 'image', content: 'Manali Heights', content_image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400&q=80', unfocusedX: 2000 - 320, unfocusedY: 2000 - 380, date: 'Today · 8:15 AM', category: 'Travel' },
   { id: 'card-2', source_type: 'voice', duration: '1:30', unfocusedX: 2000 + 120, unfocusedY: 2000 - 360, date: 'Today' },
   { id: 'card-3', source_type: 'text', category: 'Idea', content: 'Kinetic typography scaling dynamically based on user motion acceleration.', unfocusedX: 2000 + 380, unfocusedY: 2000 - 240, date: 'Today' },
@@ -36,22 +37,25 @@ const MOCK_CARDS = [
   { id: 'card-20', source_type: 'text', category: 'Study', content: 'Deep study into React Native SVG rendering performance optimizations.', unfocusedX: 2000 - 480, unfocusedY: 2000 + 60, date: 'May 17' }
 ];
 
-// Linear path connections to form constellation curves between consecutive notes
-const CARD_CONNECTIONS = Array.from({ length: 19 }, (_, i) => ({
-  fromId: `card-${i + 1}`,
-  toId: `card-${i + 2}`
-}));
-
 interface UserModeMapProps {
   onNodePress: (node: any, type: string) => void;
   theme?: 'light' | 'dark';
   focusedCardIndex?: number;
+  onOpenMenu?: (node: any) => void;
 }
 
 const UserModeMap = React.forwardRef<any, UserModeMapProps>((props, ref) => {
-  const { onNodePress, theme = 'light', focusedCardIndex } = props;
+  const { onNodePress, theme = 'light', focusedCardIndex, onOpenMenu } = props;
 
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+
+  // Cards layout state to handle dynamic positioning, grouping, and fusion
+  const [cards, setCards] = useState<any[]>(INITIAL_MOCK_CARDS);
+  // Groupings: array of arrays of node IDs
+  const [groups, setGroups] = useState<string[][]>([
+    ['card-6', 'card-7', 'card-8'], // Initial cluster group
+    ['card-12', 'card-13', 'card-14', 'card-15', 'card-16'] // Initial stacked deck group (>4 notes)
+  ]);
 
   // Shared values for 2D Panning
   const canvasX = useSharedValue(0);
@@ -69,6 +73,10 @@ const UserModeMap = React.forwardRef<any, UserModeMapProps>((props, ref) => {
   const activeDragX = useSharedValue(0);
   const activeDragY = useSharedValue(0);
   const draggedNodeId = useSharedValue<string | null>(null);
+
+  // Motion Trajectory Line Shared Values
+  const dragStartX = useSharedValue(0);
+  const dragStartY = useSharedValue(0);
 
   // Pan gesture
   const panGesture = Gesture.Pan()
@@ -91,21 +99,67 @@ const UserModeMap = React.forwardRef<any, UserModeMapProps>((props, ref) => {
     })
     .onUpdate((event) => {
       'worklet';
-      canvasScale.value = Math.max(0.4, Math.min(1.5, startScale.value * event.scale));
+      canvasScale.value = Math.max(0.2, Math.min(1.5, startScale.value * event.scale));
     });
 
   const combinedGesture = Gesture.Simultaneous(panGesture, pinchGesture);
 
   // Center on focused note when index changes (controlled by shuffler slider)
   useEffect(() => {
-    if (focusedCardIndex !== undefined && MOCK_CARDS[focusedCardIndex]) {
-      const node = MOCK_CARDS[focusedCardIndex];
+    if (focusedCardIndex !== undefined && cards[focusedCardIndex]) {
+      const node = cards[focusedCardIndex];
       const targetX = -(node.unfocusedX - 2000);
       const targetY = -(node.unfocusedY - 2000);
       canvasX.value = withSpring(targetX, { damping: 22, stiffness: 120 });
       canvasY.value = withSpring(targetY, { damping: 22, stiffness: 120 });
     }
-  }, [focusedCardIndex]);
+  }, [focusedCardIndex, cards]);
+
+  // Handle Drag collision for magnetic connection and card fusion
+  const handleDragEndLocal = (nodeId: string, finalX: number, finalY: number) => {
+    // 1. Audio-Image Fusion check
+    const dragNode = cards.find(c => c.id === nodeId);
+    const dropTarget = cards.find(c => c.id !== nodeId && Math.abs(c.unfocusedX - finalX) < 60 && Math.abs(c.unfocusedY - finalY) < 60);
+
+    if (dragNode && dropTarget) {
+      // Conjugate Voice + Image
+      if (
+        (dragNode.source_type === 'voice' && dropTarget.source_type === 'image') ||
+        (dragNode.source_type === 'image' && dropTarget.source_type === 'voice')
+      ) {
+        const imageNode = dragNode.source_type === 'image' ? dragNode : dropTarget;
+        const voiceNode = dragNode.source_type === 'voice' ? dragNode : dropTarget;
+
+        setCards(prev => prev.map(c => {
+          if (c.id === imageNode.id) {
+            return { ...c, fusedAudio: true, duration: voiceNode.duration || '1:30' };
+          }
+          return c;
+        }).filter(c => c.id !== voiceNode.id));
+        return;
+      }
+
+      // 2. Magnetic snapping/grouping
+      const inGroupIdx = groups.findIndex(g => g.includes(dropTarget.id));
+      if (inGroupIdx !== -1) {
+        setGroups(prev => prev.map((g, i) => i === inGroupIdx ? [...g, dragNode.id] : g));
+      } else {
+        setGroups(prev => [...prev, [dropTarget.id, dragNode.id]]);
+      }
+    }
+  };
+
+  const handleEjectCard = (nodeId: string) => {
+    setGroups(prev => prev.map(g => g.filter(id => id !== nodeId)).filter(g => g.length > 0));
+  };
+
+  // Trajectory path drawing props
+  const animatedTrajectoryProps = useAnimatedProps(() => {
+    if (!draggedNodeId.value) return { d: '' };
+    return {
+      d: `M ${dragStartX.value} ${dragStartY.value} L ${activeDragX.value} ${activeDragY.value}`
+    };
+  });
 
   const animatedCanvasStyle = useAnimatedStyle(() => ({
     left: -2000 + windowWidth / 2,
@@ -117,15 +171,50 @@ const UserModeMap = React.forwardRef<any, UserModeMapProps>((props, ref) => {
     ],
   }));
 
-  // Dynamic strokeWidth props for connection lines (inversely proportional to scale)
-  const animatedLineProps = useAnimatedProps(() => {
-    return {
-      strokeWidth: 2.0 / canvasScale.value,
-    };
-  });
-
   const isDark = true;
   const gridDotColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)';
+
+  // Category Galaxy View configuration (renders when canvasScale < 0.4)
+  const galaxyBlobs = [
+    { name: 'IDEA', color: '#E8673C', x: 2000 - 400, y: 2000 - 400 },
+    { name: 'JOURNAL', color: '#3498DB', x: 2000 + 400, y: 2000 - 400 },
+    { name: 'TASKS', color: '#2ECC71', x: 2000 - 400, y: 2000 + 400 },
+    { name: 'STUDY', color: '#9B59B6', x: 2000 + 400, y: 2000 + 400 },
+    { name: 'REFLECTION', color: '#F1C40F', x: 2000, y: 2000 - 600 },
+    { name: 'DREAM', color: '#1ABC9C', x: 2000, y: 2000 + 600 },
+    { name: 'CUSTOM PROJECT', color: '#E67E22', x: 2000 - 600, y: 2000 }
+  ];
+
+  // Render wobbly rectangle paths enclosing grouped coordinates
+  const renderWobblyGroups = () => {
+    return groups.map((g, idx) => {
+      if (g.length < 2 || g.length > 4) return null; // Only draw loops around small groups
+      const members = cards.filter(c => g.includes(c.id));
+      if (members.length === 0) return null;
+
+      const minX = Math.min(...members.map(m => m.unfocusedX)) - 24;
+      const maxX = Math.max(...members.map(m => m.unfocusedX)) + 196;
+      const minY = Math.min(...members.map(m => m.unfocusedY)) - 24;
+      const maxY = Math.max(...members.map(m => m.unfocusedY)) + 196;
+
+      // irregular wobbly loop path outline
+      const d = `M ${minX + 8} ${minY} Q ${(minX + maxX)/2} ${minY - 12} ${maxX - 8} ${minY} T ${maxX} ${minY + 24} T ${maxX + 12} ${(minY + maxY)/2} T ${maxX} ${maxY} T ${(minX + maxX)/2} ${maxY + 12} T ${minX + 8} ${maxY} T ${minX - 12} ${(minY + maxY)/2} Z`;
+
+      return (
+        <Path 
+          key={`wobbly-${idx}`}
+          d={d}
+          stroke="#E8673C"
+          strokeWidth={2.0}
+          fill="none"
+          strokeDasharray="4, 4"
+          opacity={0.8}
+        />
+      );
+    });
+  };
+
+  const isGalaxy = canvasScale.value < 0.4;
 
   return (
     <View style={styles.container}>
@@ -133,7 +222,7 @@ const UserModeMap = React.forwardRef<any, UserModeMapProps>((props, ref) => {
         <View style={StyleSheet.absoluteFillObject}>
           <Animated.View style={[styles.canvas, animatedCanvasStyle]}>
             
-            {/* Infinite SVG Layer for grid (lines removed to resolve lag) */}
+            {/* SVG Layer */}
             <View style={StyleSheet.absoluteFillObject}>
               <Svg width={4000} height={4000} style={StyleSheet.absoluteFillObject}>
                 <Defs>
@@ -144,21 +233,61 @@ const UserModeMap = React.forwardRef<any, UserModeMapProps>((props, ref) => {
 
                 {/* Dot Grid */}
                 <Rect width={4000} height={4000} fill="url(#dotGrid)" />
+
+                {/* Draw movement trajectory lines */}
+                <AnimatedPath
+                  stroke="#E8673C"
+                  strokeWidth={1.5}
+                  strokeDasharray="5, 5"
+                  animatedProps={animatedTrajectoryProps}
+                />
+
+                {/* Wobbly outline rectangles around small groups */}
+                {!isGalaxy && renderWobblyGroups()}
               </Svg>
             </View>
 
-            {/* Render 20 Spatial Cards */}
-            {MOCK_CARDS.map((node) => (
-              <DriftNode
-                key={node.id}
-                node={node}
-                onPress={onNodePress}
-                activeDragX={activeDragX}
-                activeDragY={activeDragY}
-                draggedNodeId={draggedNodeId}
-                theme={theme}
-              />
+            {/* Galaxy Mode Category blobs */}
+            {isGalaxy && galaxyBlobs.map((blob, idx) => (
+              <View 
+                key={idx} 
+                style={[
+                  styles.galaxyBlob, 
+                  { 
+                    left: blob.x - 75, 
+                    top: blob.y - 75,
+                    borderColor: blob.color 
+                  }
+                ]}
+              >
+                <Text style={[styles.galaxyBlobText, { color: blob.color }]}>{blob.name}</Text>
+              </View>
             ))}
+
+            {/* Render Card Nodes */}
+            {!isGalaxy && cards.map((node) => {
+              // Stacking UI representation: skip rendering cards folded deep in stack deck (>4 cards)
+              const stackGroup = groups.find(g => g.includes(node.id) && g.length > 4);
+              if (stackGroup) {
+                const positionInStack = stackGroup.indexOf(node.id);
+                // Only render front card (index 0) of the stack
+                if (positionInStack > 0) return null;
+              }
+
+              return (
+                <DriftNode
+                  key={node.id}
+                  node={node}
+                  onPress={onNodePress}
+                  activeDragX={activeDragX}
+                  activeDragY={activeDragY}
+                  draggedNodeId={draggedNodeId}
+                  theme={theme}
+                  onLongPressMenu={onOpenMenu}
+                  onEjectCard={handleEjectCard}
+                />
+              );
+            })}
           </Animated.View>
         </View>
       </GestureDetector>
@@ -179,5 +308,21 @@ const styles = StyleSheet.create({
     position: 'absolute',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  galaxyBlob: {
+    position: 'absolute',
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  galaxyBlobText: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.8,
   },
 });
