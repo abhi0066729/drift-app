@@ -513,7 +513,7 @@
       "source_file": "components\\ArchiveNode.tsx",
       "source_location": "L1",
       "id": "components_archivenode_tsx",
-      "community": 36
+      "community": 35
     },
     {
       "label": "accentRgba()",
@@ -521,7 +521,7 @@
       "source_file": "components\\ArchiveNode.tsx",
       "source_location": "L128",
       "id": "archivenode_accentrgba",
-      "community": 36
+      "community": 35
     },
     {
       "label": "renderRightActions()",
@@ -529,7 +529,7 @@
       "source_file": "components\\ArchiveNode.tsx",
       "source_location": "L130",
       "id": "archivenode_renderrightactions",
-      "community": 36
+      "community": 35
     },
     {
       "label": "AtmosphericBackground.tsx",
@@ -609,7 +609,7 @@
       "source_file": "components\\external-link.tsx",
       "source_location": "L1",
       "id": "components_external_link_tsx",
-      "community": 37
+      "community": 36
     },
     {
       "label": "ExternalLink()",
@@ -617,7 +617,7 @@
       "source_file": "components\\external-link.tsx",
       "source_location": "L7",
       "id": "external_link_externallink",
-      "community": 37
+      "community": 36
     },
     {
       "label": "async()",
@@ -625,7 +625,7 @@
       "source_file": "components\\external-link.tsx",
       "source_location": "L13",
       "id": "external_link_async",
-      "community": 37
+      "community": 36
     },
     {
       "label": "FlashcardCarousel.tsx",
@@ -633,7 +633,7 @@
       "source_file": "components\\FlashcardCarousel.tsx",
       "source_location": "L1",
       "id": "components_flashcardcarousel_tsx",
-      "community": 38
+      "community": 37
     },
     {
       "label": "nextCard()",
@@ -641,7 +641,7 @@
       "source_file": "components\\FlashcardCarousel.tsx",
       "source_location": "L28",
       "id": "flashcardcarousel_nextcard",
-      "community": 38
+      "community": 37
     },
     {
       "label": "prevCard()",
@@ -649,7 +649,7 @@
       "source_file": "components\\FlashcardCarousel.tsx",
       "source_location": "L32",
       "id": "flashcardcarousel_prevcard",
-      "community": 38
+      "community": 37
     },
     {
       "label": "GhostModeMap.tsx",
@@ -961,7 +961,7 @@
       "source_file": "components\\UserModeMap.tsx",
       "source_location": "L1",
       "id": "components_usermodemap_tsx",
-      "community": 32
+      "community": 38
     },
     {
       "label": "handleDragEndLocal()",
@@ -969,7 +969,7 @@
       "source_file": "components\\UserModeMap.tsx",
       "source_location": "L119",
       "id": "usermodemap_handledragendlocal",
-      "community": 32
+      "community": 38
     },
     {
       "label": "handleEjectCard()",
@@ -977,15 +977,7 @@
       "source_file": "components\\UserModeMap.tsx",
       "source_location": "L152",
       "id": "usermodemap_handleejectcard",
-      "community": 32
-    },
-    {
-      "label": "renderWobblyGroups()",
-      "file_type": "code",
-      "source_file": "components\\UserModeMap.tsx",
-      "source_location": "L189",
-      "id": "usermodemap_renderwobblygroups",
-      "community": 32
+      "community": 38
     },
     {
       "label": "collapsible.tsx",
@@ -2673,7 +2665,7 @@
       "source_file": "utils\\peopleUtils.ts",
       "source_location": "L1",
       "id": "utils_peopleutils_ts",
-      "community": 33
+      "community": 32
     },
     {
       "label": "extractPeopleFromNotes()",
@@ -2681,7 +2673,7 @@
       "source_file": "utils\\peopleUtils.ts",
       "source_location": "L18",
       "id": "peopleutils_extractpeoplefromnotes",
-      "community": 33
+      "community": 32
     },
     {
       "label": "getPeopleConnections()",
@@ -2689,7 +2681,7 @@
       "source_file": "utils\\peopleUtils.ts",
       "source_location": "L73",
       "id": "peopleutils_getpeopleconnections",
-      "community": 33
+      "community": 32
     },
     {
       "label": "generateSeedPeopleNotes()",
@@ -2697,7 +2689,7 @@
       "source_file": "utils\\peopleUtils.ts",
       "source_location": "L100",
       "id": "peopleutils_generateseedpeoplenotes",
-      "community": 33
+      "community": 32
     },
     {
       "label": "seedingUtils.ts",
@@ -2721,7 +2713,7 @@
       "source_file": "utils\\studioUtils.ts",
       "source_location": "L1",
       "id": "utils_studioutils_ts",
-      "community": 34
+      "community": 33
     },
     {
       "label": "getKeywords()",
@@ -2729,7 +2721,7 @@
       "source_file": "utils\\studioUtils.ts",
       "source_location": "L10",
       "id": "studioutils_getkeywords",
-      "community": 34
+      "community": 33
     },
     {
       "label": "calculateSemanticResonance()",
@@ -2737,7 +2729,7 @@
       "source_file": "utils\\studioUtils.ts",
       "source_location": "L15",
       "id": "studioutils_calculatesemanticresonance",
-      "community": 34
+      "community": 33
     },
     {
       "label": "growKnowledgeTree()",
@@ -2745,7 +2737,7 @@
       "source_file": "utils\\studioUtils.ts",
       "source_location": "L36",
       "id": "studioutils_growknowledgetree",
-      "community": 34
+      "community": 33
     },
     {
       "label": "theme.ts",
@@ -2801,7 +2793,7 @@
       "source_file": "v1_staging\\components\\UserModeMap.tsx",
       "source_location": "L1",
       "id": "v1_staging_components_usermodemap_tsx",
-      "community": 35
+      "community": 34
     },
     {
       "label": "handleDragStart()",
@@ -2809,7 +2801,7 @@
       "source_file": "v1_staging\\components\\UserModeMap.tsx",
       "source_location": "L211",
       "id": "usermodemap_handledragstart",
-      "community": 35
+      "community": 34
     },
     {
       "label": "handleDragEnd()",
@@ -2817,7 +2809,7 @@
       "source_file": "v1_staging\\components\\UserModeMap.tsx",
       "source_location": "L217",
       "id": "usermodemap_handledragend",
-      "community": 35
+      "community": 34
     },
     {
       "label": "findRangeIndices()",
@@ -2825,7 +2817,7 @@
       "source_file": "v1_staging\\components\\UserModeMap.tsx",
       "source_location": "L278",
       "id": "usermodemap_findrangeindices",
-      "community": 35
+      "community": 34
     },
     {
       "label": "noteUtils.ts",
@@ -3955,18 +3947,6 @@
       "_tgt": "usermodemap_handleejectcard",
       "source": "components_usermodemap_tsx",
       "target": "usermodemap_handleejectcard",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "components\\UserModeMap.tsx",
-      "source_location": "L189",
-      "weight": 1.0,
-      "_src": "components_usermodemap_tsx",
-      "_tgt": "usermodemap_renderwobblygroups",
-      "source": "components_usermodemap_tsx",
-      "target": "usermodemap_renderwobblygroups",
       "confidence_score": 1.0
     },
     {

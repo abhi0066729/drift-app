@@ -185,34 +185,7 @@ const UserModeMap = React.forwardRef<any, UserModeMapProps>((props, ref) => {
     { name: 'CUSTOM PROJECT', color: '#E67E22', x: 2000 - 600, y: 2000 }
   ];
 
-  // Render wobbly rectangle paths enclosing grouped coordinates
-  const renderWobblyGroups = () => {
-    return groups.map((g, idx) => {
-      if (g.length < 2 || g.length > 4) return null; // Only draw loops around small groups
-      const members = cards.filter(c => g.includes(c.id));
-      if (members.length === 0) return null;
 
-      const minX = Math.min(...members.map(m => m.unfocusedX)) - 24;
-      const maxX = Math.max(...members.map(m => m.unfocusedX)) + 196;
-      const minY = Math.min(...members.map(m => m.unfocusedY)) - 24;
-      const maxY = Math.max(...members.map(m => m.unfocusedY)) + 196;
-
-      // irregular wobbly loop path outline
-      const d = `M ${minX + 8} ${minY} Q ${(minX + maxX)/2} ${minY - 12} ${maxX - 8} ${minY} T ${maxX} ${minY + 24} T ${maxX + 12} ${(minY + maxY)/2} T ${maxX} ${maxY} T ${(minX + maxX)/2} ${maxY + 12} T ${minX + 8} ${maxY} T ${minX - 12} ${(minY + maxY)/2} Z`;
-
-      return (
-        <Path 
-          key={`wobbly-${idx}`}
-          d={d}
-          stroke="#E8673C"
-          strokeWidth={2.0}
-          fill="none"
-          strokeDasharray="4, 4"
-          opacity={0.8}
-        />
-      );
-    });
-  };
 
   const isGalaxy = canvasScale.value < 0.4;
 
@@ -234,16 +207,9 @@ const UserModeMap = React.forwardRef<any, UserModeMapProps>((props, ref) => {
                 {/* Dot Grid */}
                 <Rect width={4000} height={4000} fill="url(#dotGrid)" />
 
-                {/* Draw movement trajectory lines */}
-                <AnimatedPath
-                  stroke="#E8673C"
-                  strokeWidth={1.5}
-                  strokeDasharray="5, 5"
-                  animatedProps={animatedTrajectoryProps}
-                />
 
-                {/* Wobbly outline rectangles around small groups */}
-                {!isGalaxy && renderWobblyGroups()}
+
+
               </Svg>
             </View>
 
