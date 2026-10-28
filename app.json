@@ -53,6 +53,7 @@
         }
       ],
       "expo-updates",
+      "expo-sqlite",
       [
         "expo-build-properties",
         {
