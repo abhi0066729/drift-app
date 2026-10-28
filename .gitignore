@@ -44,3 +44,10 @@ app-example
 
 # graphify cache
 graphify-out/cache/
+
+# Firebase secrets
+firebase/service-account.json
+service-account.json
+*.pem
+graphify-out-backup/
+

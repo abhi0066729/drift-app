@@ -1,135 +1,115 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
+import { LovableNote } from '@/components/drift/LovableCardBody';
 
-export type PipelineStep = 'idle' | 'queued' | 'embedding' | 'vectorizing' | 'synthesizing' | 'complete' | 'error';
-
-/**
- * Mammoth Scale Note Structure
- * Optimized for local-first database performance.
- */
-export type Note = {
-  id: string;
-  numeric_id?: number;
-  user_id?: string;
-  content: string;
-  created_at: number;
-  source_type: 'text' | 'voice' | 'url' | 'synthesis';
-  
-  // High-performance columns (Queryable in SQLite)
-  category: string;
-  emotion: string;
-  summary?: string;
-  embedding_status: 'pending' | 'processing' | 'complete' | 'error';
-  synthesis_status: 'pending' | 'processing' | 'complete' | 'error';
-  
-  // Layout Cache
-  layout_x?: number;
-  layout_y?: number;
-  layout_cluster?: string;
-  
-  audio_url?: string;
-  is_deleted: boolean;
-  entities_json?: string;
-  is_refining?: boolean;
-  
-  // Metadata for UI
-  note_type?: 'note' | 'page';
-  word_count?: number;
-  reading_time?: number;
-  chunk_count?: number;
-  resonances?: Record<string, number>;
-  room_id?: string;
-  wing_id?: string;
-  is_ghost?: boolean;
-  images?: string[];
-  semantic_links?: string[];
-  pipeline_step?: PipelineStep;
-  pipeline_metrics?: {
-    embedding_ms?: number;
-    vectorizing_ms?: number;
-    synthesis_ms?: number;
-    total_ms?: number;
-    start_time?: number;
-    error_message?: string;
-  };
-};
-
-interface NotesState {
-  // THE VISIBLE PROJECTION
-  // In a mammoth knowledge base, we don't store ALL notes in memory.
-  // This array stores the currently windowed/filtered set of notes.
-  notes: Note[];
-  
-  lastUpdate: number;
-  studioSeeds: string[];
-  activeFilters: { person?: string; topic?: string; date?: string; category?: string };
+export interface NotesState {
   theme: 'light' | 'dark';
-  
-  // Actions
-  addNote: (note: Note) => void;
-  updateNote: (id: string, updates: Partial<Note>) => void;
-  setNotes: (notes: Note[]) => void;
-  setFilters: (filters: Partial<NotesState['activeFilters']>) => void;
-  clearNotes: () => void;
-  deleteNote: (id: string) => void;
-  toggleStudioSeed: (id: string) => void;
   toggleTheme: () => void;
+  notes: LovableNote[];
+  setNotes: (notes: LovableNote[] | ((prev: LovableNote[]) => LovableNote[])) => void;
+  addNote: (note: LovableNote) => void;
+  updateNote: (id: string, updates: Partial<LovableNote>) => void;
+  deleteNote: (id: string) => void;
+  boards: string[];
+  addBoard: (board: string) => void;
+  activeBoard: string | null;
+  setActiveBoard: (board: string | null) => void;
 }
+
+export const INITIAL_SEEDS: LovableNote[] = [
+  {
+    id: '1',
+    type: 'text',
+    x: 40,
+    y: 180,
+    title: 'Slow mornings',
+    body: 'Ideas arrive when nothing is asked of them. Keep a pocket of quiet each day.',
+  },
+  {
+    id: '2',
+    type: 'image',
+    x: 320,
+    y: 160,
+    title: 'Lake, 6:04am',
+    img: 'lake',
+  },
+  {
+    id: '3',
+    type: 'audio',
+    x: 40,
+    y: 470,
+    title: 'Melody idea',
+  },
+  {
+    id: '4',
+    type: 'map',
+    x: 320,
+    y: 480,
+    title: 'Kyoto tea house',
+    body: '35.0116° N, 135.7681° E',
+  },
+  {
+    id: '5',
+    type: 'todo',
+    x: 40,
+    y: 770,
+    title: 'Studio list',
+    body: 'Linen swatches|Call the framer|Film for Contax',
+  },
+  {
+    id: '6',
+    type: 'image',
+    x: 320,
+    y: 790,
+    title: 'Still life',
+    img: 'vase',
+  },
+];
 
 export const useNotesStore = create<NotesState>()(
   persist(
     (set) => ({
-      notes: [],
-      lastUpdate: Date.now(),
-      studioSeeds: [],
-      activeFilters: {},
-      theme: 'dark',
-      
-      addNote: (note) => set((state) => ({ 
-        notes: [note, ...state.notes],
-        lastUpdate: Date.now()
-      })),
-      
+      theme: 'light',
+      toggleTheme: () =>
+        set((state) => ({ theme: state.theme === 'dark' ? 'light' : 'dark' })),
+
+      notes: INITIAL_SEEDS,
+      setNotes: (notesOrFn) =>
+        set((state) => ({
+          notes:
+            typeof notesOrFn === 'function' ? notesOrFn(state.notes) : notesOrFn,
+        })),
+
+      addNote: (note) =>
+        set((state) => ({
+          notes: [...state.notes, note],
+        })),
+
       updateNote: (id, updates) =>
         set((state) => ({
           notes: state.notes.map((n) => (n.id === id ? { ...n, ...updates } : n)),
-          lastUpdate: Date.now()
         })),
-        
-      deleteNote: (id) => set((state) => ({ 
-        notes: state.notes.filter((n) => n.id !== id) 
-      })),
-      
-      setNotes: (notes) => set({ notes }),
-      
-      setFilters: (filters) =>
-        set((state) => ({ activeFilters: { ...state.activeFilters, ...filters } })),
-        
-      clearNotes: () => set({ notes: [], studioSeeds: [] }),
-      
-      toggleStudioSeed: (id) => set((state) => ({
-        studioSeeds: state.studioSeeds.includes(id)
-          ? state.studioSeeds.filter((seedId) => seedId !== id)
-          : [...state.studioSeeds, id]
-      })),
-      
-      toggleTheme: () => set({ theme: 'dark' }),
+
+      deleteNote: (id) =>
+        set((state) => ({
+          notes: state.notes.filter((n) => n.id !== id),
+        })),
+
+      boards: ['Inspirations', 'Studio'],
+      addBoard: (board) =>
+        set((state) => ({
+          boards: state.boards.includes(board)
+            ? state.boards
+            : [...state.boards, board],
+        })),
+
+      activeBoard: null,
+      setActiveBoard: (board) => set({ activeBoard: board }),
     }),
     {
       name: 'drift-notes-storage',
-      storage: createJSONStorage(() => 
-        Platform.OS === 'web' ? window.localStorage : AsyncStorage as any
-      ),
-      // MAMMOTH SCALE FIX: Exclude 'notes' from persistence.
-      // SQLite is the source of truth. Hydrating 5000 notes from AsyncStorage blocks the JS thread.
-      partialize: (state) => ({
-        studioSeeds: state.studioSeeds,
-        activeFilters: state.activeFilters,
-        theme: state.theme,
-        lastUpdate: state.lastUpdate
-      }),
+      storage: createJSONStorage(() => AsyncStorage),
     }
   )
 );

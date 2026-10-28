@@ -1,11 +1,11 @@
-# Graph Report - .  (2026-07-20)
+# Graph Report - .  (2026-10-29)
 
 ## Corpus Check
-- 98 files · ~2,602,694 words
+- 30 files · ~156,833 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 355 nodes · 355 edges · 96 communities detected
+- 74 nodes · 48 edges · 30 communities detected
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
@@ -40,585 +40,186 @@
 - [[_COMMUNITY_Community 27|Community 27]]
 - [[_COMMUNITY_Community 28|Community 28]]
 - [[_COMMUNITY_Community 29|Community 29]]
-- [[_COMMUNITY_Community 30|Community 30]]
-- [[_COMMUNITY_Community 31|Community 31]]
-- [[_COMMUNITY_Community 32|Community 32]]
-- [[_COMMUNITY_Community 33|Community 33]]
-- [[_COMMUNITY_Community 34|Community 34]]
-- [[_COMMUNITY_Community 35|Community 35]]
-- [[_COMMUNITY_Community 36|Community 36]]
-- [[_COMMUNITY_Community 37|Community 37]]
-- [[_COMMUNITY_Community 38|Community 38]]
-- [[_COMMUNITY_Community 39|Community 39]]
-- [[_COMMUNITY_Community 40|Community 40]]
-- [[_COMMUNITY_Community 41|Community 41]]
-- [[_COMMUNITY_Community 42|Community 42]]
-- [[_COMMUNITY_Community 43|Community 43]]
-- [[_COMMUNITY_Community 44|Community 44]]
-- [[_COMMUNITY_Community 45|Community 45]]
-- [[_COMMUNITY_Community 46|Community 46]]
-- [[_COMMUNITY_Community 47|Community 47]]
-- [[_COMMUNITY_Community 48|Community 48]]
-- [[_COMMUNITY_Community 49|Community 49]]
-- [[_COMMUNITY_Community 50|Community 50]]
-- [[_COMMUNITY_Community 51|Community 51]]
-- [[_COMMUNITY_Community 52|Community 52]]
-- [[_COMMUNITY_Community 53|Community 53]]
-- [[_COMMUNITY_Community 54|Community 54]]
-- [[_COMMUNITY_Community 55|Community 55]]
-- [[_COMMUNITY_Community 56|Community 56]]
-- [[_COMMUNITY_Community 57|Community 57]]
-- [[_COMMUNITY_Community 58|Community 58]]
-- [[_COMMUNITY_Community 59|Community 59]]
-- [[_COMMUNITY_Community 60|Community 60]]
-- [[_COMMUNITY_Community 61|Community 61]]
-- [[_COMMUNITY_Community 62|Community 62]]
-- [[_COMMUNITY_Community 63|Community 63]]
-- [[_COMMUNITY_Community 64|Community 64]]
-- [[_COMMUNITY_Community 65|Community 65]]
-- [[_COMMUNITY_Community 66|Community 66]]
-- [[_COMMUNITY_Community 67|Community 67]]
-- [[_COMMUNITY_Community 68|Community 68]]
-- [[_COMMUNITY_Community 69|Community 69]]
-- [[_COMMUNITY_Community 70|Community 70]]
-- [[_COMMUNITY_Community 71|Community 71]]
-- [[_COMMUNITY_Community 72|Community 72]]
-- [[_COMMUNITY_Community 73|Community 73]]
-- [[_COMMUNITY_Community 74|Community 74]]
-- [[_COMMUNITY_Community 75|Community 75]]
-- [[_COMMUNITY_Community 76|Community 76]]
-- [[_COMMUNITY_Community 77|Community 77]]
-- [[_COMMUNITY_Community 78|Community 78]]
-- [[_COMMUNITY_Community 79|Community 79]]
-- [[_COMMUNITY_Community 80|Community 80]]
-- [[_COMMUNITY_Community 81|Community 81]]
-- [[_COMMUNITY_Community 82|Community 82]]
-- [[_COMMUNITY_Community 83|Community 83]]
-- [[_COMMUNITY_Community 84|Community 84]]
-- [[_COMMUNITY_Community 85|Community 85]]
-- [[_COMMUNITY_Community 86|Community 86]]
-- [[_COMMUNITY_Community 87|Community 87]]
-- [[_COMMUNITY_Community 88|Community 88]]
-- [[_COMMUNITY_Community 89|Community 89]]
-- [[_COMMUNITY_Community 90|Community 90]]
-- [[_COMMUNITY_Community 91|Community 91]]
-- [[_COMMUNITY_Community 92|Community 92]]
-- [[_COMMUNITY_Community 93|Community 93]]
-- [[_COMMUNITY_Community 94|Community 94]]
-- [[_COMMUNITY_Community 95|Community 95]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `EmbeddingEngine` - 9 edges
-2. `VectorSearchService` - 9 edges
-3. `AIJobScheduler` - 8 edges
-4. `NoteService` - 8 edges
-5. `EmbeddingManager` - 7 edges
-6. `SemanticAnchorService` - 7 edges
-7. `AIResourceManager` - 6 edges
-8. `BackupService` - 6 edges
-9. `DatabaseService` - 6 edges
-10. `LocalLlamaService` - 6 edges
+1. `NoteService` - 10 edges
+2. `MainActivity` - 5 edges
+3. `ErrorBoundary` - 4 edges
+4. `MainApplication` - 3 edges
+5. `rand()` - 2 edges
+6. `createThread()` - 2 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `generateNexusMatrix()` --calls--> `getMentalMomentum()`  [EXTRACTED]
-  v1_staging\utils\noteUtils.ts → utils\noteUtils.ts
+- None detected - all connections are within the same source files.
 
 ## Communities
 
 ### Community 0 - "Community 0"
-Cohesion: 0.2
-Nodes (8): calculateSearchMatch(), findThoughtChain(), generateFullGhostPool(), generateMentalPattern(), generateMockUserNotes(), generateNexusMatrix(), getMentalMomentum(), processContextualConnections()
+Cohesion: 0.24
+Nodes (1): NoteService
 
 ### Community 1 - "Community 1"
 Cohesion: 0.29
-Nodes (11): BlinkingStar(), handleClear(), handleDeleteNote(), handleNotePress(), handleScroll(), onGestureEvent(), onHandlerStateChange(), onSwipeStart() (+3 more)
-
-### Community 2 - "Community 2"
-Cohesion: 0.29
-Nodes (2): AsyncLock, VectorSearchService
-
-### Community 3 - "Community 3"
-Cohesion: 0.27
-Nodes (4): generateConstellation(), getSecondaryFilaments(), hashCode(), seededRandom()
-
-### Community 4 - "Community 4"
-Cohesion: 0.29
-Nodes (1): EmbeddingEngine
-
-### Community 5 - "Community 5"
-Cohesion: 0.22
-Nodes (0): 
-
-### Community 6 - "Community 6"
-Cohesion: 0.36
-Nodes (1): AIJobScheduler
-
-### Community 7 - "Community 7"
-Cohesion: 0.47
-Nodes (4): CortexService, getEmbed(), getLlama(), getVector()
-
-### Community 8 - "Community 8"
-Cohesion: 0.39
-Nodes (1): NoteService
-
-### Community 9 - "Community 9"
-Cohesion: 0.33
-Nodes (3): getEmbed(), getLlama(), SyncService
-
-### Community 10 - "Community 10"
-Cohesion: 0.43
-Nodes (1): EmbeddingManager
-
-### Community 11 - "Community 11"
-Cohesion: 0.36
-Nodes (1): SemanticAnchorService
-
-### Community 12 - "Community 12"
-Cohesion: 0.29
 Nodes (1): MainApplication
 
-### Community 13 - "Community 13"
-Cohesion: 0.43
-Nodes (1): AIResourceManager
-
-### Community 14 - "Community 14"
-Cohesion: 0.43
-Nodes (1): BackupService
-
-### Community 15 - "Community 15"
-Cohesion: 0.29
-Nodes (1): DatabaseService
-
-### Community 16 - "Community 16"
-Cohesion: 0.33
-Nodes (1): LocalLlamaService
-
-### Community 17 - "Community 17"
-Cohesion: 0.38
-Nodes (1): Logger
-
-### Community 18 - "Community 18"
-Cohesion: 0.48
-Nodes (1): MLPClassifier
-
-### Community 19 - "Community 19"
-Cohesion: 0.33
-Nodes (1): ModelDownloadService
-
-### Community 20 - "Community 20"
-Cohesion: 0.43
-Nodes (1): ResourceCoordinator
-
-### Community 21 - "Community 21"
-Cohesion: 0.43
-Nodes (4): aggregateEntities(), getCategoryMomentum(), getFutureProphecy(), getSynthesisInsights()
-
-### Community 22 - "Community 22"
+### Community 2 - "Community 2"
 Cohesion: 0.33
 Nodes (1): MainActivity
 
+### Community 3 - "Community 3"
+Cohesion: 0.4
+Nodes (1): ErrorBoundary
+
+### Community 4 - "Community 4"
+Cohesion: 0.5
+Nodes (2): createThread(), rand()
+
+### Community 5 - "Community 5"
+Cohesion: 0.67
+Nodes (0): 
+
+### Community 6 - "Community 6"
+Cohesion: 0.67
+Nodes (0): 
+
+### Community 7 - "Community 7"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 8 - "Community 8"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 9 - "Community 9"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 10 - "Community 10"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 11 - "Community 11"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 12 - "Community 12"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 13 - "Community 13"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 14 - "Community 14"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 15 - "Community 15"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 16 - "Community 16"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 17 - "Community 17"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 18 - "Community 18"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 19 - "Community 19"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 20 - "Community 20"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 21 - "Community 21"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 22 - "Community 22"
+Cohesion: 1.0
+Nodes (0): 
+
 ### Community 23 - "Community 23"
-Cohesion: 0.33
+Cohesion: 1.0
 Nodes (0): 
 
 ### Community 24 - "Community 24"
-Cohesion: 0.53
-Nodes (1): ClusteringService
+Cohesion: 1.0
+Nodes (0): 
 
 ### Community 25 - "Community 25"
-Cohesion: 0.47
-Nodes (1): RetrievalService
+Cohesion: 1.0
+Nodes (0): 
 
 ### Community 26 - "Community 26"
-Cohesion: 0.4
+Cohesion: 1.0
 Nodes (0): 
 
 ### Community 27 - "Community 27"
-Cohesion: 0.6
-Nodes (3): extractDeep(), extractRealtime(), normalizeMetadata()
+Cohesion: 1.0
+Nodes (0): 
 
 ### Community 28 - "Community 28"
-Cohesion: 0.5
-Nodes (1): SynthesisService
+Cohesion: 1.0
+Nodes (0): 
 
 ### Community 29 - "Community 29"
-Cohesion: 0.6
-Nodes (3): computeConstellations(), hash(), makePRNG()
-
-### Community 30 - "Community 30"
-Cohesion: 0.5
-Nodes (0): 
-
-### Community 31 - "Community 31"
-Cohesion: 0.5
-Nodes (0): 
-
-### Community 32 - "Community 32"
-Cohesion: 0.5
-Nodes (0): 
-
-### Community 33 - "Community 33"
-Cohesion: 0.67
-Nodes (2): calculateSemanticResonance(), getKeywords()
-
-### Community 34 - "Community 34"
-Cohesion: 0.5
-Nodes (0): 
-
-### Community 35 - "Community 35"
-Cohesion: 0.67
-Nodes (0): 
-
-### Community 36 - "Community 36"
-Cohesion: 0.67
-Nodes (0): 
-
-### Community 37 - "Community 37"
-Cohesion: 0.67
-Nodes (0): 
-
-### Community 38 - "Community 38"
-Cohesion: 0.67
-Nodes (0): 
-
-### Community 39 - "Community 39"
-Cohesion: 0.67
-Nodes (1): IntentDetector
-
-### Community 40 - "Community 40"
-Cohesion: 0.67
-Nodes (0): 
-
-### Community 41 - "Community 41"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 42 - "Community 42"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 43 - "Community 43"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 44 - "Community 44"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 45 - "Community 45"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 46 - "Community 46"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 47 - "Community 47"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 48 - "Community 48"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 49 - "Community 49"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 50 - "Community 50"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 51 - "Community 51"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 52 - "Community 52"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 53 - "Community 53"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 54 - "Community 54"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 55 - "Community 55"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 56 - "Community 56"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 57 - "Community 57"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 58 - "Community 58"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 59 - "Community 59"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 60 - "Community 60"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 61 - "Community 61"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 62 - "Community 62"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 63 - "Community 63"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 64 - "Community 64"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 65 - "Community 65"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 66 - "Community 66"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 67 - "Community 67"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 68 - "Community 68"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 69 - "Community 69"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 70 - "Community 70"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 71 - "Community 71"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 72 - "Community 72"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 73 - "Community 73"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 74 - "Community 74"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 75 - "Community 75"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 76 - "Community 76"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 77 - "Community 77"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 78 - "Community 78"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 79 - "Community 79"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 80 - "Community 80"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 81 - "Community 81"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 82 - "Community 82"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 83 - "Community 83"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 84 - "Community 84"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 85 - "Community 85"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 86 - "Community 86"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 87 - "Community 87"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 88 - "Community 88"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 89 - "Community 89"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 90 - "Community 90"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 91 - "Community 91"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 92 - "Community 92"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 93 - "Community 93"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 94 - "Community 94"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 95 - "Community 95"
 Cohesion: 1.0
 Nodes (0): 
 
 ## Knowledge Gaps
-- **Thin community `Community 41`** (2 nodes): `test_ai.js`, `testFast()`
+- **Thin community `Community 7`** (2 nodes): `_layout.tsx`, `TabLayout()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 42`** (2 nodes): `dashboard.tsx`, `handleBulkCommit()`
+- **Thin community `Community 8`** (2 nodes): `AmbientMeshBackground()`, `AmbientMeshBackground.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 43`** (2 nodes): `modal.tsx`, `ModalScreen()`
+- **Thin community `Community 9`** (2 nodes): `LovableFocusModal.tsx`, `handleCreateBoard()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 44`** (2 nodes): `handlePress()`, `ChronosNexusToggle.tsx`
+- **Thin community `Community 10`** (2 nodes): `icon-symbol.ios.tsx`, `IconSymbol()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 45`** (2 nodes): `GhostOverlay.tsx`, `GhostOverlay()`
+- **Thin community `Community 11`** (2 nodes): `icon-symbol.tsx`, `IconSymbol()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 46`** (2 nodes): `haptic-tab.tsx`, `HapticTab()`
+- **Thin community `Community 12`** (2 nodes): `main()`, `fetch-crashes.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 47`** (2 nodes): `hello-wave.tsx`, `HelloWave()`
+- **Thin community `Community 13`** (2 nodes): `use-color-scheme.web.ts`, `useColorScheme()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 48`** (2 nodes): `NebulaHub.tsx`, `renderNarrativeIcon()`
+- **Thin community `Community 14`** (2 nodes): `useHomeScreenController.ts`, `useHomeScreenController()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 49`** (2 nodes): `NexusSurfaceMatrix.tsx`, `BlinkingStar()`
+- **Thin community `Community 15`** (2 nodes): `withIosModifications.js`, `withIosModifications()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 50`** (2 nodes): `parallax-scroll-view.tsx`, `ParallaxScrollView()`
+- **Thin community `Community 16`** (2 nodes): `moveDirectories()`, `reset-project.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 51`** (2 nodes): `ReadingModal.tsx`, `DropAndBounce()`
+- **Thin community `Community 17`** (2 nodes): `train_classifier_head.py`, `main()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 52`** (2 nodes): `ScrollToTopButton.tsx`, `ScrollToTopButton()`
+- **Thin community `Community 18`** (1 nodes): `babel.config.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 53`** (2 nodes): `SyncOverlay.tsx`, `SyncOverlay()`
+- **Thin community `Community 19`** (1 nodes): `eslint.config.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 54`** (2 nodes): `themed-text.tsx`, `ThemedText()`
+- **Thin community `Community 20`** (1 nodes): `expo-env.d.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 55`** (2 nodes): `themed-view.tsx`, `ThemedView()`
+- **Thin community `Community 21`** (1 nodes): `metro.config.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 56`** (2 nodes): `icon-symbol.ios.tsx`, `IconSymbol()`
+- **Thin community `Community 22`** (1 nodes): `_layout.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 57`** (2 nodes): `icon-symbol.tsx`, `IconSymbol()`
+- **Thin community `Community 23`** (1 nodes): `index.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 58`** (2 nodes): `schema.ts`, `initDatabase()`
+- **Thin community `Community 24`** (1 nodes): `LovableCardNode.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 59`** (2 nodes): `use-color-scheme.web.ts`, `useColorScheme()`
+- **Thin community `Community 25`** (1 nodes): `LovableHeader.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 60`** (2 nodes): `use-theme-color.ts`, `useThemeColor()`
+- **Thin community `Community 26`** (1 nodes): `LovableListView.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 61`** (2 nodes): `native-mock.js`, `constructor()`
+- **Thin community `Community 27`** (1 nodes): `LovableZoomControls.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 62`** (2 nodes): `withIosModifications.js`, `withIosModifications()`
+- **Thin community `Community 28`** (1 nodes): `use-color-scheme.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 63`** (2 nodes): `moveDirectories()`, `reset-project.js`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 64`** (2 nodes): `train_classifier_head.py`, `main()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 65`** (2 nodes): `preloadNavigationAssets()`, `assetLoader.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 66`** (2 nodes): `hashUUIDToNumber()`, `idUtils.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 67`** (2 nodes): `seedSyntheticMemories()`, `seedingUtils.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 68`** (1 nodes): `babel.config.js`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 69`** (1 nodes): `eslint.config.js`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 70`** (1 nodes): `expo-env.d.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 71`** (1 nodes): `metro.config.js`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 72`** (1 nodes): `scratch_ModelDownloadService_fixed.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 73`** (1 nodes): `_layout.tsx`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 74`** (1 nodes): `_layout.tsx`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 75`** (1 nodes): `AtmosphericBackground.tsx`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 76`** (1 nodes): `CelestialPortal.tsx`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 77`** (1 nodes): `DriftNode.tsx`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 78`** (1 nodes): `GhostModeMap.tsx`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 79`** (1 nodes): `KineticFocusMap.tsx`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 80`** (1 nodes): `NexusHullLayer.tsx`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 81`** (1 nodes): `NexusSummaryGlass.tsx`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 82`** (1 nodes): `OpeningTransition.tsx`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 83`** (1 nodes): `ResonanceFeedbackOverlay.tsx`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 84`** (1 nodes): `ThoughtCloud.tsx`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 85`** (1 nodes): `collapsible.tsx`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 86`** (1 nodes): `Categories.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 87`** (1 nodes): `theme.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 88`** (1 nodes): `use-color-scheme.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 89`** (1 nodes): `check_braces.js`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 90`** (1 nodes): `IntelligenceService.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 91`** (1 nodes): `regexMaps.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 92`** (1 nodes): `useNotesStore.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 93`** (1 nodes): `useSettingsStore.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 94`** (1 nodes): `theme.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 95`** (1 nodes): `NexusSurfaceMatrix.tsx`
+- **Thin community `Community 29`** (1 nodes): `useNotesStore.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 
 ## Suggested Questions
