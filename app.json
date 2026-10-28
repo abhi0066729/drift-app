@@ -52,7 +52,6 @@
           }
         }
       ],
-      "expo-sqlite",
       "expo-updates",
       [
         "expo-build-properties",
@@ -63,8 +62,7 @@
         }
       ],
       "expo-web-browser",
-      "./plugins/withIosModifications",
-      "@react-native-voice/voice"
+      "./plugins/withIosModifications"
     ],
     "experiments": {
       "typedRoutes": true,
