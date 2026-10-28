@@ -1,10 +1,12 @@
-// Neural Bridge: Lazy-load Llama to avoid circular imports
 export const getLlama = () => require('./LocalLlamaService').LocalLlamaService.getInstance();
 
 export type NoteCategory = string;
 
 import { SEMANTIC_INTENTS, EMOTION_MAP } from './regexMaps';
 import { SemanticAnchorService } from './SemanticAnchorService';
+
+export { SEMANTIC_INTENTS, EMOTION_MAP };
+export const predictIntent = extractRealtime;
 
 export type SemanticMetadata = {
   category: string; // Legacy/Display category

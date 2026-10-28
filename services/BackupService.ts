@@ -63,8 +63,8 @@ export class BackupService {
       // This will scan note_embeddings and re-insert into expo-vector-search.
       await this.triggerHNSWRebuild();
 
-      // 3. Refresh the UI
-      await NoteService.getInstance().loadAllNotes();
+      // 3. Refresh the UI (legacy note service call commented out)
+      // await NoteService.getInstance().getNotes();
     } catch (error) {
       console.error('[BackupService] Restore failed:', error);
       throw error;

@@ -67,7 +67,7 @@ export function generateMockUserNotes(): Note[] {
     images: [],
     entities_json: JSON.stringify({ category: item.category }),
     is_ghost: false,
-  })) as Note[];
+  })) as unknown as Note[];
 }
 
 export function processContextualConnections(notes: Note[], width: number, searchQuery: string = '') {

@@ -335,6 +335,9 @@ export default function CaptureScreen() {
       note_type: isPage ? 'page' : 'note',
       word_count: wordCount,
       reading_time: isPage ? readingTime * 60 : 0, // seconds
+      // Place new notes in the center resolution area (2000, 2000) with dynamic jitter to prevent stacking
+      layout_x: 2000 + (Math.random() * 160 - 80),
+      layout_y: 2000 + (Math.random() * 160 - 80),
       entities_json: JSON.stringify({ 
         preliminary_category: currentCategory,
         emotion: emotionHint || 'Neutral',

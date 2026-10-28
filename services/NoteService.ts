@@ -43,6 +43,7 @@ export class NoteService {
         return {
           ...n,
           is_deleted: !!n.is_deleted,
+          is_liked: !!n.is_liked,
           is_refining: !!n.is_refining,
           pipeline_metrics: n.pipeline_metrics ? JSON.parse(n.pipeline_metrics) : undefined,
           images: parsedEntities.images || [],
@@ -166,6 +167,19 @@ export class NoteService {
       useNotesStore.getState().deleteNote(id);
     } catch (error) {
       console.error('[NoteService] Failed to delete note:', error);
+    }
+  }
+
+  public async toggleLikeNote(id: string) {
+    try {
+      const db = await DatabaseService.getInstance().getDb();
+      const note = useNotesStore.getState().notes.find(n => n.id === id);
+      const nextLikedState = note ? !note.is_liked : true;
+      
+      await db.runAsync('UPDATE notes SET is_liked = ? WHERE id = ?', [nextLikedState ? 1 : 0, id]);
+      useNotesStore.getState().toggleLikeNote(id);
+    } catch (e) {
+      console.error('[NoteService] Failed to toggle like state in database:', e);
     }
   }
 }

@@ -33,6 +33,6 @@ export const seedSyntheticMemories = (addNote: (note: Note) => void, notes: Note
       source_type: 'text',
       images: [],
       entities_json: JSON.stringify({ category: thought.category, emotion: 'Focused' }),
-    } as Note);
+    } as unknown as Note);
   });
 };

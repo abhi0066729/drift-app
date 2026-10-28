@@ -280,7 +280,7 @@ export default function NexusSurfaceMatrix({ notes, theme, onPress }: NexusSurfa
         created_at: Date.now() - (Math.random() * 1000 * 60 * 60 * 24 * 30),
         source_type: 'text',
         entities_json: JSON.stringify({ category: domain.category }),
-      });
+      } as any);
     }
   }, [addNote]);
 

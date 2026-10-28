@@ -1,22 +1,24 @@
 import React from 'react';
-import { StyleSheet, Text, View, Pressable, ScrollView, Dimensions, Platform } from 'react-native';
-import Animated, { 
-  FadeIn, 
-  FadeOut, 
-  withSpring, 
-  useSharedValue, 
-  useAnimatedScrollHandler, 
-  useAnimatedStyle 
+import {
+  StyleSheet,
+  Text,
+  View,
+  Pressable,
+  ScrollView,
+  Platform,
+  Modal,
+  SafeAreaView,
+} from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
 } from 'react-native-reanimated';
 import { Image } from 'expo-image';
-import { BlurView } from 'expo-blur';
 import { CATEGORY_COLORS } from '@/constants/Categories';
 import { NightTheme } from '@/constants/theme';
 import { useNotesStore } from '@/store/useNotesStore';
-
 import { NexusNode } from '@/utils/nexusEngine';
-
-
 
 interface ReadingModalProps {
   node: NexusNode;
@@ -27,249 +29,283 @@ interface ReadingModalProps {
 
 export default function ReadingModal({ node, onClose, translucent, searchQuery }: ReadingModalProps) {
   const theme = useNotesStore(state => state.theme);
+
+  // Guard: never render with null node
   if (!node) return null;
 
-  let finalCategory = (node.categories && node.categories.length > 0) ? node.categories[0] : (node.category || '');
-  let finalEmotion = node.emotion || '';
+  const isDark = theme === 'dark';
+
+  // Safe string extraction with fallbacks
+  let finalCategory = '';
+  try {
+    finalCategory = (node.categories && node.categories.length > 0)
+      ? String(node.categories[0] || '')
+      : String(node.category || '');
+  } catch (_) {}
+
+  let finalEmotion = '';
+  try { finalEmotion = String(node.emotion || ''); } catch (_) {}
+
   let parsedEntities: any = null;
-  
-  // Robust parsing for nodes from different sources (Chronicle vs Map)
   if (node.entities_json) {
     try {
       parsedEntities = JSON.parse(node.entities_json);
-      if (!finalCategory) finalCategory = parsedEntities.category || (parsedEntities.categories && parsedEntities.categories[0]);
-      if (!finalEmotion) finalEmotion = parsedEntities.emotion;
-    } catch (e) {}
+      if (!finalCategory) finalCategory = String(parsedEntities.category || (parsedEntities.categories && parsedEntities.categories[0]) || '');
+      if (!finalEmotion) finalEmotion = String(parsedEntities.emotion || '');
+    } catch (_) {}
   }
-  
+
   if (!finalCategory) finalCategory = 'Journal';
 
-  const headerTitle = (finalEmotion 
-    ? `${finalCategory.toUpperCase()} · ${finalEmotion.toUpperCase()}`
-    : finalCategory.toUpperCase()) || 'NOTE';
+  let headerTitle = 'NOTE';
+  try {
+    headerTitle = finalEmotion
+      ? `${finalCategory.toUpperCase()} · ${finalEmotion.toUpperCase()}`
+      : finalCategory.toUpperCase();
+    if (!headerTitle) headerTitle = 'NOTE';
+  } catch (_) {}
 
   const color = CATEGORY_COLORS[finalCategory] || '#8E44AD';
-  
-  const content = node.content || '';
+  const content = node.content ? String(node.content) : '';
   const hasSearch = searchQuery && searchQuery.length > 0;
   const isMatch = hasSearch && (
     content.toLowerCase().includes(searchQuery!.toLowerCase()) ||
     finalCategory.toLowerCase().includes(searchQuery!.toLowerCase())
   );
 
-  const DropAndBounce = () => {
-    'worklet';
-    return {
-      initialValues: { transform: [{ translateY: -500 }, { scale: 0.9 }], opacity: 0 },
-      animations: {
-        transform: [
-          { translateY: withSpring(0, { damping: 12, stiffness: 100, mass: 1 }) },
-          { scale: withSpring(1) }
-        ],
-        opacity: withSpring(1),
-      },
-    };
-  };
+  const isPage = (node as any)?.note_type === 'page';
 
-  const isDark = theme === 'dark';
-  const isPage = node.note_type === 'page';
-
+  // Reanimated scroll tracking (only used for scroll progress bar — safe, no entering animations)
   const scrollY = useSharedValue(0);
   const contentHeight = useSharedValue(1);
   const containerHeight = useSharedValue(1);
 
-  const scrollHandler = useAnimatedScrollHandler((event) => {
-    scrollY.value = event.contentOffset.y;
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      'worklet';
+      scrollY.value = event.contentOffset?.y ?? 0;
+      contentHeight.value = event.contentSize?.height ?? 1;
+      containerHeight.value = event.layoutMeasurement?.height ?? 1;
+    },
   });
 
   const progressStyle = useAnimatedStyle(() => {
+    'worklet';
     const scrollable = contentHeight.value - containerHeight.value;
     const progress = scrollable > 0 ? scrollY.value / scrollable : 0;
     return {
-      width: `${Math.min(Math.max(progress * 100, 0), 100)}%`,
+      width: `${Math.min(Math.max(progress * 100, 0), 100)}%` as any,
     };
   });
 
+  const resonanceKeys = React.useMemo(() => {
+    try {
+      const res = node?.resonances;
+      if (!res || typeof res !== 'object') return [];
+      return Object.keys(res).sort((a, b) => ((res[b] as number) || 0) - ((res[a] as number) || 0));
+    } catch (_) {
+      return [];
+    }
+  }, [node?.resonances]);
+
+  // ─── PAGE MODE ────────────────────────────────────────────────────────────
   if (isPage) {
-    const pageImages = node.images || parsedEntities?.images || [];
+    const pageImages: string[] = node.images || parsedEntities?.images || [];
     return (
-      <Animated.View 
-        entering={FadeIn.duration(300)} 
-        exiting={FadeOut.duration(200)} 
-        style={[StyleSheet.absoluteFill, { zIndex: 1000, backgroundColor: isDark ? '#0A0A0C' : '#F4F4F6' }]}
+      <Modal
+        visible={true}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={onClose}
       >
-        {/* Scroll Progress Bar */}
-        <View style={styles.progressBarBg}>
-          <Animated.View style={[styles.progressBarFill, { backgroundColor: color }, progressStyle]} />
-        </View>
+        <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? '#0A0A0C' : '#F4F4F6' }}>
+          {/* Scroll Progress Bar */}
+          <View style={styles.progressBarBg}>
+            <Animated.View style={[styles.progressBarFill, { backgroundColor: color }, progressStyle]} />
+          </View>
 
-        {/* Close Button Header */}
-        <View style={[styles.pageHeader, { borderBottomColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' }]}>
-          <Text style={[styles.pageHeaderTitle, { color: isDark ? 'rgba(255,255,255,0.9)' : '#111' }]}>{headerTitle}</Text>
-          <Pressable style={styles.closeButton} onPress={onClose}>
-            <Text style={[styles.closeButtonText, { color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)' }]}>✕ Close</Text>
-          </Pressable>
-        </View>
+          {/* Close Button Header */}
+          <View style={[styles.pageHeader, { borderBottomColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' }]}>
+            <Text style={[styles.pageHeaderTitle, { color: isDark ? 'rgba(255,255,255,0.9)' : '#111' }]}>{headerTitle}</Text>
+            <Pressable style={styles.closeButton} onPress={onClose}>
+              <Text style={[styles.closeButtonText, { color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)' }]}>✕ Close</Text>
+            </Pressable>
+          </View>
 
-        <Animated.ScrollView 
-          onScroll={scrollHandler}
-          scrollEventThrottle={16}
-          onContentSizeChange={(w, h) => { contentHeight.value = h; }}
-          onLayout={(e) => { containerHeight.value = e.nativeEvent.layout.height; }}
-          showsVerticalScrollIndicator={false} 
-          contentContainerStyle={styles.pageScrollContent}
-        >
-          {/* Title */}
-          <Text style={[styles.pageMainTitle, { color: isDark ? '#FFF' : '#000' }]}>
-            {finalCategory}
-          </Text>
+          <Animated.ScrollView
+            onScroll={scrollHandler}
+            scrollEventThrottle={16}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.pageScrollContent}
+          >
+            <Text style={[styles.pageMainTitle, { color: isDark ? '#FFF' : '#000' }]}>
+              {finalCategory}
+            </Text>
+            <Text style={[styles.pageBodyContent, { color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.8)' }]}>
+              {content}
+            </Text>
 
-          {/* Premium Body Text */}
-          <Text style={[styles.pageBodyContent, { color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.8)' }]}>
-            {content}
-          </Text>
-
-          {/* Image Grid Display */}
-          {pageImages && pageImages.length > 0 && (
-            <View style={styles.imageGrid}>
-              {pageImages.map((imgUri: string, idx: number) => (
-                <Image 
-                  key={imgUri + '-' + idx} 
-                  source={{ uri: imgUri }} 
-                  style={[
-                    styles.gridImage, 
-                    pageImages.length === 1 && styles.gridImageSingle,
-                    pageImages.length === 2 && styles.gridImageDouble,
-                  ]} 
-                  contentFit="cover" 
-                  transition={200}
-                />
-              ))}
-            </View>
-          )}
-
-          {/* Synthesis Card */}
-          {parsedEntities?.summary && (
-            <View style={[styles.synthesisCard, { backgroundColor: isDark ? 'rgba(142, 68, 173, 0.08)' : 'rgba(142, 68, 173, 0.04)', borderColor: isDark ? 'rgba(142, 68, 173, 0.2)' : 'rgba(142, 68, 173, 0.15)' }]}>
-              <View style={styles.synthesisCardHeader}>
-                <View style={[styles.synthesisDot, { backgroundColor: '#8E44AD' }]} />
-                <Text style={styles.synthesisTitle}>INTELLIGENCE SYNTHESIS</Text>
+            {pageImages.length > 0 && (
+              <View style={styles.imageGrid}>
+                {pageImages.map((imgUri: string, idx: number) => (
+                  <Image
+                    key={imgUri + '-' + idx}
+                    source={{ uri: imgUri }}
+                    style={[
+                      styles.gridImage,
+                      pageImages.length === 1 && styles.gridImageSingle,
+                      pageImages.length === 2 && styles.gridImageDouble,
+                    ]}
+                    contentFit="cover"
+                    transition={200}
+                  />
+                ))}
               </View>
-              <Text style={[styles.synthesisSummary, { color: isDark ? 'rgba(255,255,255,0.9)' : '#333' }]}>
-                {parsedEntities.summary}
-              </Text>
-              {parsedEntities.cognitive_mode && (
-                <View style={styles.synthesisMetaRow}>
-                  <Text style={[styles.synthesisMetaLabel, { color: isDark ? 'rgba(255,255,255,0.4)' : '#666' }]}>COGNITIVE MODE:</Text>
-                  <Text style={styles.synthesisMetaVal}>{parsedEntities.cognitive_mode}</Text>
-                </View>
-              )}
-            </View>
-          )}
+            )}
 
-          {/* Footer Date */}
-          <Text style={[styles.pageFooterDate, { color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.4)' }]}>
-            Captured on {new Date(node.created_at || Date.now()).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-          </Text>
-        </Animated.ScrollView>
-      </Animated.View>
+            {parsedEntities?.summary && (
+              <View style={[styles.synthesisCard, { backgroundColor: isDark ? 'rgba(142,68,173,0.08)' : 'rgba(142,68,173,0.04)', borderColor: isDark ? 'rgba(142,68,173,0.2)' : 'rgba(142,68,173,0.15)' }]}>
+                <View style={styles.synthesisCardHeader}>
+                  <View style={[styles.synthesisDot, { backgroundColor: '#8E44AD' }]} />
+                  <Text style={styles.synthesisTitle}>INTELLIGENCE SYNTHESIS</Text>
+                </View>
+                <Text style={[styles.synthesisSummary, { color: isDark ? 'rgba(255,255,255,0.9)' : '#333' }]}>
+                  {String(parsedEntities.summary)}
+                </Text>
+                {parsedEntities.cognitive_mode && (
+                  <View style={styles.synthesisMetaRow}>
+                    <Text style={[styles.synthesisMetaLabel, { color: isDark ? 'rgba(255,255,255,0.4)' : '#666' }]}>COGNITIVE MODE:</Text>
+                    <Text style={styles.synthesisMetaVal}>{String(parsedEntities.cognitive_mode)}</Text>
+                  </View>
+                )}
+              </View>
+            )}
+
+            <Text style={[styles.pageFooterDate, { color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.4)' }]}>
+              {node.created_at
+                ? new Date(node.created_at).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+                : ''}
+            </Text>
+          </Animated.ScrollView>
+        </SafeAreaView>
+      </Modal>
     );
   }
 
+  // ─── CARD MODE (bottom sheet overlay) ────────────────────────────────────
   return (
-    <Animated.View 
-      entering={FadeIn.duration(200)} 
-      exiting={FadeOut.duration(200)} 
-      style={[StyleSheet.absoluteFill, { zIndex: 1000 }]}
+    <Modal
+      visible={true}
+      animationType="fade"
+      transparent={true}
+      statusBarTranslucent={true}
+      onRequestClose={onClose}
     >
-      <Pressable style={StyleSheet.absoluteFill} onPress={onClose}>
-        <BlurView intensity={60} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
-      </Pressable>
-      
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }} pointerEvents="box-none">
-        <Animated.View 
-          entering={DropAndBounce}
-          exiting={FadeOut.duration(200)}
-          style={[styles.contentContainer, { backgroundColor: 'transparent' }]}
+      <Pressable style={[styles.backdrop, { backgroundColor: isDark ? 'rgba(0,0,0,0.75)' : 'rgba(0,0,0,0.45)' }]} onPress={onClose}>
+        {/* Inner pressable to block backdrop press propagation */}
+        <Pressable
+          style={[styles.contentContainer, { backgroundColor: isDark ? '#0F0F12' : '#FFFFFF' }]}
+          onPress={(e) => e.stopPropagation()}
         >
-          <BlurView 
-            intensity={80} 
-            tint={isDark ? "dark" : "light"} 
-            style={StyleSheet.absoluteFill} 
-          />
-          
-          <View style={{ flexShrink: 1, paddingVertical: 24 }}>
-            {/* Header section matching ThoughtCloud avatar+name layout */}
-            <View style={styles.header}>
-              <View style={[styles.avatarPlaceholder, { backgroundColor: `${color}20` }]}>
-                <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: color, opacity: 0.25 }} />
-              </View>
-              <View style={styles.headerText}>
-                <Text style={[styles.title, { color: isDark ? 'rgba(255,255,255,0.95)' : '#111111' }]} numberOfLines={1}>{headerTitle}</Text>
-              </View>
-            </View>
+          <View style={styles.dragHandle} />
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-              {/* Main Note Card matching ThoughtCloud list items */}
-              <View style={[styles.noteCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }]}>
-                {node.images && node.images.length > 0 && (
-                  <Image 
-                    source={{ uri: node.images[0] }} 
-                    style={styles.noteImage} 
-                    transition={200} 
-                    contentFit="cover" 
-                  />
-                )}
-                <Text style={[styles.noteContent, { color: isDark ? 'rgba(255,255,255,0.9)' : '#111111' }]}>
-                  {content || 'No content available for this note.'}
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={[styles.avatarPlaceholder, { backgroundColor: `${color}22` }]}>
+              <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: color, opacity: 0.8 }} />
+            </View>
+            <View style={styles.headerText}>
+              <Text style={[styles.title, { color: isDark ? 'rgba(255,255,255,0.95)' : '#111111' }]} numberOfLines={1}>
+                {headerTitle}
+              </Text>
+            </View>
+            <Pressable style={styles.headerClose} onPress={onClose}>
+              <Text style={{ color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)', fontSize: 18 }}>✕</Text>
+            </Pressable>
+          </View>
+
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={[styles.noteCard, {
+              backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+              borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
+            }]}>
+              {node.images && node.images.length > 0 && (
+                <Image
+                  source={{ uri: node.images[0] }}
+                  style={styles.noteImage}
+                  transition={200}
+                  contentFit="cover"
+                />
+              )}
+              <Text style={[styles.noteContent, { color: isDark ? 'rgba(255,255,255,0.92)' : '#111111' }]}>
+                {content || 'No content available for this note.'}
+              </Text>
+
+              <View style={[styles.cardFooter, { borderTopColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }]}>
+                <Text style={[styles.footerDate, { color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)' }]}>
+                  {node.created_at
+                    ? new Date(node.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+                    : ''}
                 </Text>
-                
-                <View style={[styles.cardFooter, { borderTopColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }]}>
-                  <Text style={[styles.footerDate, { color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)' }]}>
-                    {new Date(node.created_at || Date.now()).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+              </View>
+
+              {hasSearch && (
+                <View style={[styles.contextFooter, { borderTopColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }]}>
+                  <Text style={[styles.contextHeader, { color }]}>SEMANTIC ECHO</Text>
+                  <Text style={[styles.contextText, { color: isDark ? NightTheme.textMuted : '#666' }]}>
+                    {isMatch
+                      ? `This thought resonates directly with your whisper for "${searchQuery}".`
+                      : 'This context remains visible to guide your semantic drift.'}
                   </Text>
                 </View>
+              )}
 
-                {hasSearch && (
-                  <View style={[styles.contextFooter, { borderTopColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }]}>
-                    <Text style={[styles.contextHeader, { color }]}>SEMANTIC ECHO</Text>
-                    <Text style={[styles.contextText, { color: isDark ? NightTheme.textMuted : '#666' }]}>
-                      {isMatch 
-                        ? `This thought resonates directly with your whisper for "${searchQuery}".`
-                        : "This context remains visible to guide your semantic drift."}
-                    </Text>
+              {resonanceKeys.length > 1 && (
+                <View style={[styles.resonanceInsight, { backgroundColor: isDark ? 'rgba(142,68,173,0.12)' : 'rgba(142,68,173,0.08)' }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#8E44AD', marginRight: 8 }} />
+                    <Text style={[styles.contextHeader, { color: '#8E44AD', marginBottom: 0 }]}>RESONANCE INSIGHT</Text>
                   </View>
-                )}
-
-                {/* RESONANCE INSIGHT: The 'Purple Context' section */}
-                {Object.keys(node.resonances || {}).length > 1 && (
-                  <View style={[styles.resonanceInsight, { backgroundColor: isDark ? 'rgba(142, 68, 173, 0.12)' : 'rgba(142, 68, 173, 0.08)' }]}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#8E44AD', marginRight: 8 }} />
-                      <Text style={[styles.contextHeader, { color: '#8E44AD', marginBottom: 0 }]}>RESONANCE INSIGHT</Text>
-                    </View>
-                    <Text style={[styles.contextText, { color: isDark ? NightTheme.textPrimary : '#444' }]}>
-                      This thought is primarily categorized as <Text style={{ fontWeight: '700' }}>{Object.keys(node.resonances || {}).sort((a,b) => (node.resonances?.[b] ?? 0) - (node.resonances?.[a] ?? 0))[0]}</Text>, 
-                      but it also shows a strong resonance with <Text style={{ fontWeight: '700' }}>{Object.keys(node.resonances || {}).sort((a,b) => (node.resonances?.[b] ?? 0) - (node.resonances?.[a] ?? 0))[1]}</Text>.
-                    </Text>
-                  </View>
-                )}
-              </View>
-            </ScrollView>
-          </View>
-        </Animated.View>
-      </View>
-    </Animated.View>
+                  <Text style={[styles.contextText, { color: isDark ? NightTheme.textPrimary : '#444' }]}>
+                    This thought is primarily categorized as{' '}
+                    <Text style={{ fontWeight: '700' }}>{String(resonanceKeys[0] || finalCategory)}</Text>, and shows resonance with{' '}
+                    <Text style={{ fontWeight: '700' }}>{String(resonanceKeys[1] || 'general notes')}</Text>.
+                  </Text>
+                </View>
+              )}
+            </View>
+          </ScrollView>
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+  },
   contentContainer: {
-    width: '90%',
+    width: '100%',
     maxHeight: '82%',
     borderRadius: 32,
     overflow: 'hidden',
-    paddingTop: 24,
+    paddingTop: 12,
+  },
+  dragHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(128,128,128,0.3)',
+    alignSelf: 'center',
+    marginBottom: 12,
   },
   header: {
     flexDirection: 'row',
@@ -277,13 +313,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     marginBottom: 20,
   },
+  headerClose: {
+    padding: 8,
+  },
   avatarPlaceholder: {
     width: 48,
     height: 48,
     borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(142, 68, 173, 0.1)',
   },
   headerText: {
     flex: 1,
@@ -293,13 +331,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '300',
     letterSpacing: 0.5,
-  },
-  subconsciousHeader: {
-    fontSize: 7,
-    fontWeight: '800',
-    marginTop: 4,
-    letterSpacing: 1.5,
-    textTransform: 'uppercase',
   },
   scrollContent: {
     paddingBottom: 40,
@@ -355,65 +386,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(142, 68, 173, 0.15)',
   },
-  echoChainContainer: {
-    marginTop: 32,
-    paddingTop: 24,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(124, 58, 237, 0.1)',
-  },
-  echoHeader: {
-    marginBottom: 20,
-  },
-  echoSubtitle: {
-    fontSize: 10,
-    fontWeight: '400',
-    marginTop: 2,
-    letterSpacing: 0.2,
-  },
-  echoItem: {
-    flexDirection: 'row',
-    marginBottom: 8,
-  },
-  echoTimeline: {
-    width: 20,
-    alignItems: 'center',
-  },
-  echoDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginTop: 6,
-  },
-  echoLine: {
-    flex: 1,
-    width: 1,
-    backgroundColor: 'rgba(124, 58, 237, 0.15)',
-    marginVertical: 4,
-  },
-  echoContent: {
-    flex: 1,
-    paddingLeft: 12,
-    paddingBottom: 16,
-  },
-  echoDate: {
-    fontSize: 9,
-    fontWeight: '700',
-    marginBottom: 4,
-    letterSpacing: 0.5,
-  },
-  echoSnippet: {
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: '300',
-  },
   progressBarBg: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
     height: 3,
     backgroundColor: 'rgba(0,0,0,0.05)',
-    zIndex: 1100,
   },
   progressBarFill: {
     height: '100%',
@@ -424,8 +399,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: Platform.OS === 'ios' ? 56 : 24,
-    paddingBottom: 16,
+    paddingVertical: 16,
     borderBottomWidth: 1,
   },
   pageHeaderTitle: {

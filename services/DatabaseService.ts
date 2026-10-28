@@ -121,6 +121,18 @@ export class DatabaseService {
         await db.runAsync('INSERT OR REPLACE INTO schema_migrations (version, applied_at) VALUES (?, ?)', [100, Date.now()]);
         console.log('[DatabaseService] Migration v100 complete.');
       }
+
+      // Version 101: Note Favorite / Like status
+      if (currentVersion < 101) {
+        console.log('[DatabaseService] Applying Favorites Migration (v101)...');
+        try {
+          await db.execAsync("ALTER TABLE notes ADD COLUMN is_liked INTEGER DEFAULT 0");
+        } catch (e) {
+          console.log('[DatabaseService] Migration v101 step skipped: is_liked may exist');
+        }
+        await db.runAsync('INSERT OR REPLACE INTO schema_migrations (version, applied_at) VALUES (?, ?)', [101, Date.now()]);
+        console.log('[DatabaseService] Migration v101 complete.');
+      }
     } catch (error) {
       console.error('[DatabaseService] Migration critical failure:', error);
     }

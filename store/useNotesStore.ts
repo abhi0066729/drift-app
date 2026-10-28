@@ -43,6 +43,7 @@ export type Note = {
   room_id?: string;
   wing_id?: string;
   is_ghost?: boolean;
+  is_liked?: boolean;
   images?: string[];
   semantic_links?: string[];
   pipeline_step?: PipelineStep;
@@ -67,6 +68,10 @@ interface NotesState {
   activeFilters: { person?: string; topic?: string; date?: string; category?: string };
   theme: 'light' | 'dark';
   
+  // Projects Board State
+  projects: string[];
+  activeProject: string;
+  
   // Actions
   addNote: (note: Note) => void;
   updateNote: (id: string, updates: Partial<Note>) => void;
@@ -75,7 +80,11 @@ interface NotesState {
   clearNotes: () => void;
   deleteNote: (id: string) => void;
   toggleStudioSeed: (id: string) => void;
+  toggleLikeNote: (id: string) => void;
   toggleTheme: () => void;
+  addProject: (name: string) => void;
+  setActiveProject: (name: string) => void;
+  addNoteToProject: (id: string, projectName: string) => void;
 }
 
 export const useNotesStore = create<NotesState>()(
@@ -86,6 +95,8 @@ export const useNotesStore = create<NotesState>()(
       studioSeeds: [],
       activeFilters: {},
       theme: 'dark',
+      projects: ['My Space', 'Visual Moodboard', 'Core Space'],
+      activeProject: 'My Space',
       
       addNote: (note) => set((state) => ({ 
         notes: [note, ...state.notes],
@@ -115,7 +126,26 @@ export const useNotesStore = create<NotesState>()(
           : [...state.studioSeeds, id]
       })),
       
+      toggleLikeNote: (id) =>
+        set((state) => ({
+          notes: state.notes.map((n) => (n.id === id ? { ...n, is_liked: !n.is_liked } : n)),
+          lastUpdate: Date.now()
+        })),
+        
       toggleTheme: () => set({ theme: 'dark' }),
+
+      addProject: (name) => set((state) => ({
+        projects: state.projects.includes(name) ? state.projects : [...state.projects, name],
+        activeProject: name,
+        lastUpdate: Date.now()
+      })),
+
+      setActiveProject: (name) => set({ activeProject: name }),
+
+      addNoteToProject: (id, projectName) => set((state) => ({
+        notes: state.notes.map((n) => (n.id === id ? { ...n, room_id: projectName } : n)),
+        lastUpdate: Date.now()
+      }))
     }),
     {
       name: 'drift-notes-storage',
@@ -128,7 +158,9 @@ export const useNotesStore = create<NotesState>()(
         studioSeeds: state.studioSeeds,
         activeFilters: state.activeFilters,
         theme: state.theme,
-        lastUpdate: state.lastUpdate
+        lastUpdate: state.lastUpdate,
+        projects: state.projects,
+        activeProject: state.activeProject
       }),
     }
   )

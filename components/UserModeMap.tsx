@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { StyleSheet, View, useWindowDimensions, Platform, Text } from 'react-native';
+import { StyleSheet, View, useWindowDimensions, Platform, Text, Pressable, ScrollView, TouchableOpacity } from 'react-native';
 import Animated, { 
   useAnimatedStyle, 
   useSharedValue, 
@@ -10,6 +10,8 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Svg, { Path, Rect, Circle, Defs, Pattern } from 'react-native-svg';
 import DriftNode from './DriftNode';
+import { useNotesStore } from '@/store/useNotesStore';
+import { BlurView } from 'expo-blur';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
@@ -48,16 +50,47 @@ const UserModeMap = React.forwardRef<any, UserModeMapProps>((props, ref) => {
   const { onNodePress, theme = 'light', focusedCardIndex, onOpenMenu } = props;
 
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const storeNotes = useNotesStore(state => state.notes);
 
-  // Cards layout state to handle dynamic positioning, grouping, and fusion
-  const [cards, setCards] = useState<any[]>(INITIAL_MOCK_CARDS);
+  // Cards layout state dynamically bound to store notes
+  const cards = useMemo(() => {
+    const activeNotes = storeNotes.length > 0 ? storeNotes : INITIAL_MOCK_CARDS;
+    
+    // Map favorited/liked notes to center visible resolution area (radius ~ 110px around 2000, 2000)
+    return (activeNotes as any[]).map((note: any, idx) => {
+      let x = note.layout_x !== undefined ? note.layout_x : note.unfocusedX;
+      let y = note.layout_y !== undefined ? note.layout_y : note.unfocusedY;
+      
+      if (x === undefined || y === undefined) {
+        // Fallback positioning if undefined
+        x = 2000 + (Math.random() * 200 - 100);
+        y = 2000 + (Math.random() * 200 - 100);
+      }
+
+      if (note.is_liked) {
+        // Place favorited nodes in immediate visible ring centered on (2000, 2000)
+        const angle = (idx * 2 * Math.PI) / Math.max(1, activeNotes.filter((n: any) => n.is_liked).length);
+        const radius = 110; // First visible screen boundary ring
+        x = 2000 + Math.cos(angle) * radius;
+        y = 2000 + Math.sin(angle) * radius;
+      }
+      return {
+        ...note,
+        unfocusedX: x,
+        unfocusedY: y,
+      };
+    });
+  }, [storeNotes]);
+
   // Groupings: array of arrays of node IDs
   const [groups, setGroups] = useState<string[][]>([
     ['card-6', 'card-7', 'card-8'], // Initial cluster group
     ['card-12', 'card-13', 'card-14', 'card-15', 'card-16'] // Initial stacked deck group (>4 notes)
   ]);
 
-  // Shared values for 2D Panning
+  const [activeStackGroup, setActiveStackGroup] = useState<string[] | null>(null);
+
+  // Shared values for 2D Panning centered on 2000, 2000
   const canvasX = useSharedValue(0);
   const canvasY = useSharedValue(0);
   
@@ -68,15 +101,6 @@ const UserModeMap = React.forwardRef<any, UserModeMapProps>((props, ref) => {
   const startX = useSharedValue(0);
   const startY = useSharedValue(0);
   const startScale = useSharedValue(1.0);
-
-  // Real-time tracking of active drag node (avoidance physics helper)
-  const activeDragX = useSharedValue(0);
-  const activeDragY = useSharedValue(0);
-  const draggedNodeId = useSharedValue<string | null>(null);
-
-  // Motion Trajectory Line Shared Values
-  const dragStartX = useSharedValue(0);
-  const dragStartY = useSharedValue(0);
 
   // Pan gesture
   const panGesture = Gesture.Pan()
@@ -104,6 +128,23 @@ const UserModeMap = React.forwardRef<any, UserModeMapProps>((props, ref) => {
 
   const combinedGesture = Gesture.Simultaneous(panGesture, pinchGesture);
 
+  // Automatically center the canvas view on the centroid of the card structure on mount or when cards are added
+  useEffect(() => {
+    if (cards.length > 0) {
+      let sumX = 0;
+      let sumY = 0;
+      cards.forEach(c => {
+        sumX += c.unfocusedX;
+        sumY += c.unfocusedY;
+      });
+      const avgX = sumX / cards.length;
+      const avgY = sumY / cards.length;
+      
+      canvasX.value = withSpring(-(avgX - 2000), { damping: 24, stiffness: 100 });
+      canvasY.value = withSpring(-(avgY - 2000), { damping: 24, stiffness: 100 });
+    }
+  }, [cards.length]);
+
   // Center on focused note when index changes (controlled by shuffler slider)
   useEffect(() => {
     if (focusedCardIndex !== undefined && cards[focusedCardIndex]) {
@@ -113,13 +154,13 @@ const UserModeMap = React.forwardRef<any, UserModeMapProps>((props, ref) => {
       canvasX.value = withSpring(targetX, { damping: 22, stiffness: 120 });
       canvasY.value = withSpring(targetY, { damping: 22, stiffness: 120 });
     }
-  }, [focusedCardIndex, cards]);
+  }, [focusedCardIndex]);
 
   // Handle Drag collision for magnetic connection and card fusion
-  const handleDragEndLocal = (nodeId: string, finalX: number, finalY: number) => {
+  const handleDragEndLocal = (nodeId: string, targetId: string) => {
     // 1. Audio-Image Fusion check
-    const dragNode = cards.find(c => c.id === nodeId);
-    const dropTarget = cards.find(c => c.id !== nodeId && Math.abs(c.unfocusedX - finalX) < 60 && Math.abs(c.unfocusedY - finalY) < 60);
+    const dragNode = cards.find(c => c.id === nodeId) as any;
+    const dropTarget = cards.find(c => c.id === targetId) as any;
 
     if (dragNode && dropTarget) {
       // Conjugate Voice + Image
@@ -127,39 +168,34 @@ const UserModeMap = React.forwardRef<any, UserModeMapProps>((props, ref) => {
         (dragNode.source_type === 'voice' && dropTarget.source_type === 'image') ||
         (dragNode.source_type === 'image' && dropTarget.source_type === 'voice')
       ) {
-        const imageNode = dragNode.source_type === 'image' ? dragNode : dropTarget;
-        const voiceNode = dragNode.source_type === 'voice' ? dragNode : dropTarget;
+        const imageNode = (dragNode.source_type === 'image' ? dragNode : dropTarget) as any;
+        const voiceNode = (dragNode.source_type === 'voice' ? dragNode : dropTarget) as any;
 
-        setCards(prev => prev.map(c => {
-          if (c.id === imageNode.id) {
-            return { ...c, fusedAudio: true, duration: voiceNode.duration || '1:30' };
-          }
-          return c;
-        }).filter(c => c.id !== voiceNode.id));
+        const { NoteService } = require('@/services/NoteService');
+        NoteService.getInstance().updateNote(imageNode.id, { 
+          fusedAudio: true, 
+          duration: voiceNode.duration || '1:30' 
+        });
+        NoteService.getInstance().deleteNote(voiceNode.id);
         return;
       }
 
       // 2. Magnetic snapping/grouping
-      const inGroupIdx = groups.findIndex(g => g.includes(dropTarget.id));
-      if (inGroupIdx !== -1) {
-        setGroups(prev => prev.map((g, i) => i === inGroupIdx ? [...g, dragNode.id] : g));
-      } else {
-        setGroups(prev => [...prev, [dropTarget.id, dragNode.id]]);
-      }
+      setGroups(prev => {
+        const clean = prev.map(g => g.filter(id => id !== nodeId)).filter(g => g.length > 0);
+        const inGroupIdx = clean.findIndex(g => g.includes(targetId));
+        if (inGroupIdx !== -1) {
+          return clean.map((g, i) => i === inGroupIdx ? [...g, nodeId] : g);
+        } else {
+          return [...clean, [targetId, nodeId]];
+        }
+      });
     }
   };
 
   const handleEjectCard = (nodeId: string) => {
     setGroups(prev => prev.map(g => g.filter(id => id !== nodeId)).filter(g => g.length > 0));
   };
-
-  // Trajectory path drawing props
-  const animatedTrajectoryProps = useAnimatedProps(() => {
-    if (!draggedNodeId.value) return { d: '' };
-    return {
-      d: `M ${dragStartX.value} ${dragStartY.value} L ${activeDragX.value} ${activeDragY.value}`
-    };
-  });
 
   const animatedCanvasStyle = useAnimatedStyle(() => ({
     left: -2000 + windowWidth / 2,
@@ -185,9 +221,7 @@ const UserModeMap = React.forwardRef<any, UserModeMapProps>((props, ref) => {
     { name: 'CUSTOM PROJECT', color: '#E67E22', x: 2000 - 600, y: 2000 }
   ];
 
-
-
-  const isGalaxy = canvasScale.value < 0.4;
+  const isGalaxy = false; // Disabled galaxy view to prevent zooming out to categories
 
   return (
     <View style={styles.container}>
@@ -206,57 +240,91 @@ const UserModeMap = React.forwardRef<any, UserModeMapProps>((props, ref) => {
 
                 {/* Dot Grid */}
                 <Rect width={4000} height={4000} fill="url(#dotGrid)" />
-
-
-
-
               </Svg>
             </View>
 
-            {/* Galaxy Mode Category blobs */}
-            {isGalaxy && galaxyBlobs.map((blob, idx) => (
-              <View 
-                key={idx} 
-                style={[
-                  styles.galaxyBlob, 
-                  { 
-                    left: blob.x - 75, 
-                    top: blob.y - 75,
-                    borderColor: blob.color 
-                  }
-                ]}
-              >
-                <Text style={[styles.galaxyBlobText, { color: blob.color }]}>{blob.name}</Text>
-              </View>
-            ))}
 
             {/* Render Card Nodes */}
             {!isGalaxy && cards.map((node) => {
-              // Stacking UI representation: skip rendering cards folded deep in stack deck (>4 cards)
-              const stackGroup = groups.find(g => g.includes(node.id) && g.length > 4);
+              // Stacking UI representation: skip rendering cards folded deep in stack deck
+              const stackGroup = groups.find(g => g.includes(node.id));
               if (stackGroup) {
                 const positionInStack = stackGroup.indexOf(node.id);
                 // Only render front card (index 0) of the stack
                 if (positionInStack > 0) return null;
               }
 
+              const isInGroup = stackGroup && stackGroup.length > 1;
+
               return (
                 <DriftNode
                   key={node.id}
                   node={node}
-                  onPress={onNodePress}
-                  activeDragX={activeDragX}
-                  activeDragY={activeDragY}
-                  draggedNodeId={draggedNodeId}
+                  parentPanGesture={panGesture}
+                  onPress={(n) => {
+                    if (isInGroup) {
+                      setActiveStackGroup(stackGroup);
+                    } else {
+                      onNodePress(n, 'text');
+                    }
+                  }}
                   theme={theme}
                   onLongPressMenu={onOpenMenu}
-                  onEjectCard={handleEjectCard}
+                  stackCount={isInGroup ? stackGroup!.length : 1}
                 />
               );
             })}
           </Animated.View>
         </View>
       </GestureDetector>
+
+      {/* Floating Scrollable Stack Carousel Overlay */}
+      {activeStackGroup && (
+        <View style={styles.carouselModalOverlay}>
+          <BlurView experimentalBlurMethod={Platform.OS === 'android' ? 'dimezisBlurView' : undefined} intensity={80} style={StyleSheet.absoluteFillObject} tint="dark" />
+          <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setActiveStackGroup(null)} />
+          
+          <View style={styles.carouselContainer}>
+            <Text style={styles.carouselTitle}>STACKED CARDS ({activeStackGroup.length})</Text>
+            
+            <ScrollView 
+              horizontal 
+              pagingEnabled 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.carouselScrollContent}
+            >
+              {activeStackGroup.map((cardId) => {
+                const node = cards.find(c => c.id === cardId);
+                if (!node) return null;
+                return (
+                  <View key={cardId} style={styles.carouselCardWrapper}>
+                    <DriftNode
+                      node={node}
+                      onPress={(n) => {
+                        onNodePress(n, 'text');
+                        setActiveStackGroup(null);
+                      }}
+                      theme={theme}
+                      onLongPressMenu={onOpenMenu}
+                      onEjectCard={(id) => {
+                        handleEjectCard(id);
+                        setActiveStackGroup(prev => prev ? prev.filter(x => x !== id) : null);
+                      }}
+                    />
+                  </View>
+                );
+              })}
+            </ScrollView>
+
+            <TouchableOpacity 
+              style={styles.closeCarouselBtn} 
+              onPress={() => setActiveStackGroup(null)}
+            >
+              <Text style={styles.closeCarouselText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </View>
   );
 });
@@ -290,5 +358,58 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 0.8,
+  },
+  carouselModalOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 99999,
+  },
+  carouselContainer: {
+    width: '90%',
+    height: 320,
+    backgroundColor: 'rgba(15, 15, 18, 0.95)',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    paddingVertical: 20,
+    alignItems: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.5,
+    shadowRadius: 28,
+    elevation: 16,
+  },
+  carouselTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#E8673C',
+    letterSpacing: 1.0,
+    marginBottom: 16,
+  },
+  carouselScrollContent: {
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+  carouselCardWrapper: {
+    width: 200,
+    height: 180,
+    marginHorizontal: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  closeCarouselBtn: {
+    marginTop: 16,
+    paddingHorizontal: 28,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  closeCarouselText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
   },
 });

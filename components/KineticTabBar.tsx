@@ -3,7 +3,7 @@ import { useNotesStore } from '@/store/useNotesStore';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { BlurView } from 'expo-blur';
 import React, { useEffect } from 'react';
-import { Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -11,9 +11,10 @@ import Animated, {
   withSpring,
   withTiming
 } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
-const TAB_BAR_WIDTH = width - 64;
+const TAB_BAR_WIDTH = Math.min(width - 40, 390);
 
 const getLabel = (routeName: string) => {
   switch (routeName) {
@@ -26,46 +27,46 @@ const getLabel = (routeName: string) => {
 };
 
 function KineticTabItem({ route, isFocused, onPress, onLongPress, theme }: any) {
-  // Shared values for the gravity drop
+  const isDark = theme === 'dark';
   const dropY = useSharedValue(isFocused ? 0 : 0);
-  const dotOpacity = useSharedValue(isFocused ? 1 : 0.4);
-
-  // Shared values for the impact ripple
+  const scaleVal = useSharedValue(isFocused ? 1.05 : 1);
+  const pillOpacity = useSharedValue(isFocused ? 1 : 0);
   const rippleScale = useSharedValue(0.5);
   const rippleOpacity = useSharedValue(0);
 
   useEffect(() => {
     if (isFocused) {
-      // 1. Teleport dot up (invisible to user instantly)
-      dropY.value = -30;
-      dotOpacity.value = 0;
+      dropY.value = -12;
+      scaleVal.value = 1.1;
+      pillOpacity.value = withTiming(1, { duration: 180 });
       rippleScale.value = 0.5;
       rippleOpacity.value = 0;
 
-      // 2. Drop the gravity dot heavily
-      dotOpacity.value = withTiming(1, { duration: 150 });
-      dropY.value = withSpring(0, { damping: 5, stiffness: 180, mass: 1.2 }, () => {
-        // 3. Immediately fast ripple explosion upon impact
-        rippleOpacity.value = withTiming(0.6, { duration: 50 }, () => {
-          rippleOpacity.value = withTiming(0, { duration: 300, easing: Easing.out(Easing.ease) });
-        });
-        rippleScale.value = withTiming(3.5, { duration: 350, easing: Easing.out(Easing.ease) });
+      dropY.value = withSpring(0, { damping: 14, stiffness: 220 });
+      scaleVal.value = withSpring(1, { damping: 12, stiffness: 180 });
+
+      rippleOpacity.value = withTiming(0.4, { duration: 80 }, () => {
+        rippleOpacity.value = withTiming(0, { duration: 300, easing: Easing.out(Easing.ease) });
       });
+      rippleScale.value = withTiming(2.4, { duration: 350, easing: Easing.out(Easing.ease) });
     } else {
-      // Defocus state
-      dotOpacity.value = withTiming(0.4, { duration: 200 });
+      pillOpacity.value = withTiming(0, { duration: 150 });
       dropY.value = withTiming(0, { duration: 200 });
+      scaleVal.value = withTiming(1, { duration: 200 });
     }
   }, [isFocused]);
 
-  const dotStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: dropY.value }],
-    opacity: dotOpacity.value,
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: dropY.value }, { scale: scaleVal.value }],
   }));
 
   const rippleStyle = useAnimatedStyle(() => ({
     transform: [{ scale: rippleScale.value }],
     opacity: rippleOpacity.value,
+  }));
+
+  const pillStyle = useAnimatedStyle(() => ({
+    opacity: pillOpacity.value,
   }));
 
   return (
@@ -74,36 +75,97 @@ function KineticTabItem({ route, isFocused, onPress, onLongPress, theme }: any) 
       onPress={onPress}
       onLongPress={onLongPress}
       style={styles.tabItem}
-      activeOpacity={1}
+      activeOpacity={0.85}
     >
-      <View style={styles.nodeWrapper}>
-        <View style={styles.dotContainer}>
-          {/* Background impact ripple */}
-          <Animated.View style={[styles.rippleRing, rippleStyle]} />
+      <Animated.View style={[styles.nodeWrapper, animStyle]}>
+        {/* Active Pill Glass Glow */}
+        <Animated.View style={[styles.activePillBg, pillStyle]}>
+          <LinearGradient
+            colors={isDark ? ['rgba(142,68,173,0.3)', 'rgba(142,68,173,0.08)'] : ['rgba(142,68,173,0.18)', 'rgba(142,68,173,0.04)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={StyleSheet.absoluteFillObject}
+          />
+        </Animated.View>
 
-          {/* The physical gravity dot */}
-          <Animated.View style={[
-            styles.nodeDot,
-            { backgroundColor: isFocused ? (theme === 'dark' ? NightTheme.accent : '#8E44AD') : (theme === 'dark' ? NightTheme.textMuted : '#111111') },
-            isFocused ? styles.nodeDotActive : {},
-            dotStyle
-          ]} />
+        <View style={styles.dotContainer}>
+          <Animated.View style={[styles.rippleRing, rippleStyle]} />
+          <View
+            style={[
+              styles.nodeDot,
+              {
+                backgroundColor: isFocused
+                  ? (isDark ? '#A29BFE' : '#8E44AD')
+                  : (isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.3)'),
+              },
+              isFocused ? styles.nodeDotActive : {},
+            ]}
+          />
         </View>
 
-        <Text style={[styles.nodeLabel, { color: isFocused ? (theme === 'dark' ? NightTheme.accent : '#8E44AD') : (theme === 'dark' ? NightTheme.textMuted : '#AAAAAA') }]}>
+        <Text
+          style={[
+            styles.nodeLabel,
+            {
+              color: isFocused
+                ? (isDark ? '#FFFFFF' : '#111111')
+                : (isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.4)'),
+              fontWeight: isFocused ? '800' : '600',
+            },
+          ]}
+        >
           {getLabel(route.name)}
         </Text>
-      </View>
+      </Animated.View>
     </TouchableOpacity>
   );
 }
 
 export default function KineticTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const theme = useNotesStore(state => state.theme);
+  const isDark = theme === 'dark';
 
   return (
-    <View style={[styles.tabBarContainer, { borderColor: theme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.4)', shadowOpacity: theme === 'dark' ? 0.3 : 0.1 }]}>
-      <BlurView intensity={theme === 'dark' ? 80 : 100} tint={theme === 'dark' ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight'} style={styles.blurContainer}>
+    <View style={styles.outerWrapper}>
+      <View
+        style={[
+          styles.tabBarContainer,
+          {
+            shadowColor: isDark ? '#000000' : '#8E44AD',
+            shadowOpacity: isDark ? 0.45 : 0.15,
+          },
+        ]}
+      >
+        <BlurView
+          experimentalBlurMethod={Platform.OS === 'android' ? 'dimezisBlurView' : undefined}
+          intensity={isDark ? 65 : 85}
+          tint={isDark ? 'dark' : 'light'}
+          style={StyleSheet.absoluteFillObject}
+        />
+
+        {/* Liquid Glass Highlight Rim */}
+        <LinearGradient
+          colors={
+            isDark
+              ? ['rgba(255,255,255,0.22)', 'rgba(255,255,255,0.05)', 'rgba(255,255,255,0.02)']
+              : ['rgba(255,255,255,0.85)', 'rgba(255,255,255,0.3)', 'rgba(255,255,255,0.1)']
+          }
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+          pointerEvents="none"
+        />
+
+        <View
+          style={[
+            styles.glassBorder,
+            {
+              borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.6)',
+            },
+          ]}
+          pointerEvents="none"
+        />
+
         <View style={styles.tabsRow}>
           {(() => {
             const filteredRoutes = state.routes.filter(r => ['index', 'capture', 'notes', 'pulse'].includes(r.name));
@@ -128,36 +190,40 @@ export default function KineticTabBar({ state, descriptors, navigation }: Bottom
             });
           })()}
         </View>
-      </BlurView>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  tabBarContainer: {
+  outerWrapper: {
     position: 'absolute',
-    bottom: 32,
-    alignSelf: 'center',
-    width: TAB_BAR_WIDTH,
-    height: 70,
-    borderRadius: 35,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.4)',
+    bottom: 28,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 1000,
   },
-  blurContainer: {
-    flex: 1,
+  tabBarContainer: {
+    width: TAB_BAR_WIDTH,
+    height: 66,
+    borderRadius: 33,
+    overflow: 'hidden',
+    shadowOffset: { width: 0, height: 12 },
+    shadowRadius: 24,
+    elevation: 16,
+  },
+  glassBorder: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 33,
+    borderWidth: 1.5,
   },
   tabsRow: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: 8,
     zIndex: 10,
   },
   tabItem: {
@@ -168,41 +234,48 @@ const styles = StyleSheet.create({
   },
   nodeWrapper: {
     alignItems: 'center',
-    justifyContent: 'flex-start',
-    marginTop: 4,
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    width: '100%',
+  },
+  activePillBg: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 20,
+    overflow: 'hidden',
   },
   dotContainer: {
-    width: 20,
-    height: 20,
+    width: 16,
+    height: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
   nodeDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     zIndex: 2,
   },
   nodeDotActive: {
     shadowColor: '#8E44AD',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
+    shadowOpacity: 0.9,
     shadowRadius: 8,
     elevation: 4,
   },
   rippleRing: {
     position: 'absolute',
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     borderWidth: 1.5,
     borderColor: '#8E44AD',
     zIndex: 1,
   },
   nodeLabel: {
     fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 2.0,
-    marginTop: 6,
-  }
+    letterSpacing: 1.6,
+    marginTop: 4,
+  },
 });
