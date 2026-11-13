@@ -73,15 +73,17 @@ export function LovableCardBody({
     const imgSrc = note.img && LOCAL_IMAGES[note.img] ? LOCAL_IMAGES[note.img] : LOCAL_IMAGES.lake;
     return (
       <View style={styles.imageCardContainer}>
-        <Image source={imgSrc} style={styles.cardImage} resizeMode="cover" />
-        <LinearGradient
-          colors={['transparent', 'rgba(15, 20, 18, 0.4)', 'rgba(12, 18, 15, 0.85)']}
-          locations={[0.2, 0.6, 1]}
-          style={StyleSheet.absoluteFillObject}
-        />
-        <View style={styles.photoCaption}>
-          <Text style={styles.photoTitle}>{note.title}</Text>
-          <Text style={styles.photoSub}>Image notes</Text>
+        <View style={styles.imageInnerFrame}>
+          <Image source={imgSrc} style={styles.cardImage} resizeMode="cover" />
+          <LinearGradient
+            colors={['transparent', 'rgba(15, 20, 18, 0.35)', 'rgba(12, 18, 15, 0.85)']}
+            locations={[0.2, 0.6, 1]}
+            style={StyleSheet.absoluteFillObject}
+          />
+          <View style={styles.photoCaption}>
+            <Text style={styles.photoTitle}>{note.title}</Text>
+            <Text style={styles.photoSub}>Image notes</Text>
+          </View>
         </View>
       </View>
     );
@@ -91,7 +93,11 @@ export function LovableCardBody({
   if (note.type === 'audio') {
     return (
       <LinearGradient
-        colors={['rgba(215, 238, 245, 0.95)', 'rgba(255, 245, 220, 0.95)', 'rgba(235, 215, 245, 0.95)']}
+        colors={[
+          'rgba(215, 238, 245, 0.72)',
+          'rgba(255, 245, 220, 0.68)',
+          'rgba(235, 215, 245, 0.72)',
+        ]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.paddedCard}
@@ -145,7 +151,7 @@ export function LovableCardBody({
   // 3. MAP / PLACE CARD
   if (note.type === 'map') {
     return (
-      <View style={[styles.mapContainer, { backgroundColor: 'rgba(255, 255, 255, 0.65)' }]}>
+      <View style={[styles.mapContainer, { backgroundColor: 'rgba(255, 255, 255, 0.52)' }]}>
         <View style={styles.mapSvgWrapper}>
           <Svg viewBox="0 0 240 135" style={StyleSheet.absoluteFillObject}>
             <Path
@@ -197,7 +203,7 @@ export function LovableCardBody({
     const items = (note.body || '').split('|');
     return (
       <LinearGradient
-        colors={['#1E2322', '#22292E', '#2A202E']}
+        colors={['rgba(30, 35, 34, 0.82)', 'rgba(34, 41, 46, 0.82)', 'rgba(42, 32, 46, 0.82)']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.paddedCard}
@@ -238,7 +244,11 @@ export function LovableCardBody({
   // 5. TEXT NOTE CARD (Pastel sunrise gradient wash)
   return (
     <LinearGradient
-      colors={['rgba(225, 245, 240, 0.95)', 'rgba(255, 248, 230, 0.95)', 'rgba(240, 225, 245, 0.95)']}
+      colors={[
+        'rgba(225, 245, 240, 0.74)',
+        'rgba(255, 248, 230, 0.70)',
+        'rgba(240, 225, 245, 0.74)',
+      ]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={styles.paddedCard}
@@ -255,6 +265,8 @@ const styles = StyleSheet.create({
     padding: 18,
     width: CARD_WIDTH,
     borderRadius: 22,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.65)',
   },
   headerBetween: {
     flexDirection: 'row',
@@ -343,6 +355,14 @@ const styles = StyleSheet.create({
     width: CARD_WIDTH,
     height: 285,
     borderRadius: 22,
+    padding: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.45)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.75)',
+  },
+  imageInnerFrame: {
+    flex: 1,
+    borderRadius: 17,
     overflow: 'hidden',
   },
   cardImage: {
@@ -371,6 +391,8 @@ const styles = StyleSheet.create({
     width: CARD_WIDTH,
     padding: 10,
     borderRadius: 22,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.65)',
   },
   mapSvgWrapper: {
     height: 135,

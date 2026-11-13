@@ -13,7 +13,7 @@ export function useHomeScreenController() {
   const setNotes = useNotesStore((state) => state.setNotes);
   const boards = useNotesStore((state) => state.boards);
 
-  const [zoom, setZoom] = useState<number>(1);
+  const [zoom, setZoom] = useState<number>(0.75);
   const [mode, setMode] = useState<'canvas' | 'list'>('canvas');
   const [focusedNote, setFocusedNote] = useState<LovableNote | null>(null);
 
