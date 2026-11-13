@@ -76,7 +76,7 @@ export function LovableCardBody({
         <View style={styles.imageInnerFrame}>
           <Image source={imgSrc} style={styles.cardImage} resizeMode="cover" />
           <LinearGradient
-            colors={['transparent', 'rgba(15, 20, 18, 0.35)', 'rgba(12, 18, 15, 0.85)']}
+            colors={['transparent', 'rgba(15, 20, 18, 0.25)', 'rgba(12, 18, 15, 0.75)']}
             locations={[0.2, 0.6, 1]}
             style={StyleSheet.absoluteFillObject}
           />
@@ -94,9 +94,9 @@ export function LovableCardBody({
     return (
       <LinearGradient
         colors={[
-          'rgba(215, 238, 245, 0.72)',
-          'rgba(255, 245, 220, 0.68)',
-          'rgba(235, 215, 245, 0.72)',
+          'rgba(215, 238, 245, 0.38)',
+          'rgba(255, 245, 220, 0.32)',
+          'rgba(235, 215, 245, 0.38)',
         ]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -151,7 +151,7 @@ export function LovableCardBody({
   // 3. MAP / PLACE CARD
   if (note.type === 'map') {
     return (
-      <View style={[styles.mapContainer, { backgroundColor: 'rgba(255, 255, 255, 0.52)' }]}>
+      <View style={[styles.mapContainer, { backgroundColor: 'rgba(255, 255, 255, 0.22)' }]}>
         <View style={styles.mapSvgWrapper}>
           <Svg viewBox="0 0 240 135" style={StyleSheet.absoluteFillObject}>
             <Path
@@ -159,7 +159,7 @@ export function LovableCardBody({
               fill="none"
               stroke="#64DFDF"
               strokeWidth="14"
-              opacity={0.4}
+              opacity={0.5}
             />
             {[20, 60, 100, 140, 180, 220].map((x) => (
               <Line
@@ -168,7 +168,7 @@ export function LovableCardBody({
                 y1="0"
                 x2={x - 30}
                 y2="135"
-                stroke="rgba(0, 0, 0, 0.08)"
+                stroke="rgba(0, 0, 0, 0.12)"
                 strokeWidth="1.5"
               />
             ))}
@@ -179,11 +179,11 @@ export function LovableCardBody({
                 y1={y}
                 x2="240"
                 y2={y - 20}
-                stroke="rgba(0, 0, 0, 0.08)"
+                stroke="rgba(0, 0, 0, 0.12)"
                 strokeWidth="1.5"
               />
             ))}
-            <Rect x="140" y="20" width="50" height="34" rx="6" fill="rgba(100, 223, 223, 0.25)" />
+            <Rect x="140" y="20" width="50" height="34" rx="6" fill="rgba(100, 223, 223, 0.35)" />
             <Circle cx="120" cy="62" r="7" fill="#FF7F66" />
             <Circle cx="120" cy="62" r="5" fill="#FF7F66" stroke="#FFFFFF" strokeWidth="2" />
           </Svg>
@@ -203,7 +203,7 @@ export function LovableCardBody({
     const items = (note.body || '').split('|');
     return (
       <LinearGradient
-        colors={['rgba(30, 35, 34, 0.82)', 'rgba(34, 41, 46, 0.82)', 'rgba(42, 32, 46, 0.82)']}
+        colors={['rgba(25, 30, 28, 0.65)', 'rgba(30, 36, 42, 0.65)', 'rgba(38, 28, 42, 0.65)']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.paddedCard}
@@ -219,7 +219,7 @@ export function LovableCardBody({
                 onPress={() => toggleTodo(i)}
                 style={[
                   styles.todoRow,
-                  { backgroundColor: on ? 'rgba(255, 255, 255, 0.06)' : 'rgba(255, 255, 255, 0.12)' },
+                  { backgroundColor: on ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.10)' },
                 ]}
               >
                 <View style={[styles.todoCheck, on && styles.todoCheckOn]}>
@@ -245,9 +245,9 @@ export function LovableCardBody({
   return (
     <LinearGradient
       colors={[
-        'rgba(225, 245, 240, 0.74)',
-        'rgba(255, 248, 230, 0.70)',
-        'rgba(240, 225, 245, 0.74)',
+        'rgba(225, 245, 240, 0.42)',
+        'rgba(255, 248, 230, 0.38)',
+        'rgba(240, 225, 245, 0.42)',
       ]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
@@ -264,9 +264,7 @@ const styles = StyleSheet.create({
   paddedCard: {
     padding: 18,
     width: CARD_WIDTH,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.65)',
+    borderRadius: 24,
   },
   headerBetween: {
     flexDirection: 'row',
@@ -354,11 +352,9 @@ const styles = StyleSheet.create({
   imageCardContainer: {
     width: CARD_WIDTH,
     height: 285,
-    borderRadius: 22,
+    borderRadius: 24,
     padding: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.45)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.75)',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
   },
   imageInnerFrame: {
     flex: 1,
@@ -390,9 +386,7 @@ const styles = StyleSheet.create({
   mapContainer: {
     width: CARD_WIDTH,
     padding: 10,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.65)',
+    borderRadius: 24,
   },
   mapSvgWrapper: {
     height: 135,

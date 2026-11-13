@@ -7,6 +7,8 @@ import Animated, {
   withSpring,
   runOnJS,
 } from 'react-native-reanimated';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Layers } from 'lucide-react-native';
 import { LovableNote, CARD_WIDTH, LovableCardBody } from './LovableCardBody';
 
@@ -108,8 +110,30 @@ export const LovableCardNode = memo(function LovableCardNode({
           delayLongPress={450}
           style={styles.cardPressable}
         >
-          {/* Card Glass Container */}
-          <View style={styles.cardGlass}>
+          {/* True Optical Glassmorphism Shell */}
+          <View style={styles.cardGlassWrapper}>
+            <BlurView
+              intensity={Platform.OS === 'ios' ? 45 : 30}
+              tint="light"
+              style={StyleSheet.absoluteFillObject}
+            />
+
+            {/* Specular Liquid Light Sheen */}
+            <LinearGradient
+              colors={[
+                'rgba(255, 255, 255, 0.45)',
+                'rgba(255, 255, 255, 0.12)',
+                'rgba(255, 255, 255, 0.03)',
+                'rgba(255, 255, 255, 0.18)',
+              ]}
+              locations={[0, 0.25, 0.75, 1]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0.85, y: 1 }}
+              style={StyleSheet.absoluteFillObject}
+              pointerEvents="none"
+            />
+
+            {/* Card Content */}
             <LovableCardBody note={note} />
 
             {/* Board Tag Pill */}
@@ -150,16 +174,16 @@ const styles = StyleSheet.create({
   cardPressable: {
     width: CARD_WIDTH,
   },
-  cardGlass: {
-    borderRadius: 22,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.75)',
-    backgroundColor: 'rgba(255, 255, 255, 0.28)',
+  cardGlassWrapper: {
+    borderRadius: 24,
+    borderWidth: 1.2,
+    borderColor: 'rgba(255, 255, 255, 0.65)',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     overflow: 'hidden',
     shadowColor: '#1A1820',
-    shadowOffset: { width: 0, height: 14 },
-    shadowOpacity: 0.16,
-    shadowRadius: 22,
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
     elevation: 8,
   },
   boardBadge: {
