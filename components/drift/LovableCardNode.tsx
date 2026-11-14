@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useState } from 'react';
 import { StyleSheet, View, Text, Pressable, Platform } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -7,10 +7,9 @@ import Animated, {
   withSpring,
   runOnJS,
 } from 'react-native-reanimated';
-import { BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Layers } from 'lucide-react-native';
 import { LovableNote, CARD_WIDTH, LovableCardBody } from './LovableCardBody';
+import { LiquidGlassSurface, GlassVariant } from './LiquidGlassSurface';
 
 interface LovableCardNodeProps {
   note: LovableNote;
@@ -33,6 +32,8 @@ export const LovableCardNode = memo(function LovableCardNode({
   onStackPress,
   onDragEndPosition,
 }: LovableCardNodeProps) {
+  const [isPressed, setIsPressed] = useState(false);
+
   // Shared drag values
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
@@ -40,6 +41,15 @@ export const LovableCardNode = memo(function LovableCardNode({
 
   const startX = useSharedValue(0);
   const startY = useSharedValue(0);
+
+  // Optical glass variant mapping based on content modality & stacking
+  const glassVariant: GlassVariant = React.useMemo(() => {
+    if (stackCount > 1) return 'layered';
+    if (note.type === 'image') return 'image';
+    if (note.type === 'todo') return 'smoked';
+    if (note.type === 'map') return 'clear';
+    return 'frosted';
+  }, [note.type, stackCount]);
 
   // Compute derived stacked offset
   const stackOffsetX = stackCount > 1
@@ -107,33 +117,18 @@ export const LovableCardNode = memo(function LovableCardNode({
         <Pressable
           onPress={() => onCardPress(note)}
           onLongPress={() => onCardLongPress && onCardLongPress(note)}
+          onPressIn={() => setIsPressed(true)}
+          onPressOut={() => setIsPressed(false)}
           delayLongPress={450}
           style={styles.cardPressable}
         >
-          {/* True Optical Glassmorphism Shell */}
-          <View style={styles.cardGlassWrapper}>
-            <BlurView
-              intensity={Platform.OS === 'ios' ? 45 : 30}
-              tint="light"
-              style={StyleSheet.absoluteFillObject}
-            />
-
-            {/* Specular Liquid Light Sheen */}
-            <LinearGradient
-              colors={[
-                'rgba(255, 255, 255, 0.45)',
-                'rgba(255, 255, 255, 0.12)',
-                'rgba(255, 255, 255, 0.03)',
-                'rgba(255, 255, 255, 0.18)',
-              ]}
-              locations={[0, 0.25, 0.75, 1]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 0.85, y: 1 }}
-              style={StyleSheet.absoluteFillObject}
-              pointerEvents="none"
-            />
-
-            {/* Card Content */}
+          {/* Physical Liquid Glass Material Surface */}
+          <LiquidGlassSurface
+            variant={glassVariant}
+            isPressed={isPressed}
+            isDragging={isDragging.value}
+            stackDepth={stackIndex}
+          >
             <LovableCardBody note={note} />
 
             {/* Board Tag Pill */}
@@ -142,7 +137,7 @@ export const LovableCardNode = memo(function LovableCardNode({
                 <Text style={styles.boardBadgeText}>{note.board}</Text>
               </View>
             )}
-          </View>
+          </LiquidGlassSurface>
         </Pressable>
       </GestureDetector>
 
@@ -173,18 +168,6 @@ const styles = StyleSheet.create({
   },
   cardPressable: {
     width: CARD_WIDTH,
-  },
-  cardGlassWrapper: {
-    borderRadius: 24,
-    borderWidth: 1.2,
-    borderColor: 'rgba(255, 255, 255, 0.65)',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    overflow: 'hidden',
-    shadowColor: '#1A1820',
-    shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.12,
-    shadowRadius: 24,
-    elevation: 8,
   },
   boardBadge: {
     position: 'absolute',

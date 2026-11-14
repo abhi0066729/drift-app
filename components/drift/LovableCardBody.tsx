@@ -68,7 +68,7 @@ export function LovableCardBody({
     if (onToggleTodo) onToggleTodo(idx);
   };
 
-  // 1. IMAGE CARD
+  // 1. IMAGE CARD (Image glass material)
   if (note.type === 'image') {
     const imgSrc = note.img && LOCAL_IMAGES[note.img] ? LOCAL_IMAGES[note.img] : LOCAL_IMAGES.lake;
     return (
@@ -76,7 +76,7 @@ export function LovableCardBody({
         <View style={styles.imageInnerFrame}>
           <Image source={imgSrc} style={styles.cardImage} resizeMode="cover" />
           <LinearGradient
-            colors={['transparent', 'rgba(15, 20, 18, 0.25)', 'rgba(12, 18, 15, 0.75)']}
+            colors={['transparent', 'rgba(15, 20, 18, 0.20)', 'rgba(12, 18, 15, 0.75)']}
             locations={[0.2, 0.6, 1]}
             style={StyleSheet.absoluteFillObject}
           />
@@ -89,14 +89,14 @@ export function LovableCardBody({
     );
   }
 
-  // 2. AUDIO / VOICE CARD
+  // 2. AUDIO / VOICE CARD (Clear/Layered glass material)
   if (note.type === 'audio') {
     return (
       <LinearGradient
         colors={[
-          'rgba(215, 238, 245, 0.38)',
-          'rgba(255, 245, 220, 0.32)',
-          'rgba(235, 215, 245, 0.38)',
+          'rgba(215, 238, 245, 0.25)',
+          'rgba(255, 245, 220, 0.18)',
+          'rgba(235, 215, 245, 0.25)',
         ]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -148,10 +148,10 @@ export function LovableCardBody({
     );
   }
 
-  // 3. MAP / PLACE CARD
+  // 3. MAP / PLACE CARD (Clear crystalline glass)
   if (note.type === 'map') {
     return (
-      <View style={[styles.mapContainer, { backgroundColor: 'rgba(255, 255, 255, 0.22)' }]}>
+      <View style={[styles.mapContainer, { backgroundColor: 'rgba(255, 255, 255, 0.08)' }]}>
         <View style={styles.mapSvgWrapper}>
           <Svg viewBox="0 0 240 135" style={StyleSheet.absoluteFillObject}>
             <Path
@@ -198,12 +198,12 @@ export function LovableCardBody({
     );
   }
 
-  // 4. TODO / LIST CARD (Dark Theme card matching Lovable)
+  // 4. TODO / LIST CARD (Smoked obsidian glass material)
   if (note.type === 'todo') {
     const items = (note.body || '').split('|');
     return (
       <LinearGradient
-        colors={['rgba(25, 30, 28, 0.65)', 'rgba(30, 36, 42, 0.65)', 'rgba(38, 28, 42, 0.65)']}
+        colors={['rgba(20, 24, 24, 0.45)', 'rgba(24, 28, 34, 0.40)', 'rgba(30, 22, 34, 0.45)']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.paddedCard}
@@ -241,13 +241,13 @@ export function LovableCardBody({
     );
   }
 
-  // 5. TEXT NOTE CARD (Pastel sunrise gradient wash)
+  // 5. TEXT NOTE CARD (Frosted liquid glass with variable transparency)
   return (
     <LinearGradient
       colors={[
-        'rgba(225, 245, 240, 0.42)',
-        'rgba(255, 248, 230, 0.38)',
-        'rgba(240, 225, 245, 0.42)',
+        'rgba(225, 245, 240, 0.28)',
+        'rgba(255, 248, 230, 0.22)',
+        'rgba(240, 225, 245, 0.28)',
       ]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
@@ -353,8 +353,8 @@ const styles = StyleSheet.create({
     width: CARD_WIDTH,
     height: 285,
     borderRadius: 24,
-    padding: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    padding: 7,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
   },
   imageInnerFrame: {
     flex: 1,
